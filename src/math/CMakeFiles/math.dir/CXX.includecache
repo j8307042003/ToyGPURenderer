@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Ray.cpp
+Ray.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Ray.h
+iostream
+-
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Ray.h
+Vec3.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec3.h
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec3.h
+string
+-
+math.h
+-
+iostream
+-
+sstream
+-
+

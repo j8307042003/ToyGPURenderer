@@ -1,0 +1,27 @@
+#include "RenderView.h"
+#include<stdlib.h>
+#include<stdio.h>
+#include<iostream>
+
+RenderView::RenderView(int width, int height) : width(width), height(height) {
+	std::cout << "Init Buff " << this->width << "  " << this->height << std::endl;
+	InitBuffer();
+}
+
+
+void RenderView::InitBuffer() {
+	if (buffer != NULL) {
+		delete buffer;
+	}
+	
+	buffer = new unsigned int[width * height];
+	std::cout << "Buffer Size  " << width * height << std::endl;
+}
+
+
+
+void RenderView::SetPixel(int x, int y, int colorInt32 ) {
+	//std::cout << x << "  " << y << std::endl;
+	//std::cout << x * width + y << std::endl;
+	buffer[x + y * width] = colorInt32;
+}

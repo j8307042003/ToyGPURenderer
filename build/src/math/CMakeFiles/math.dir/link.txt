@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmath.a  CMakeFiles/math.dir/Vec3.cpp.o CMakeFiles/math.dir/Ray.cpp.o CMakeFiles/math.dir/Quaternion.cpp.o CMakeFiles/math.dir/Transform.cpp.o
+/usr/bin/ranlib libmath.a

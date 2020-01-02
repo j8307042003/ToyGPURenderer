@@ -1,0 +1,2 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc libshape.a  CMakeFiles/shape.dir/Shape.cpp.o CMakeFiles/shape.dir/Sphere.cpp.o CMakeFiles/shape.dir/Triangle.cpp.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib libshape.a
