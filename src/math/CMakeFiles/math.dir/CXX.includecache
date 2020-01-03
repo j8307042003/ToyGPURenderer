@@ -6,6 +6,22 @@
 
 #IncludeRegexTransform: 
 
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Matrix4.h
+Vec4.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec4.h
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Quaternion.cpp
+Quaternion.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Quaternion.h
+Matrix4.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Matrix4.h
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Quaternion.h
+Vec3.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec3.h
+Matrix4.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Matrix4.h
+
 /Users/pine/Desktop/Programming/C++/Renderer/src/math/Ray.cpp
 Ray.h
 /Users/pine/Desktop/Programming/C++/Renderer/src/math/Ray.h
@@ -16,6 +32,26 @@ iostream
 Vec3.h
 /Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec3.h
 
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Transform.cpp
+Transform.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Transform.h
+Matrix4.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Matrix4.h
+iostream
+-
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Transform.h
+Vec3.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec3.h
+Quaternion.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Quaternion.h
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec3.cpp
+Vec3.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec3.h
+math.h
+-
+
 /Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec3.h
 string
 -
@@ -25,4 +61,6 @@ iostream
 -
 sstream
 -
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/math/Vec4.h
 

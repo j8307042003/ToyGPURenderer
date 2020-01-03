@@ -74,30 +74,30 @@ Scene make_test_scene1() {
 
 	// scene.AddShape(new Sphere({0, 0, wallWidth / 2}, 1));	
 	scene.AddShape(new Sphere({-2.5, 0, -wallWidth / 1.2f}, 2));	
-	// scene.AddShape(new Sphere({ 0, 3, -wallWidth / 1.0f}, 2));	
+	scene.AddShape(new Sphere({ 1, 0, -wallWidth / 1.2f}, 2));	
 
-	scene.AddShape(new Sphere({ 0, 5, -wallWidth / 1.0f}, 2));	
-	scene.AddShape(new Sphere({ 3, 3, -wallWidth / 1.0f}, 2));	
-	scene.AddShape(new Sphere({ -4, 3, -wallWidth / 1.0f}, 2));	
-	scene.AddShape(new Sphere({ 0,  0, -wallWidth / 1.0f}, 2));	
+	// scene.AddShape(new Sphere({ 0, 5, -wallWidth / 1.0f}, 2));	
+	// scene.AddShape(new Sphere({ 3, 3, -wallWidth / 1.0f}, 2));	
+	// scene.AddShape(new Sphere({ -4, 3, -wallWidth / 1.0f}, 2));	
+	// scene.AddShape(new Sphere({ 0,  0, -wallWidth / 1.0f}, 2));	
 
 
 	//walls
 	scene.AddMaterial(new material({0.7, 0.3, 0.3}, {0, 0, 0}));	 //Right Wall
 	scene.AddMaterial(new material({0.3, 0.7, 0.3}, {0, 0, 0}));	 //Left Wall
-	scene.AddMaterial(new material({0.7, 0.7, 0.7}, {0, 0, 0})); //behind wall
-	scene.AddMaterial(new material({0.7, 0.7, 0.7}, {0, 0, 0})); //End Wall	
+	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0})); //behind wall
+	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0})); //End Wall	
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	 //Floor
-	scene.AddMaterial(new material({1, 1, 1}, {1, 1, 1}));	 //Ceil
+	scene.AddMaterial(new material({0.8, 0.8, 0.8}, {1, 1, 1}));	 //Ceil
 
 	//spheres
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
-	// scene.AddMaterial(new material({1, 1, 1}, {0.4, 0.4, 0.4}));	
+	scene.AddMaterial(new material({1, 1, 1}, {0.4, 0.4, 1}));	
 
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
+	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
+	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
+	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
+	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}));	
 
 
 

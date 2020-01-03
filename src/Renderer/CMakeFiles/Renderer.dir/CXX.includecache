@@ -6,24 +6,6 @@
 
 #IncludeRegexTransform: 
 
-/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Camera.cpp
-Camera.h
-/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Camera.h
-RenderView.h
-/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/RenderView.h
-math/Ray.h
-/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/math/Ray.h
-algorithm
--
-stdlib.h
--
-stdio.h
--
-iostream
--
-stack
--
-
 /Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Camera.h
 math/Quaternion.h
 /Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/math/Quaternion.h
@@ -45,6 +27,18 @@ stdio.h
 -
 iostream
 -
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Renderer.cpp
+Renderer.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Renderer.h
+
+/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Renderer.h
+thread
+-
+Scene.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Scene.h
+Camera.h
+/Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Camera.h
 
 /Users/pine/Desktop/Programming/C++/Renderer/src/Renderer/Scene.h
 math/Vec3.h

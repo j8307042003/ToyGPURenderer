@@ -62,7 +62,7 @@ public:
   	}
 
 	Vec3 operator-(const float& f);
-	Vec3 operator-();
+	Vec3 operator-()const;
 	Vec3 operator*(const Vec3& rhs);
 	Vec3 operator*(const float& f);
   	friend Vec3 operator*(float lhs,const Vec3& rhs)

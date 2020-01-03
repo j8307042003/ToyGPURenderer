@@ -77,7 +77,7 @@ int main(){
              GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());
 
     glMatrixMode(GL_PROJECTION);
-    glOrtho(0, 640, 0, 480, -1, 1);
+    glOrtho(0, width, 0, height, -1, 1);
     glMatrixMode(GL_MODELVIEW);
 
     std::cout << "begin render" << std::endl; 

@@ -17,15 +17,16 @@ public:
 	unsigned int * GetBuffer();
 
 	void RenderScene(const Scene * s);
-	void RenderScenePixel(const Scene * s, int x, int y);
+	void RenderScenePixel(const Scene * s, int x, int y, void* memory);
 
 	void TryRayCast(const Scene * s, const Vec3 & origin, const Vec3 & dir);
 
+	int GetWidth() {return view.GetWidth();}
+	int GetHeight() {return view.GetHeight();}
 private:
 	RenderView view;
 	void RenderPixel_uv(float x, float y);
 	void RenderPixel(int x, int y);
 
 	Ray MakeRay(float x, float y);
-
 };

@@ -20,4 +20,6 @@ private:
 	void EndTask();
 
 	void RenderTask();
+	void SplitRender(int x_start, int y_start, int x_end, int y_end);
+
 };

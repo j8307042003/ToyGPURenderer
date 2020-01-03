@@ -27,3 +27,8 @@ if (APPLE)
   target_link_libraries(App "-framework OpenGL")
 endif()
 
+
+if(WIN32)
+  find_package(OpenGL REQUIRED)
+  target_link_libraries(App ${OPENGL_LIBRARIES})
+endif()

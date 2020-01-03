@@ -132,9 +132,127 @@ struct TraceRayBundle
 	bool doneRequestRay;
 };
 
+bool Trace_(const Scene * s, 
+			const std::vector<Shape*> * shapes, 
+			const Ray & ray, 
+			Vec3 & color, 
+			void* memory){
+	const int maxSample = 8;
+	const int maxpDepth = 3;
+	const int maxStack = 512;
+
+	Vec3 hitPos;
+	Vec3 direction;
+	int idx;
+
+	bool hit = RayCast(shapes, ray, hitPos, direction, idx);
+	if (!hit) return false;
+
+	int currentStackCount = 0;
+	// TraceRayBundle * bundleStack = (TraceRayBundle*) malloc(sizeof(TraceRayBundle) * maxStack);
+	TraceRayBundle * bundleStack = (TraceRayBundle*) memory;
+
+	material * m = s->materials[idx];
+
+
+
+	TraceRayBundle * rays = &bundleStack[currentStackCount];
+	// memset(rays, 0, sizeof(TraceRayBundle));
+	rays->colorSum = {0,0,0};
+	rays->parent = NULL;
+	rays->depth = 0;
+	rays->m = m;
+	rays->doneRequestRay = false;
+
+	Vec3 normal = (-ray.dir + direction) / 2;
+	for( int i = 0; i < maxSample ; i++ )
+	{
+
+		Vec3 dir = make_random(direction);
+		while(Vec3::Dot(dir, normal) < 0) {
+			dir = make_random(direction);
+		}		
+		//TODO use normal
+		rays->traceRay[i].ray = {hitPos, dir};
+		rays->traceRay[i].bundle = rays;
+	}
+
+	currentStackCount++;
+
+	//TODO
+	// TraceRayBundle * currentBundle;
+
+	while(currentStackCount > 0) {
+		TraceRayBundle * currentBundle = &bundleStack[currentStackCount-1];
+		if (!currentBundle->doneRequestRay){
+
+			//Handle Ray Bundle
+			for ( int i = 0; i < maxSample; i++ ) {
+				TraceRay traceRay = currentBundle->traceRay[i];
+				bool hit = RayCast(shapes, traceRay.ray, hitPos, direction, idx);
+					
+				Vec3 normal = (-traceRay.ray.dir + direction) / 2;
+				if (hit) {
+					material * m = s->materials[idx];
+					if (currentBundle->depth >= maxpDepth || m->emission.length() > 0.1) {
+						//reach the end fallback
+						currentBundle->colorSum += m->emission;
+					}
+					else {
+						TraceRayBundle * rays = &bundleStack[currentStackCount];
+						rays->colorSum = {0,0,0};
+						rays->parent = currentBundle;
+						rays->depth = currentBundle->depth + 1;
+						rays->m = m;
+						rays->doneRequestRay = false;
+						for( int i = 0; i < maxSample ; i++ )
+						{
+							//TODO use normal
+							Vec3 dir = make_random(direction);
+							while(Vec3::Dot(dir, normal) < 0) {
+								dir = make_random(direction);
+							}
+
+							rays->traceRay[i].ray = {hitPos, dir};
+							rays->traceRay[i].bundle = rays;
+						}
+
+						currentStackCount++;
+					}
+				} else {
+					//Not Hit
+				}
+
+				currentBundle->doneRequestRay = true;
+			}
+
+		} else {
+			if (currentBundle->parent != NULL){
+				material * m = currentBundle->m;
+				currentBundle->parent->colorSum += (currentBundle->colorSum / maxSample) * m->color + m->emission;
+			}
+			else
+				color = (currentBundle->colorSum / maxSample) * m->color + m->emission;
+
+			currentStackCount--;
+		}
+	}
+
+
+	// free(bundleStack);
+	return true;
+}
+
+/*
 bool Trace_(const Scene * s, const std::vector<Shape*> * shapes, const Ray & ray, Vec3 & color, bool bDebug){
 	const int maxSample = 8;
 	const int maxpDepth = 3;
+	const int maxStack = 1024;
+
+	int currentStackCount = 0;
+	TraceRayBundle * bundleStack = (TraceRayBundle*) malloc(sizeof(TraceRayBundle) * maxStack);
+
+
 	std::stack<TraceRayBundle*> traceStack;
 	Vec3 hitPos;
 	Vec3 direction;
@@ -151,10 +269,17 @@ bool Trace_(const Scene * s, const std::vector<Shape*> * shapes, const Ray & ray
 	rays->depth = 0;
 	rays->m = m;
 	rays->doneRequestRay = false;
+
+	Vec3 normal = (-ray.dir + direction) / 2;
 	for( int i = 0; i < maxSample ; i++ )
 	{
+
+		Vec3 dir = make_random(direction);
+		while(Vec3::Dot(dir, normal) < 0) {
+			dir = make_random(direction);
+		}		
 		//TODO use normal
-		rays->traceRay[i].ray = {hitPos, make_random(direction)};
+		rays->traceRay[i].ray = {hitPos, dir};
 		rays->traceRay[i].bundle = rays;
 	}
 
@@ -172,7 +297,7 @@ bool Trace_(const Scene * s, const std::vector<Shape*> * shapes, const Ray & ray
 				TraceRay traceRay = currentBundle->traceRay[i];
 				bool hit = RayCast(shapes, traceRay.ray, hitPos, direction, idx);
 					
-				Vec3 normal = (traceRay.ray.dir + direction) / 2;
+				Vec3 normal = (-traceRay.ray.dir + direction) / 2;
 				if (hit) {
 					material * m = s->materials[idx];
 					if (currentBundle->depth >= maxpDepth || m->emission.length() > 0.1) {
@@ -223,16 +348,17 @@ bool Trace_(const Scene * s, const std::vector<Shape*> * shapes, const Ray & ray
 	return true;
 }
 
+*/
 
-void Camera::RenderScenePixel(const Scene * s, int x, int y) {
+
+void Camera::RenderScenePixel(const Scene * s, int x, int y, void* memory) {
 	const std::vector<Shape*> * shapes = &s->shapes;
 	float width = view.GetWidth();
 	float height = view.GetHeight();
 	Ray ray = MakeRay(x / width, y/ height);
 
 	Vec3 color;
-	bool hit = Trace(s, shapes, ray, color, 32, true);
-	std::cout << "final Color " << color.x << " " << color.y << "  " << color.z << std::endl;
+	bool hit = Trace_(s, shapes, ray, color, memory);
 	if(hit)
 		view.SetPixel(x, view.GetHeight() - y - 1, EncodeInt32(color.x * 255, color.y * 255, color.z * 255, 255));
 
@@ -242,6 +368,9 @@ void Camera::RenderScenePixel(const Scene * s, int x, int y) {
 void Camera::RenderScene(const Scene * s) {
 	float width = view.GetWidth();
 	float height = view.GetHeight();
+
+	const int maxStack = 512;
+	void* bundleStack = malloc(sizeof(TraceRayBundle) * maxStack);
 
 	const std::vector<Shape*> * shapes = &s->shapes;
 	Vec3 hitPos, direction;
@@ -255,7 +384,7 @@ void Camera::RenderScene(const Scene * s) {
 			Vec3 color;
 			bool bDebug = (i == 159 && j == 35);
 			// bool hit = Trace(s, shapes, ray, color, 8, bDebug);
-			bool hit = Trace_(s, shapes, ray, color, false);
+			bool hit = Trace_(s, shapes, ray, color, bundleStack);
 
 			if(bDebug)
 				std::cout << "final Color " << color.x << " " << color.y << "  " << color.z << std::endl;
@@ -273,9 +402,6 @@ void Camera::RenderScene(const Scene * s) {
 //			//		depth = hitDepth;
 //			//	}
 			//}
-			hitPos = hitPos / 10.0f;
-			hitPos = hitPos * 0.5 + 0.5;
-
 			if(hit) {
 				// material m = *(s->materials[idx]);
 				view.SetPixel(i, view.GetHeight() - j - 1, EncodeInt32(color.x * 255, color.y * 255, color.z * 255, 255));

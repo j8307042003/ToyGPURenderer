@@ -33,7 +33,7 @@ Vec3 Vec3::operator+(const float& f) {
 }
 
 
-Vec3 Vec3::operator-() {
+Vec3 Vec3::operator-() const {
 	return Vec3(-x, -y, -z);
 }
 
