@@ -29,6 +29,7 @@ void Renderer::RenderTask() {
 	const int width = cam->GetWidth();
 	const int height = cam->GetHeight();
 
+	itNum = 1;
 	int widthDiff = (width / threadNum);
 	while(true) {
 		if (stopFlag) return;
@@ -36,19 +37,22 @@ void Renderer::RenderTask() {
 
 		std::thread t[threadNum];
 		for(int i = 0 ; i < threadNum; i++) {
-			t[i] = std::thread(&Renderer::SplitRender, this, widthDiff * i, 0, (widthDiff) * (i + 1) - 1, height);
+			//t[i] = std::thread(&Renderer::SplitRender, this, widthDiff * i, 0, (widthDiff) * (i + 1) - 1, height);
+			t[i] = std::thread(&Renderer::SplitRender, this, 0, 0, width, height, i, threadNum);
 		}
 
 		for (int i = 0 ; i < threadNum; i++){
 			t[i].join();
 		}
 
-        std::this_thread::sleep_for (std::chrono::seconds(5));
+        // std::this_thread::sleep_for (std::chrono::seconds(1));
+        std::this_thread::sleep_for (std::chrono::milliseconds(100));
+		itNum++;
 	}
 }
 
 
-void Renderer::SplitRender(int x_start, int y_start, int x_end, int y_end){
+void Renderer::SplitRender(int x_start, int y_start, int x_end, int y_end, int offset, int threadNum){
 	struct TraceRayBundle;
 	struct TraceRay {
 		Ray ray;
@@ -67,9 +71,9 @@ void Renderer::SplitRender(int x_start, int y_start, int x_end, int y_end){
 	const int maxStack = 512;
 	void* bundleStack = malloc(sizeof(TraceRayBundle) * maxStack);
 
-	for(int x = x_start; x <= x_end; x++){
+	for(int x = x_start + offset; x <= x_end; x += threadNum){
 		for(int y = y_start; y < y_end; y++){
-			cam->RenderScenePixel(s, x, y, bundleStack);
+			cam->RenderScenePixel(s, x, y, bundleStack, itNum);
 		}
 	}
 }

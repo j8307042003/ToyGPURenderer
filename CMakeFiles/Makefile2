@@ -173,10 +173,10 @@ src/shape/clean: src/shape/CMakeFiles/shape.dir/clean
 # Target rules for target CMakeFiles/App.dir
 
 # All Build rule for target.
-CMakeFiles/App.dir/all: src/shape/CMakeFiles/shape.dir/all
-CMakeFiles/App.dir/all: src/math/CMakeFiles/math.dir/all
 CMakeFiles/App.dir/all: src/GLFW/src/CMakeFiles/glfw.dir/all
 CMakeFiles/App.dir/all: src/Renderer/CMakeFiles/Renderer.dir/all
+CMakeFiles/App.dir/all: src/math/CMakeFiles/math.dir/all
+CMakeFiles/App.dir/all: src/shape/CMakeFiles/shape.dir/all
 	$(MAKE) -f CMakeFiles/App.dir/build.make CMakeFiles/App.dir/depend
 	$(MAKE) -f CMakeFiles/App.dir/build.make CMakeFiles/App.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/pine/Desktop/Programming/C++/Renderer/CMakeFiles --progress-num=1,2 "Built target App"
@@ -311,8 +311,8 @@ src/GLFW/src/CMakeFiles/glfw.dir/clean:
 # Target rules for target src/Renderer/CMakeFiles/Renderer.dir
 
 # All Build rule for target.
-src/Renderer/CMakeFiles/Renderer.dir/all: src/shape/CMakeFiles/shape.dir/all
 src/Renderer/CMakeFiles/Renderer.dir/all: src/math/CMakeFiles/math.dir/all
+src/Renderer/CMakeFiles/Renderer.dir/all: src/shape/CMakeFiles/shape.dir/all
 	$(MAKE) -f src/Renderer/CMakeFiles/Renderer.dir/build.make src/Renderer/CMakeFiles/Renderer.dir/depend
 	$(MAKE) -f src/Renderer/CMakeFiles/Renderer.dir/build.make src/Renderer/CMakeFiles/Renderer.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/pine/Desktop/Programming/C++/Renderer/CMakeFiles --progress-num=3,4,5,6,7 "Built target Renderer"

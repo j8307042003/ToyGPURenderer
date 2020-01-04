@@ -18,6 +18,9 @@ public:
 	}
 
 	void SetPixel(int x, int y, int colorInt32);
+	void AddPixel(int x, int y, int colorInt32);
+	int GetPixel(int x, int y);
+
 	unsigned int * GetBuffer() { return buffer; }
 private:
 	int width;

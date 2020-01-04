@@ -25,3 +25,12 @@ void RenderView::SetPixel(int x, int y, int colorInt32 ) {
 	//std::cout << x * width + y << std::endl;
 	buffer[x + y * width] = colorInt32;
 }
+
+void RenderView::AddPixel(int x, int y, int colorInt32) {
+	buffer[x + y * width] += colorInt32;
+}
+
+int RenderView::GetPixel(int x, int y) {
+	return buffer[x + y * width];
+}
+

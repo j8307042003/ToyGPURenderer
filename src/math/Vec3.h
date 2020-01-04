@@ -55,7 +55,7 @@ public:
   		return Vec3(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
   	}
 	Vec3 operator+(const float& f);
-	Vec3 operator-(const Vec3& rhs);
+	inline Vec3 operator-(const Vec3& rhs);
   	friend Vec3 operator-(const Vec3& lhs,const Vec3& rhs)
   	{
   		return { lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
@@ -78,4 +78,10 @@ public:
 	Vec3& operator-=(const Vec3& rhs);
 };
 
+inline Vec3 Vec3::operator-(const Vec3 & rhs){
+	return {x - rhs.x, y - rhs.y, z - rhs.z};
+}
+
+
 #endif
+

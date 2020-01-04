@@ -41,12 +41,6 @@ Vec3 Vec3::operator-(const float& f) {
 	return Vec3(x - f, y - f, z - f);
 }
 
-
-Vec3 Vec3::operator-(const Vec3 & rhs){
-	Vec3 tmp(x - rhs.x, y - rhs.y, z - rhs.z);
-	return tmp;
-}
-
 Vec3 Vec3::operator*(const Vec3 & rhs){
 	Vec3 tmp(x * rhs.x, y * rhs.y, z * rhs.z);
 	return tmp;

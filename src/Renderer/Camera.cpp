@@ -6,6 +6,7 @@
 #include<stdio.h>
 #include<iostream>
 #include<stack>
+#include<cmath>
 
 Vec3 normalize(Vec3 v) {
 	return v.normalized();
@@ -29,14 +30,52 @@ Camera::Camera( int width, int height, Vec3 position) :
 }
 
 
+void make_coordinateSys(const Vec3 & normal, Vec3 & normal_t, Vec3 & normal_b) {
+	if (std::fabs(normal.x) > std::fabs(normal.y))
+		normal_t = {normal.z, 0, -normal.x};
+	else
+		normal_t = {0, -normal.z, normal.y};
+
+
+	normal_b = Vec3::Cross(normal, normal_t);		
+}
+
+Vec3 uniformSampleHemisphere(const float &r1, const float &r2) 
+{ 
+    // cos(theta) = r1 = y
+    // cos^2(theta) + sin^2(theta) = 1 -> sin(theta) = srtf(1 - cos^2(theta))
+    float sinTheta = sqrtf(1 - r1 * r1); 
+    float phi = 2 * M_PI * r2; 
+    float x = sinTheta * cosf(phi); 
+    float z = sinTheta * sinf(phi); 
+    return Vec3(x, r1, z); 
+} 
+ 
+
+
 
 float myRand() {
 	return rand() / (RAND_MAX + 1.0);
 }
 
+float Rand01() {
+	return rand() / (RAND_MAX + 1.0);
+}
+
 Vec3 make_random(const Vec3 & dir) {
 	// const Vec3 normal = 
-	return (Vec3(myRand() - 0.5, myRand() - 0.5, myRand() - 0.5)).normalized();
+	// return (Vec3(myRand() - 0.5, myRand() - 0.5, myRand() - 0.5)).normalized();
+	Vec3 Nb, Nt;
+	make_coordinateSys(dir, Nb, Nt);
+
+	float r1 = Rand01();
+	float r2 = Rand01();
+
+	Vec3 localHemiSphereDir = uniformSampleHemisphere(r1, r2);
+    return { 
+        localHemiSphereDir.x * Nb.x + localHemiSphereDir.y * dir.x + localHemiSphereDir.z * Nt.x, 
+        localHemiSphereDir.x * Nb.y + localHemiSphereDir.y * dir.y + localHemiSphereDir.z * Nt.y, 
+        localHemiSphereDir.x * Nb.z + localHemiSphereDir.y * dir.z + localHemiSphereDir.z * Nt.z}; 	
 }
 
 void Camera::FullRender() {
@@ -137,8 +176,8 @@ bool Trace_(const Scene * s,
 			const Ray & ray, 
 			Vec3 & color, 
 			void* memory){
-	const int maxSample = 8;
-	const int maxpDepth = 3;
+	const int maxSample = 2;
+	const int maxpDepth = 4;
 	const int maxStack = 512;
 
 	Vec3 hitPos;
@@ -168,10 +207,10 @@ bool Trace_(const Scene * s,
 	for( int i = 0; i < maxSample ; i++ )
 	{
 
-		Vec3 dir = make_random(direction);
-		while(Vec3::Dot(dir, normal) < 0) {
-			dir = make_random(direction);
-		}		
+		Vec3 dir = make_random(normal);
+		// while(Vec3::Dot(dir, normal) < 0) {
+			// dir = make_random(direction);
+		// }		
 		//TODO use normal
 		rays->traceRay[i].ray = {hitPos, dir};
 		rays->traceRay[i].bundle = rays;
@@ -208,10 +247,10 @@ bool Trace_(const Scene * s,
 						for( int i = 0; i < maxSample ; i++ )
 						{
 							//TODO use normal
-							Vec3 dir = make_random(direction);
-							while(Vec3::Dot(dir, normal) < 0) {
-								dir = make_random(direction);
-							}
+							Vec3 dir = make_random(normal);
+							// while(Vec3::Dot(dir, normal) < 0) {
+								// dir = make_random(direction);
+							// }
 
 							rays->traceRay[i].ray = {hitPos, dir};
 							rays->traceRay[i].bundle = rays;
@@ -229,10 +268,14 @@ bool Trace_(const Scene * s,
 		} else {
 			if (currentBundle->parent != NULL){
 				material * m = currentBundle->m;
-				currentBundle->parent->colorSum += (currentBundle->colorSum / maxSample) * m->color + m->emission;
+				Vec3 recColor = (currentBundle->colorSum / maxSample);
+				currentBundle->parent->colorSum += (recColor * ( 1 - m->specular )) * m->color + recColor * m->specular + m->emission;
+				// currentBundle->parent->colorSum += (currentBundle->colorSum / maxSample) * m->color + m->emission;
 			}
-			else
-				color = (currentBundle->colorSum / maxSample) * m->color + m->emission;
+			else {
+				Vec3 recColor = (currentBundle->colorSum / maxSample);
+				color = (recColor * ( 1 - m->specular )) * m->color + recColor * m->specular + m->emission;
+			}
 
 			currentStackCount--;
 		}
@@ -351,7 +394,7 @@ bool Trace_(const Scene * s, const std::vector<Shape*> * shapes, const Ray & ray
 */
 
 
-void Camera::RenderScenePixel(const Scene * s, int x, int y, void* memory) {
+void Camera::RenderScenePixel(const Scene * s, int x, int y, void* memory, int itNum) {
 	const std::vector<Shape*> * shapes = &s->shapes;
 	float width = view.GetWidth();
 	float height = view.GetHeight();
@@ -359,8 +402,20 @@ void Camera::RenderScenePixel(const Scene * s, int x, int y, void* memory) {
 
 	Vec3 color;
 	bool hit = Trace_(s, shapes, ray, color, memory);
-	if(hit)
-		view.SetPixel(x, view.GetHeight() - y - 1, EncodeInt32(color.x * 255, color.y * 255, color.z * 255, 255));
+
+	int pixelColor = view.GetPixel(x, view.GetHeight() - y - 1);
+	Vec3 vPixelColor = { (pixelColor & 255) / 255.0f, (pixelColor >> 8 & 255) / 255.0f, (pixelColor >> 16 & 255) / 255.0f };
+	vPixelColor = (vPixelColor * (itNum - 1 ) + (hit ? color : Vec3(0,0,0))) / itNum;
+
+	// int r = ((pixelColor & 255) * (itNum - 1 ) + (hit ? color.x * 255 : 0)) / itNum;
+	// int g = ((pixelColor >>  8 & 255) * (itNum - 1 ) + (hit ? color.y * 255 : 0)) / itNum;
+	// int b = ((pixelColor >> 16 & 255) * (itNum - 1 ) + (hit ? color.z * 255 : 0)) / itNum;
+	// int a = ((pixelColor >> 24 & 255) * (itNum - 1 ) + (hit ? color.x * 255 : 0)) / itNum;
+
+	if(hit){
+		view.SetPixel(x, view.GetHeight() - y - 1, EncodeInt32(vPixelColor.x * 255, vPixelColor.y * 255, vPixelColor.z * 255, 255));
+		// view.SetPixel(x, view.GetHeight() - y - 1, EncodeInt32(r, g, b, 255));
+	}
 
 }
 

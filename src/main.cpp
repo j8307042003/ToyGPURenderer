@@ -39,9 +39,13 @@ int main(){
         return -1;
 
     scene = make_test_scene1();
+    // scene = make_test_scene2();
 
-    int width = 640;
-    int height = 480;
+    int width = 1280; //640;
+    int height = 960; //480;
+
+    width = 640;
+    height = 480;
 
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(width, height, "Hello World", NULL, NULL);

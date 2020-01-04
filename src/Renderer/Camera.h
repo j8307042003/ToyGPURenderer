@@ -17,7 +17,7 @@ public:
 	unsigned int * GetBuffer();
 
 	void RenderScene(const Scene * s);
-	void RenderScenePixel(const Scene * s, int x, int y, void* memory);
+	void RenderScenePixel(const Scene * s, int x, int y, void* memory, int itNum);
 
 	void TryRayCast(const Scene * s, const Vec3 & origin, const Vec3 & dir);
 
