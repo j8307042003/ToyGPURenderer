@@ -76,4 +76,6 @@ void Renderer::SplitRender(int x_start, int y_start, int x_end, int y_end, int o
 			cam->RenderScenePixel(s, x, y, bundleStack, itNum);
 		}
 	}
+
+	free(bundleStack);
 }

@@ -20,13 +20,20 @@ public:
 	void SetPixel(int x, int y, int colorInt32);
 	void AddPixel(int x, int y, int colorInt32);
 	int GetPixel(int x, int y);
+	void AddPixelSample(int x, int y, int itNum, float r, float g, float b);
 
 	unsigned int * GetBuffer() { return buffer; }
 private:
 	int width;
 	int height;
 
+	int EncodeInt32(int r, int g, int b, int a);
+
 	void InitBuffer();
 
 	unsigned int * buffer;
+	unsigned int * color_r;
+	unsigned int * color_g;
+	unsigned int * color_b;
+
 };

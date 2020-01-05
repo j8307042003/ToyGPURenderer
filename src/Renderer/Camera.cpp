@@ -157,6 +157,7 @@ struct TraceRayBundle;
 
 struct TraceRay {
 	Ray ray;
+	material * m;
 	TraceRayBundle * bundle;
 };
 
@@ -165,11 +166,41 @@ struct TraceRayBundle
 {
 	TraceRay traceRay[64];
 	TraceRayBundle * parent;
+	int parentIdx;
 	material * m;
+	Vec3 dir;
+	Vec3 normal;
 	Vec3 colorSum;
 	int depth;
 	bool doneRequestRay;
 };
+
+void ResolveRayBundle(TraceRayBundle & bundle, int maxSample)
+{
+	// bundle.colorSum = {0,0,0};
+	for (int i = 0; i < maxSample; i++) {
+		const TraceRay & ray = bundle.traceRay[i];
+		if (ray.m == NULL) continue;
+		Vec3 diffuse = ray.m->emission * bundle.m->color;
+
+		Vec3 halfwayDir = ( ray.ray.dir + bundle.dir ).normalized();
+		Vec3 spec = ray.m->emission * Vec3::Dot( bundle.normal, halfwayDir );
+		bundle.colorSum += diffuse * (1) + spec * (bundle.m->specular);
+	}
+
+	bundle.colorSum = bundle.colorSum / maxSample;
+}
+
+void ResolveRayBundleParent(TraceRayBundle & bundle)
+{
+	TraceRayBundle * parent = bundle.parent;
+	if (parent == NULL) return;
+	Vec3 diffuse = bundle.colorSum * parent->m->color;
+
+	Vec3 halfwayDir = ( bundle.dir + parent->dir ).normalized();
+	Vec3 spec = parent->m->emission * pow( fmax( Vec3::Dot( parent->normal, halfwayDir ), 0 ), 32.0 );
+	parent->colorSum += diffuse * (1) + spec * (parent->m->specular);	
+}
 
 bool Trace_(const Scene * s, 
 			const std::vector<Shape*> * shapes, 
@@ -187,6 +218,7 @@ bool Trace_(const Scene * s,
 	bool hit = RayCast(shapes, ray, hitPos, direction, idx);
 	if (!hit) return false;
 
+
 	int currentStackCount = 0;
 	// TraceRayBundle * bundleStack = (TraceRayBundle*) malloc(sizeof(TraceRayBundle) * maxStack);
 	TraceRayBundle * bundleStack = (TraceRayBundle*) memory;
@@ -200,6 +232,8 @@ bool Trace_(const Scene * s,
 	rays->colorSum = {0,0,0};
 	rays->parent = NULL;
 	rays->depth = 0;
+	rays->dir = ray.dir;
+	rays->normal = (-ray.dir + direction) / 2;
 	rays->m = m;
 	rays->doneRequestRay = false;
 
@@ -227,7 +261,7 @@ bool Trace_(const Scene * s,
 
 			//Handle Ray Bundle
 			for ( int i = 0; i < maxSample; i++ ) {
-				TraceRay traceRay = currentBundle->traceRay[i];
+				TraceRay & traceRay = currentBundle->traceRay[i];
 				bool hit = RayCast(shapes, traceRay.ray, hitPos, direction, idx);
 					
 				Vec3 normal = (-traceRay.ray.dir + direction) / 2;
@@ -235,25 +269,26 @@ bool Trace_(const Scene * s,
 					material * m = s->materials[idx];
 					if (currentBundle->depth >= maxpDepth || m->emission.length() > 0.1) {
 						//reach the end fallback
-						currentBundle->colorSum += m->emission;
+						// currentBundle->colorSum += m->emission;
+						traceRay.m = m;
 					}
 					else {
 						TraceRayBundle * rays = &bundleStack[currentStackCount];
 						rays->colorSum = {0,0,0};
 						rays->parent = currentBundle;
+						rays->parentIdx = i;
 						rays->depth = currentBundle->depth + 1;
+						rays->dir = direction;
+						rays->normal = normal;
 						rays->m = m;
 						rays->doneRequestRay = false;
 						for( int i = 0; i < maxSample ; i++ )
 						{
 							//TODO use normal
 							Vec3 dir = make_random(normal);
-							// while(Vec3::Dot(dir, normal) < 0) {
-								// dir = make_random(direction);
-							// }
-
 							rays->traceRay[i].ray = {hitPos, dir};
 							rays->traceRay[i].bundle = rays;
+							rays->traceRay[i].m = NULL;
 						}
 
 						currentStackCount++;
@@ -267,14 +302,16 @@ bool Trace_(const Scene * s,
 
 		} else {
 			if (currentBundle->parent != NULL){
-				material * m = currentBundle->m;
-				Vec3 recColor = (currentBundle->colorSum / maxSample);
-				currentBundle->parent->colorSum += (recColor * ( 1 - m->specular )) * m->color + recColor * m->specular + m->emission;
+				// material * m = currentBundle->m;
+				// Vec3 recColor = (currentBundle->colorSum / maxSample);
+				// currentBundle->parent->colorSum += (recColor * ( 1 - m->specular )) * m->color + recColor * m->specular + m->emission;
 				// currentBundle->parent->colorSum += (currentBundle->colorSum / maxSample) * m->color + m->emission;
+				ResolveRayBundle(*currentBundle, maxSample);
+				currentBundle->colorSum = currentBundle->colorSum / maxSample;
+				ResolveRayBundleParent(*currentBundle);
 			}
 			else {
-				Vec3 recColor = (currentBundle->colorSum / maxSample);
-				color = (recColor * ( 1 - m->specular )) * m->color + recColor * m->specular + m->emission;
+				color = currentBundle->colorSum + currentBundle->m->emission;
 			}
 
 			currentStackCount--;
@@ -403,9 +440,9 @@ void Camera::RenderScenePixel(const Scene * s, int x, int y, void* memory, int i
 	Vec3 color;
 	bool hit = Trace_(s, shapes, ray, color, memory);
 
-	int pixelColor = view.GetPixel(x, view.GetHeight() - y - 1);
-	Vec3 vPixelColor = { (pixelColor & 255) / 255.0f, (pixelColor >> 8 & 255) / 255.0f, (pixelColor >> 16 & 255) / 255.0f };
-	vPixelColor = (vPixelColor * (itNum - 1 ) + (hit ? color : Vec3(0,0,0))) / itNum;
+	// int pixelColor = view.GetPixel(x, view.GetHeight() - y - 1);
+	// Vec3 vPixelColor = { (pixelColor & 255) / 255.0f, (pixelColor >> 8 & 255) / 255.0f, (pixelColor >> 16 & 255) / 255.0f };
+	// vPixelColor = (vPixelColor * (itNum - 1 ) + (hit ? color : Vec3(0,0,0))) / itNum;
 
 	// int r = ((pixelColor & 255) * (itNum - 1 ) + (hit ? color.x * 255 : 0)) / itNum;
 	// int g = ((pixelColor >>  8 & 255) * (itNum - 1 ) + (hit ? color.y * 255 : 0)) / itNum;
@@ -413,7 +450,9 @@ void Camera::RenderScenePixel(const Scene * s, int x, int y, void* memory, int i
 	// int a = ((pixelColor >> 24 & 255) * (itNum - 1 ) + (hit ? color.x * 255 : 0)) / itNum;
 
 	if(hit){
-		view.SetPixel(x, view.GetHeight() - y - 1, EncodeInt32(vPixelColor.x * 255, vPixelColor.y * 255, vPixelColor.z * 255, 255));
+		// view.SetPixel(x, view.GetHeight() - y - 1, EncodeInt32(vPixelColor.x * 255, vPixelColor.y * 255, vPixelColor.z * 255, 255));
+		view.AddPixelSample(x, view.GetHeight() - y - 1, itNum, color.x, color.y, color.z);
+
 		// view.SetPixel(x, view.GetHeight() - y - 1, EncodeInt32(r, g, b, 255));
 	}
 
