@@ -202,233 +202,77 @@ void ResolveRayBundleParent(TraceRayBundle & bundle)
 	parent->colorSum += diffuse * (1) + spec * (parent->m->specular);	
 }
 
+
+struct RayHitInfo {
+	Vec3 dir;
+	Vec3 normal;
+	Vec3 reflect;
+	material * m;
+	Vec3 color;
+};
+
+void ResolveRayHit(RayHitInfo * rayHitStack, int depth) {
+	for(int i = depth; i >= 0; --i) {
+		RayHitInfo * rayHitInfo = &rayHitStack[i];
+		RayHitInfo * subRayHitInfo = &rayHitStack[i+1];
+		rayHitInfo->color = rayHitInfo->m->emission + (i == depth ? Vec3(0, 0, 0) : subRayHitInfo->color * rayHitInfo->m->color);
+	}
+}
+
 bool Trace_(const Scene * s, 
 			const std::vector<Shape*> * shapes, 
 			const Ray & ray, 
 			Vec3 & color, 
 			void* memory){
 	const int maxSample = 2;
-	const int maxpDepth = 4;
+	const int maxpDepth = 10;
 	const int maxStack = 512;
 
 	Vec3 hitPos;
 	Vec3 direction;
 	int idx;
 
-	bool hit = RayCast(shapes, ray, hitPos, direction, idx);
-	if (!hit) return false;
 
+	color = {0, 0, 0};
+	// TraceRayBundle * bundleStack = (TraceRayBundle*) memory;
+	RayHitInfo * rayHitInfoStack = (RayHitInfo*) memory;
 
-	int currentStackCount = 0;
-	// TraceRayBundle * bundleStack = (TraceRayBundle*) malloc(sizeof(TraceRayBundle) * maxStack);
-	TraceRayBundle * bundleStack = (TraceRayBundle*) memory;
+	Ray traversalRay = ray;
 
-	material * m = s->materials[idx];
-
-
-
-	TraceRayBundle * rays = &bundleStack[currentStackCount];
-	// memset(rays, 0, sizeof(TraceRayBundle));
-	rays->colorSum = {0,0,0};
-	rays->parent = NULL;
-	rays->depth = 0;
-	rays->dir = ray.dir;
-	rays->normal = (-ray.dir + direction) / 2;
-	rays->m = m;
-	rays->doneRequestRay = false;
-
-	Vec3 normal = (-ray.dir + direction) / 2;
-	for( int i = 0; i < maxSample ; i++ )
-	{
-
-		Vec3 dir = make_random(normal);
-		// while(Vec3::Dot(dir, normal) < 0) {
-			// dir = make_random(direction);
-		// }		
-		//TODO use normal
-		rays->traceRay[i].ray = {hitPos, dir};
-		rays->traceRay[i].bundle = rays;
-	}
-
-	currentStackCount++;
-
-	//TODO
-	// TraceRayBundle * currentBundle;
-
-	while(currentStackCount > 0) {
-		TraceRayBundle * currentBundle = &bundleStack[currentStackCount-1];
-		if (!currentBundle->doneRequestRay){
-
-			//Handle Ray Bundle
-			for ( int i = 0; i < maxSample; i++ ) {
-				TraceRay & traceRay = currentBundle->traceRay[i];
-				bool hit = RayCast(shapes, traceRay.ray, hitPos, direction, idx);
-					
-				Vec3 normal = (-traceRay.ray.dir + direction) / 2;
-				if (hit) {
-					material * m = s->materials[idx];
-					if (currentBundle->depth >= maxpDepth || m->emission.length() > 0.1) {
-						//reach the end fallback
-						// currentBundle->colorSum += m->emission;
-						traceRay.m = m;
-					}
-					else {
-						TraceRayBundle * rays = &bundleStack[currentStackCount];
-						rays->colorSum = {0,0,0};
-						rays->parent = currentBundle;
-						rays->parentIdx = i;
-						rays->depth = currentBundle->depth + 1;
-						rays->dir = direction;
-						rays->normal = normal;
-						rays->m = m;
-						rays->doneRequestRay = false;
-						for( int i = 0; i < maxSample ; i++ )
-						{
-							//TODO use normal
-							Vec3 dir = make_random(normal);
-							rays->traceRay[i].ray = {hitPos, dir};
-							rays->traceRay[i].bundle = rays;
-							rays->traceRay[i].m = NULL;
-						}
-
-						currentStackCount++;
-					}
-				} else {
-					//Not Hit
-				}
-
-				currentBundle->doneRequestRay = true;
-			}
-
-		} else {
-			if (currentBundle->parent != NULL){
-				// material * m = currentBundle->m;
-				// Vec3 recColor = (currentBundle->colorSum / maxSample);
-				// currentBundle->parent->colorSum += (recColor * ( 1 - m->specular )) * m->color + recColor * m->specular + m->emission;
-				// currentBundle->parent->colorSum += (currentBundle->colorSum / maxSample) * m->color + m->emission;
-				ResolveRayBundle(*currentBundle, maxSample);
-				currentBundle->colorSum = currentBundle->colorSum / maxSample;
-				ResolveRayBundleParent(*currentBundle);
-			}
+	int depth = 0;
+	for(;; depth++) {
+		bool hit = RayCast(shapes, traversalRay, hitPos, direction, idx);
+		if (!hit) {
+			if (depth == 0) return false;
 			else {
-				color = currentBundle->colorSum + currentBundle->m->emission;
+				ResolveRayHit(rayHitInfoStack, depth-1);
+				color = rayHitInfoStack[0].color;				
+				break;
 			}
-
-			currentStackCount--;
 		}
-	}
 
+		material *m  = s->materials[idx];
+		Vec3 normal = (-traversalRay.dir + direction) / 2;
+		RayHitInfo * rayHitInfo = &rayHitInfoStack[depth];
+		rayHitInfo->m = m;
+		rayHitInfo->dir = traversalRay.dir;
+		rayHitInfo->normal = normal;
+		rayHitInfo->reflect = direction;
+		rayHitInfo->color = {0, 0, 0};
 
-	// free(bundleStack);
-	return true;
-}
-
-/*
-bool Trace_(const Scene * s, const std::vector<Shape*> * shapes, const Ray & ray, Vec3 & color, bool bDebug){
-	const int maxSample = 8;
-	const int maxpDepth = 3;
-	const int maxStack = 1024;
-
-	int currentStackCount = 0;
-	TraceRayBundle * bundleStack = (TraceRayBundle*) malloc(sizeof(TraceRayBundle) * maxStack);
-
-
-	std::stack<TraceRayBundle*> traceStack;
-	Vec3 hitPos;
-	Vec3 direction;
-	int idx;
-
-	bool hit = RayCast(shapes, ray, hitPos, direction, idx);
-	if (!hit) return false;
-
-	material * m = s->materials[idx];
-
-	TraceRayBundle * rays = new TraceRayBundle();
-	rays->colorSum = {0,0,0};
-	rays->parent = NULL;
-	rays->depth = 0;
-	rays->m = m;
-	rays->doneRequestRay = false;
-
-	Vec3 normal = (-ray.dir + direction) / 2;
-	for( int i = 0; i < maxSample ; i++ )
-	{
-
-		Vec3 dir = make_random(direction);
-		while(Vec3::Dot(dir, normal) < 0) {
-			dir = make_random(direction);
-		}		
-		//TODO use normal
-		rays->traceRay[i].ray = {hitPos, dir};
-		rays->traceRay[i].bundle = rays;
-	}
-
-	traceStack.push(rays);	
-
-	//TODO
-	// TraceRayBundle * currentBundle;
-
-	while(traceStack.size() > 0) {
-		TraceRayBundle * currentBundle = traceStack.top();
-		if (!currentBundle->doneRequestRay){
-
-			//Handle Ray Bundle
-			for ( int i = 0; i < maxSample; i++ ) {
-				TraceRay traceRay = currentBundle->traceRay[i];
-				bool hit = RayCast(shapes, traceRay.ray, hitPos, direction, idx);
-					
-				Vec3 normal = (-traceRay.ray.dir + direction) / 2;
-				if (hit) {
-					material * m = s->materials[idx];
-					if (currentBundle->depth >= maxpDepth || m->emission.length() > 0.1) {
-						//reach the end fallback
-						currentBundle->colorSum += m->emission;
-					}
-					else {
-						TraceRayBundle * rays = new TraceRayBundle();
-						rays->colorSum = {0,0,0};
-						rays->parent = currentBundle;
-						rays->depth = currentBundle->depth + 1;
-						rays->m = m;
-						rays->doneRequestRay = false;
-						for( int i = 0; i < maxSample ; i++ )
-						{
-							//TODO use normal
-							Vec3 dir = make_random(direction);
-							while(Vec3::Dot(dir, normal) < 0) {
-								dir = make_random(direction);
-							}
-
-							rays->traceRay[i].ray = {hitPos, dir};
-							rays->traceRay[i].bundle = rays;
-						}
-
-						traceStack.push(rays);
-					}
-				} else {
-					//Not Hit
-				}
-
-				currentBundle->doneRequestRay = true;
-			}
-
-		} else {
-			if (currentBundle->parent != NULL){
-				material * m = currentBundle->m;
-				currentBundle->parent->colorSum += (currentBundle->colorSum / maxSample) * m->color + m->emission;
-			}
-			else
-				color = (currentBundle->colorSum / maxSample) * m->color + m->emission;
-
-			traceStack.pop();
-			delete currentBundle;
+		if (m->emission.length() > 0.8 || depth == maxpDepth) {
+			ResolveRayHit(rayHitInfoStack, depth);
+			color = rayHitInfoStack[0].color;
+			break;
 		}
+
+		traversalRay.dir = make_random(normal);
+		traversalRay.origin = hitPos;
 	}
+
 
 	return true;
 }
-
-*/
 
 
 void Camera::RenderScenePixel(const Scene * s, int x, int y, void* memory, int itNum) {

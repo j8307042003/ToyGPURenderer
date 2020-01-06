@@ -21,7 +21,7 @@ Scene make_test_scene1() {
 	// CORNELL Box
 	float wallOffsetX = 5;
 	float wallHeight = 4;
-	float wallWidth  = 40;
+	float wallWidth  = 20;
 
 	//Right Wall
 	scene.AddShape(new Plane(
@@ -86,17 +86,17 @@ Scene make_test_scene1() {
 	scene.AddMaterial(new material({0.7, 0.3, 0.3}, {0, 0, 0}, 0));	 //Right Wall
 	scene.AddMaterial(new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.4));	 //Left Wall
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0)); //behind wall
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0)); //End Wall	
+	scene.AddMaterial(new material({1, 1, 1}, {0.2, 0.5, 0.2}, 0)); //End Wall	
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0));	 //Floor
 	scene.AddMaterial(new material({0.8, 0.8, 0.8}, {1, 1, 1}, 0));	 //Ceil
 
 	//spheres
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.7));	
-	scene.AddMaterial(new material({1, 1, 1}, {0.4, 0.4, 1}, 0));	
+	scene.AddMaterial(new material({1, 1, 1}, {0.4, 0.4, 1}, 0.3));	
 
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.5));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
+	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	
+	scene.AddMaterial(new material({1, 0.4, 0.4}, {0, 0, 0}, 1));	
+	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0));	
 
 
@@ -176,10 +176,10 @@ Scene make_test_scene2() {
 	scene.AddShape(new Sphere({-2.5, -wallHeight + 2, -wallWidth / 1.2f}, 2));	
 	scene.AddShape(new Sphere({ 2.5, -wallHeight + 2, -wallWidth / 1.2f}, 2));	
 
-	scene.AddShape(new Sphere({  0, -wallHeight + 2, -wallWidth / 1.2f + 2.5f}, 2));	
+	// scene.AddShape(new Sphere({  0, -wallHeight + 2, -wallWidth / 1.2f + 2.5f}, 2));	
 	scene.AddShape(new Sphere({  0, -wallHeight + 2, -wallWidth / 1.2f - 2.5f}, 2));	
 	// scene.AddShape(new Sphere({  0, -wallHeight + 2 + 2, -wallWidth / 1.2f}, 2));	
-	scene.AddShape(new Sphere({  0, wallHeight, -wallWidth / 1.2f}, 2));	
+	scene.AddShape(new Sphere({  0, wallHeight - 1, -wallWidth / 1.2f}, 2));	
 
 
 	//walls
@@ -191,13 +191,13 @@ Scene make_test_scene2() {
 	scene.AddMaterial(new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0));	 //Ceil
 
 	//spheres
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.7));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0));	
+	scene.AddMaterial(new material({1, 1, 1}, {3, 0.5, 0.5}, 0.7));	
+	scene.AddMaterial(new material({1, 1, 1}, {0.5, 3, 0.5}, 0.3));	
 
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
+	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.5));	
 	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
-	scene.AddMaterial(new material({1, 1, 1}, {1, 1, 1}, 0));	
+	scene.AddMaterial(new material({1, 1, 1}, {4, 4, 4}, 0.3));	
 
 
 

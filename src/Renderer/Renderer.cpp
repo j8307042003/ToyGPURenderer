@@ -71,6 +71,7 @@ void Renderer::SplitRender(int x_start, int y_start, int x_end, int y_end, int o
 	const int maxStack = 512;
 	void* bundleStack = malloc(sizeof(TraceRayBundle) * maxStack);
 
+	srand(time(NULL));
 	for(int x = x_start + offset; x <= x_end; x += threadNum){
 		for(int y = y_start; y < y_end; y++){
 			cam->RenderScenePixel(s, x, y, bundleStack, itNum);
