@@ -78,6 +78,26 @@ Vec3 make_random(const Vec3 & dir) {
         localHemiSphereDir.x * Nb.z + localHemiSphereDir.y * dir.z + localHemiSphereDir.z * Nt.z}; 	
 }
 
+Vec3 make_GGXRandom(const Vec3 & dir, float roughness) {
+	// const Vec3 normal = 
+	// return (Vec3(myRand() - 0.5, myRand() - 0.5, myRand() - 0.5)).normalized();
+	Vec3 Nb, Nt;
+	make_coordinateSys(dir, Nb, Nt);
+
+	float r1 = Rand01();
+	float r2 = Rand01();
+
+	float theta1 = atan((roughness * std::sqrtf(r1)) / (std::sqrtf(1 - r1)));
+	theta1 = cosf(theta1);
+	Vec3 localHemiSphereDir = uniformSampleHemisphere(theta1, r2);
+    return { 
+        localHemiSphereDir.x * Nb.x + localHemiSphereDir.y * dir.x + localHemiSphereDir.z * Nt.x, 
+        localHemiSphereDir.x * Nb.y + localHemiSphereDir.y * dir.y + localHemiSphereDir.z * Nt.y, 
+        localHemiSphereDir.x * Nb.z + localHemiSphereDir.y * dir.z + localHemiSphereDir.z * Nt.z}; 	
+}
+
+
+
 void Camera::FullRender() {
 	float width = view.GetWidth();
 	float height = view.GetHeight();
@@ -212,10 +232,19 @@ struct RayHitInfo {
 };
 
 void ResolveRayHit(RayHitInfo * rayHitStack, int depth) {
+	// std::cout << "Resolve " << depth << std::endl;
 	for(int i = depth; i >= 0; --i) {
 		RayHitInfo * rayHitInfo = &rayHitStack[i];
 		RayHitInfo * subRayHitInfo = &rayHitStack[i+1];
-		rayHitInfo->color = rayHitInfo->m->emission + (i == depth ? Vec3(0, 0, 0) : subRayHitInfo->color * rayHitInfo->m->color);
+
+		Vec3 indirect = {0,0,0};
+		if (subRayHitInfo != NULL) {
+			// Vec3 spec = std::max(std::min(Vec3::Dot(rayHitInfo->reflect, subRayHitInfo->dir), 1.0f), 0.0f) * subRayHitInfo->color;
+			// indirect = rayHitInfo->m->color * subRayHitInfo->color * (1 - rayHitInfo->m->specular) + spec * (rayHitInfo->m->specular);
+			indirect = rayHitInfo->m->color * subRayHitInfo->color;
+		}
+
+		rayHitInfo->color = rayHitInfo->m->emission + indirect;
 	}
 }
 
@@ -225,7 +254,7 @@ bool Trace_(const Scene * s,
 			Vec3 & color, 
 			void* memory){
 	const int maxSample = 2;
-	const int maxpDepth = 10;
+	const int maxpDepth = 6;
 	const int maxStack = 512;
 
 	Vec3 hitPos;
@@ -241,7 +270,8 @@ bool Trace_(const Scene * s,
 
 	int depth = 0;
 	for(;; depth++) {
-		bool hit = RayCast(shapes, traversalRay, hitPos, direction, idx);
+		// bool hit = RayCast(shapes, traversalRay, hitPos, direction, idx);
+		bool hit = s->RayCastTest(traversalRay, hitPos, direction, idx);
 		if (!hit) {
 			if (depth == 0) return false;
 			else {
@@ -250,7 +280,6 @@ bool Trace_(const Scene * s,
 				break;
 			}
 		}
-
 		material *m  = s->materials[idx];
 		Vec3 normal = (-traversalRay.dir + direction) / 2;
 		RayHitInfo * rayHitInfo = &rayHitInfoStack[depth];
@@ -260,13 +289,14 @@ bool Trace_(const Scene * s,
 		rayHitInfo->reflect = direction;
 		rayHitInfo->color = {0, 0, 0};
 
-		if (m->emission.length() > 0.8 || depth == maxpDepth) {
+		// if (m->emission.length() > 0.8 || depth == maxpDepth) {
+		if (depth == maxpDepth) {
 			ResolveRayHit(rayHitInfoStack, depth);
 			color = rayHitInfoStack[0].color;
 			break;
 		}
 
-		traversalRay.dir = make_random(normal);
+		traversalRay.dir = make_GGXRandom(normal, 1 - m->specular);
 		traversalRay.origin = hitPos;
 	}
 

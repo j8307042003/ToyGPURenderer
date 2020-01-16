@@ -1,5 +1,5 @@
 #include "Renderer.h"
-
+#include <ctime>
 
 void Renderer::SetRenderData(Scene * s, Camera * cam){
 	// EndTask();
@@ -29,8 +29,15 @@ void Renderer::RenderTask() {
 	const int width = cam->GetWidth();
 	const int height = cam->GetHeight();
 
+	const int testRenderCount = 3;
 	itNum = 1;
 	int widthDiff = (width / threadNum);
+
+	std::clock_t start;
+    double duration;
+
+    start = std::clock();
+    int renderLoop = 0;
 	while(true) {
 		if (stopFlag) return;
         // cam->RenderScene(s);
@@ -45,7 +52,11 @@ void Renderer::RenderTask() {
 			t[i].join();
 		}
 
-        // std::this_thread::sleep_for (std::chrono::seconds(1));
+		if (itNum == testRenderCount) {
+    		duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+    		std::cout<<"render Time  "<< duration <<'\n';			
+		}
+
         std::this_thread::sleep_for (std::chrono::milliseconds(100));
 		itNum++;
 	}

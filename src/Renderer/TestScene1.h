@@ -97,7 +97,7 @@ Scene make_test_scene1() {
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	
 	scene.AddMaterial(new material({1, 0.4, 0.4}, {0, 0, 0}, 1));	
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0));	
+	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.8));	
 
 
 
@@ -142,10 +142,10 @@ Scene make_test_scene2() {
 
 	//behind Cam wall
 	scene.AddShape(new Plane(
-		{-wallOffsetX,  -wallHeight, wallWidth}, 
-		{-wallOffsetX,   wallHeight, wallWidth}, 
-		{ wallOffsetX,  -wallHeight, wallWidth}, 
-		{ wallOffsetX,   wallHeight, wallWidth}
+		{-wallOffsetX,  -wallHeight, 0.3/*wallWidth / 4*/}, 
+		{-wallOffsetX,   wallHeight, 0.3/*wallWidth / 4*/}, 
+		{ wallOffsetX,  -wallHeight, 0.3/*wallWidth / 4*/}, 
+		{ wallOffsetX,   wallHeight, 0.3/*wallWidth / 4*/}
 	));	
 
 	//End Wall
@@ -171,35 +171,55 @@ Scene make_test_scene2() {
 		{ wallOffsetX,  wallHeight,  wallWidth},
 		{ wallOffsetX,  wallHeight, -wallWidth}
 	));	
+		
 
 	// scene.AddShape(new Sphere({0, 0, wallWidth / 2}, 1));	
 	scene.AddShape(new Sphere({-2.5, -wallHeight + 2, -wallWidth / 1.2f}, 2));	
 	scene.AddShape(new Sphere({ 2.5, -wallHeight + 2, -wallWidth / 1.2f}, 2));	
 
-	// scene.AddShape(new Sphere({  0, -wallHeight + 2, -wallWidth / 1.2f + 2.5f}, 2));	
+	scene.AddShape(new Sphere({  0, -wallHeight + 2, -wallWidth / 1.2f + 2.5f}, 2));	
 	scene.AddShape(new Sphere({  0, -wallHeight + 2, -wallWidth / 1.2f - 2.5f}, 2));	
 	// scene.AddShape(new Sphere({  0, -wallHeight + 2 + 2, -wallWidth / 1.2f}, 2));	
 	scene.AddShape(new Sphere({  0, wallHeight - 1, -wallWidth / 1.2f}, 2));	
 
 
 	//walls
-	scene.AddMaterial(new material({0.7, 0.3, 0.3}, {0, 0, 0}, 0));	 //Right Wall
-	scene.AddMaterial(new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.4));	 //Left Wall
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0)); //behind wall
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0)); //End Wall	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0));	 //Floor
-	scene.AddMaterial(new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0));	 //Ceil
+	scene.AddMaterial(new material({0.7, 0.3, 0.3}, {0, 0, 0}, 0.3));	 //Right Wall
+	scene.AddMaterial(new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.3));	 //Left Wall
+	scene.AddMaterial(new material({1, 1, 1}, {6, 6, 6}, 1)); //behind wall
+	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3)); //End Wall	
+	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	 //Floor
+	scene.AddMaterial(new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0.4));	 //Ceil
 
 	//spheres
 	scene.AddMaterial(new material({1, 1, 1}, {3, 0.5, 0.5}, 0.7));	
 	scene.AddMaterial(new material({1, 1, 1}, {0.5, 3, 0.5}, 0.3));	
 
-	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
+	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
 	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.5));	
 	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
-	scene.AddMaterial(new material({1, 1, 1}, {4, 4, 4}, 0.3));	
+	scene.AddMaterial(new material({1, 1, 1}, {1, 1, 1}, 0.3));	
+
+	const int emptyObj = 30;
+	int item = 5;
+	int totalRow = emptyObj / item;
+	for(int i = 0 ; i < emptyObj; i++) {
+		int row = i / item;
+		int rowIdx = i % item;
+		scene.AddShape(new Sphere({ (((i % item) - 0.5f * item) / item) * wallOffsetX * 2 + 0.5f, (row - totalRow / 2) * (wallHeight / totalRow) * 2, -wallWidth / 2.0f}, 0.5));	
+		// scene.AddMaterial(new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, i / (float)row));	
+		scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.95f));	
+	}
+
+	// scene.AddShape(new Sphere({ 0, 0, -wallWidth / 2.f}, 0.7));	
+	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.7));	
 
 
+	// scene.AddShape(new Sphere({ -3, 0, -wallWidth / 2.5f}, 1));	
+	// scene.AddMaterial(new material({1, 1, 1}, {4, 4, 4}, 0.3));	
+
+	// scene.AddShape(new Sphere({ 3, 0, -wallWidth / 2.5f}, 1));	
+	// scene.AddMaterial(new material({1, 1, 1}, {4, 4, 4}, 0.3));	
 
 	return scene;
 }

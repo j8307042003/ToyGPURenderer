@@ -7,6 +7,9 @@
 #include"Renderer/TestScene1.h"
 #include"Renderer/Renderer.h"
 
+#include<vector>
+#include"BVH/BVH.h"
+#include"BVH/AABB.h"
 
 #define GL_SILENCE_DEPRECATION
 // #include <glad/glad.h>
@@ -38,14 +41,26 @@ int main(){
     if (!glfwInit())
         return -1;
 
-    scene = make_test_scene1();
-    // scene = make_test_scene2();
+    // scene = make_test_scene1();
+    scene = make_test_scene2();
+    scene.BuildTree();
+
+    std::vector<AABB> boxes;
+    boxes.push_back(AABB({0,0,0}, {1,1,1}));
+    boxes.push_back(AABB({-1,-1,-1}, {2,2,2}));
+    boxes.push_back(AABB({3,3,3}, {4,4,4}));
+    boxes.push_back(AABB({5,5,5}, {5,5,6}));
+    boxes.push_back(AABB({8,8,8}, {9,9,9}));
+
+    bvh_tree tree;
+    // build_bvh_simple(tree, boxes);
+
 
     int width = 1280; //640;
     int height = 960; //480;
 
-    width = 640;
-    height = 480;
+    // width = 320;
+    // height = 480;
 
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(width, height, "Hello World", NULL, NULL);
@@ -128,9 +143,13 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         glfwGetCursorPos(window, &xpos, &ypos);
         std::cout << "-----------------" << std::endl;
         std::cout << std::endl << "x " << xpos << ". y " << ypos << std::endl;
-        //cam.RenderScene(&scene);
-        material * m = scene.materials[1];
-        m->color = m->color * 0.2;
+
+        const int maxStack = 512;
+        void* bundleStack = malloc(40 * maxStack);
+
+        cam.RenderScenePixel(&scene, xpos, ypos, bundleStack, 1);
+
+        free(bundleStack);
         
         // cam.RenderScenePixel(&scene, xpos, ypos);
         // cam.TryRayCast(&scene, {5, 0.321, -19.0747}, {-0.2535, 0.01632, -0.9671});
