@@ -15,10 +15,7 @@ void RenderView::InitBuffer() {
 	}
 	
 	buffer = new unsigned int[width * height];
-	color_r = new unsigned int[width * height];
-	color_g = new unsigned int[width * height];
-	color_b = new unsigned int[width * height];
-
+	sampleIntegrators = new SampleIntegrator[width * height];
 	std::cout << "Buffer Size  " << width * height << std::endl;
 }
 
@@ -44,15 +41,17 @@ int RenderView::EncodeInt32(int r, int g, int b, int a)
 }
 
 void RenderView::AddPixelSample(int x, int y, int itNum, float r, float g, float b) {
-	color_r[x + y * width] += r * 255;
-	color_g[x + y * width] += g * 255;
-	color_b[x + y * width] += b * 255;
+	SampleIntegrator & integrator = sampleIntegrators[x + y * width];
+	integrator.r += r * 255;
+	integrator.g += g * 255;
+	integrator.b += b * 255;
+
 
 	SetPixel(x, y, 
 		EncodeInt32(
-			color_r[x + y * width] / itNum,
-			color_g[x + y * width] / itNum,
-			color_b[x + y * width] / itNum,
+			integrator.r / itNum,
+			integrator.g / itNum,
+			integrator.b / itNum,
 			255			
 		));
 }

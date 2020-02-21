@@ -11,7 +11,9 @@
 class AABB {
 public:
 	Vec3 min;
+	float pad;
 	Vec3 max;
+	float pad1;
 
 	AABB() : min({0,0,0}), max({0,0,0}) {}
 	AABB(Vec3 min, Vec3 max) : min(min), max(max) {}

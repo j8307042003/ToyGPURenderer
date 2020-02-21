@@ -14,10 +14,13 @@ const int bvh_max_child = 2;
 struct bvh_node {
 	int idx;
 	int primitiveId;
+	int p0, p1;
 	AABB boundingBox;
-	bool isLeaf;
+	uint isLeaf;
+	// char p0, p1, p2;
 	int left;
 	int right;
+	int p2;
 };
 
 

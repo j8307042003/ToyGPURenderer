@@ -6,6 +6,7 @@ add_subdirectory(src/math src/math/build)
 add_subdirectory(src/shape src/shape/build)
 add_subdirectory(src/GLFW src/GLFW/build)
 add_subdirectory(src/BVH src/BVH/build)
+add_subdirectory(src/VulkanLib src/VulkanLib/build)
 add_subdirectory(src/Renderer src/Renderer/build)
 
 include_directories(src/glad)
@@ -21,6 +22,7 @@ target_link_libraries(App Renderer)
 target_link_libraries(App math)
 target_link_libraries(App shape)
 target_link_libraries(App BVH)
+target_link_libraries(App VulkanLib)
 target_link_libraries(App glfw ${GLFW_LIBRARIES})
 
 

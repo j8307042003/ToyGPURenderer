@@ -23,6 +23,7 @@ public:
 
 	int GetWidth() {return view.GetWidth();}
 	int GetHeight() {return view.GetHeight();}
+	void * GetIntegrator() {return view.GetIntegrator();}
 private:
 	RenderView view;
 	void RenderPixel_uv(float x, float y);

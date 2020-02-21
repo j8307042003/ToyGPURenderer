@@ -6,6 +6,10 @@
 #include<iostream>
 
 
+struct SampleIntegrator {
+	unsigned int r, g, b, a;
+};
+
 
 class RenderView {
 public:
@@ -23,6 +27,7 @@ public:
 	void AddPixelSample(int x, int y, int itNum, float r, float g, float b);
 
 	unsigned int * GetBuffer() { return buffer; }
+	void * GetIntegrator() { return sampleIntegrators; }
 private:
 	int width;
 	int height;
@@ -32,8 +37,6 @@ private:
 	void InitBuffer();
 
 	unsigned int * buffer;
-	unsigned int * color_r;
-	unsigned int * color_g;
-	unsigned int * color_b;
+	SampleIntegrator * sampleIntegrators;
 
 };

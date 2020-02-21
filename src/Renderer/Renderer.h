@@ -9,17 +9,9 @@ public:
 	Renderer(){};
 
 	void SetRenderData(Scene * s, Camera * cam);
-	void StartRender();
-private:
-	bool stopFlag;
+	virtual void StartRender() = 0;
+	virtual void UpdateFrame() = 0;
+protected:
 	Scene * s;
 	Camera * cam;
-	std::thread renderThread;
-	int itNum = 0;
-	void StartTask();
-	void EndTask();
-
-	void RenderTask();
-	void SplitRender(int x_start, int y_start, int x_end, int y_end,  int offset, int threadNum);
-
 };

@@ -238,7 +238,8 @@ void ResolveRayHit(RayHitInfo * rayHitStack, int depth) {
 		RayHitInfo * subRayHitInfo = &rayHitStack[i+1];
 
 		Vec3 indirect = {0,0,0};
-		if (subRayHitInfo != NULL) {
+		// if (subRayHitInfo != NULL) {
+		if (i < depth) {
 			// Vec3 spec = std::max(std::min(Vec3::Dot(rayHitInfo->reflect, subRayHitInfo->dir), 1.0f), 0.0f) * subRayHitInfo->color;
 			// indirect = rayHitInfo->m->color * subRayHitInfo->color * (1 - rayHitInfo->m->specular) + spec * (rayHitInfo->m->specular);
 			indirect = rayHitInfo->m->color * subRayHitInfo->color;

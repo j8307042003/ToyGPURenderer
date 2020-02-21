@@ -52,7 +52,6 @@ bool Triangle::RayCastTest(const Ray * ray, Vec3 & hitPos, Vec3 & direction) {
   // (could use EPSILONS if desired)
   if (det == 0) return false;
   auto inv_det = 1.0f / det;
-
   // compute and check first bricentric coordinated
   auto tvec = ray->origin - Vertices[0];
   auto u    = Vec3::Dot(tvec, pvec) * inv_det;

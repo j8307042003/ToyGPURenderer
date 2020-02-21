@@ -6,6 +6,8 @@
 #include"Renderer/Camera.h"
 #include"Renderer/TestScene1.h"
 #include"Renderer/Renderer.h"
+#include"Renderer/ParallelRenderer.h"
+#include"Renderer/VulkanRenderer.h"
 
 #include<vector>
 #include"BVH/BVH.h"
@@ -41,8 +43,8 @@ int main(){
     if (!glfwInit())
         return -1;
 
-    // scene = make_test_scene1();
-    scene = make_test_scene2();
+    scene = make_test_scene1();
+    // scene = make_test_scene2();
     scene.BuildTree();
 
     std::vector<AABB> boxes;
@@ -81,9 +83,10 @@ int main(){
     // cam.FullRender();
     // cam.RenderScene(&scene);
     std::cout << "cam init done";
-    Renderer renderer = Renderer();
-    renderer.SetRenderData(&scene, &cam);
-    renderer.StartRender();
+    // Renderer * renderer = new ParallelRenderer();
+    Renderer * renderer = new VulkanRenderer();
+    renderer->SetRenderData(&scene, &cam);
+    renderer->StartRender();
 
 
 	unsigned int textureId;
@@ -103,6 +106,7 @@ int main(){
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
+        renderer->UpdateFrame();
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
