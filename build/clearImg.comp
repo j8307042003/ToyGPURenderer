@@ -1,0 +1,57 @@
+#version 450
+
+struct SamplerIntegrator
+{
+	uint r;
+	uint g;
+	uint b;
+	uint count;
+};
+
+#include "render.glsl"
+
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+struct Color
+{
+	uint data;
+};
+
+//layout(std140, binding = 0) buffer Ver
+layout(binding = 0) buffer Ver
+{
+   Color col[];
+};
+
+layout(binding = 1) uniform RenderSetting {
+	uint width;
+	uint height;
+	int time;
+	int sampleCount;
+} renderSetting;
+
+
+layout(binding = 2) buffer Integrator
+{
+	SamplerIntegrator integrator[];
+};
+
+
+
+layout (local_size_x = 16, local_size_y = 16) in;
+
+
+void main()
+{
+	int width = int(renderSetting.width);
+	int height = int(renderSetting.height);
+	uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
+
+	integrator[imgPos].r = 0;
+	integrator[imgPos].g = 0;
+	integrator[imgPos].b = 0;
+	integrator[imgPos].count = 0;
+
+	col[imgPos].data = 0;
+}

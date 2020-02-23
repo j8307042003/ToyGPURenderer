@@ -1,4 +1,4 @@
-build/
+build/*
 !build/clearImg.comp
 !build/clearImg.spv
 !build/imageBase.comp
