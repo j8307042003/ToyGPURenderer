@@ -483,20 +483,17 @@ void main()
 	vec3 color;
 	bool intersect = Trace(ray, color);
 
-	vec3 hitPos, dir;
-	uint instanceIdx;
+	//vec3 hitPos, dir;
+	//uint instanceIdx;
 	//intersect = RayCastTest(ray, hitPos, dir, instanceIdx);
-
-	//color = vec4((planeShape[0].t1.v2.z * -1) / 10);
-	//if (planeShape[0].t1.v3.x == 10.0) {
-	//	color = vec4(1.0, 0.0, 0.0, 0.0);
-	//	color = planeShape[0].t1.normal;
+	//if( intersect ) {
+	//	ShapeInstance instance = instances[instanceIdx];
+	//	Material m = materials[instance.materialIdx];		
+	//	color = m.color.xyz + m.emission.xyz;
+	//	color /= 3;
 	//}
-	// ray.dir = ray.dir / 2.0 + 0.5;
-	// color = vec4(ray.dir.x, ray.dir.y, 0, 0);
-	// color = vec4(ray.dir.y);
-	// color = vec4(rand_global(imgPos + renderSetting.time), rand_global(imgPos + renderSetting.time), 0, 0);
-	// color = vec4(rand_global(imgPos * renderSetting.time));
+
+
 	SamplerIntegrator it = integrator[imgPos];
 	if (intersect) {
 		it.r += uint(min(255, color.r * 255));
