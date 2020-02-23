@@ -129,7 +129,7 @@ void VulkanRenderer::SetData() {
 			m.color.x,
 			m.color.y,
 			m.color.z,
-			0,
+			m.metalic,
 
 			m.emission.x,
 			m.emission.y,
@@ -371,6 +371,7 @@ void VulkanRenderer::RenderTask() {
 		}
 
 		SubmitRender();
+
     	// memcpy(cam->GetBuffer(), mem, imageBufferSize);
 
 		/*

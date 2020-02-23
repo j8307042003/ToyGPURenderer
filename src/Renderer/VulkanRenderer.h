@@ -66,7 +66,7 @@ Vec3 make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3);
 		float r;
 		float g;
 		float b;
-		float a;
+		float metalic;
 
 		float emission_r;
 		float emission_g;

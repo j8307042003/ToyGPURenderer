@@ -24,6 +24,13 @@ Scene scene;
 Camera cam;
 Renderer * renderer;
 
+bool keys[1024];
+
+GLfloat deltaTime = 0.0f;
+GLfloat lastFrame = 0.0f;
+
+void Do_Movement();
+
 int main(){
 
     Quaternion q;
@@ -38,15 +45,6 @@ int main(){
     scene = make_test_scene2();
     scene.BuildTree();
 
-    std::vector<AABB> boxes;
-    boxes.push_back(AABB({0,0,0}, {1,1,1}));
-    boxes.push_back(AABB({-1,-1,-1}, {2,2,2}));
-    boxes.push_back(AABB({3,3,3}, {4,4,4}));
-    boxes.push_back(AABB({5,5,5}, {5,5,6}));
-    boxes.push_back(AABB({8,8,8}, {9,9,9}));
-
-    bvh_tree tree;
-    // build_bvh_simple(tree, boxes);
 
 
     int width = 1280; //640;
@@ -72,8 +70,6 @@ int main(){
     glfwSwapInterval(1);
 
     cam = Camera(width, height, Vec3(0.0f, 0.0f, -10.0f));
-    // cam.FullRender();
-    // cam.RenderScene(&scene);
     std::cout << "cam init done";
     // Renderer * renderer = new ParallelRenderer();
     renderer = new VulkanRenderer();
@@ -98,24 +94,29 @@ int main(){
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
+		GLfloat currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
+		Do_Movement();
         renderer->UpdateFrame();
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
 
-    glBindTexture(GL_TEXTURE_2D, textureId);	
+		glBindTexture(GL_TEXTURE_2D, textureId);	
 
-    glEnable(GL_TEXTURE_2D);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
-                GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());    
-    glBegin(GL_QUADS);
-    glTexCoord2i(0, 0); glVertex2i(0, 0);
-    glTexCoord2i(0, 1); glVertex2i(0, height);
-    glTexCoord2i(1, 1); glVertex2i(width, height);
-    glTexCoord2i(1, 0); glVertex2i(width, 0);
-    glEnd();
-    glDisable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, 0);
+		glEnable(GL_TEXTURE_2D);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
+			        GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());    
+		glBegin(GL_QUADS);
+		glTexCoord2i(0, 0); glVertex2i(0, 0);
+		glTexCoord2i(0, 1); glVertex2i(0, height);
+		glTexCoord2i(1, 1); glVertex2i(width, height);
+		glTexCoord2i(1, 0); glVertex2i(width, 0);
+		glEnd();
+		glDisable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 
         /* Swap front and back buffers */
@@ -156,34 +157,46 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 }
 
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    float x = 0, y = 0, z = 0;
-    if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_W) {
-            z += -1;
-        }
-        else if (key == GLFW_KEY_S) {
-            z += 1;
-        }
-        else if (key == GLFW_KEY_A) {
-            x += -1;
-        }    
-        else if (key == GLFW_KEY_D) {
-            x += 1;
-        }
-        else if (key == GLFW_KEY_E) {
-            y += 1;
-        }
-        else if (key == GLFW_KEY_Q) {
-            y += -1;
-        }  
+// Moves/alters the camera positions based on user input
+void Do_Movement()
+{
+	float x = 0, y = 0, z = 0;
 
-        if (x != 0 || y != 0 || z != 0 ) {
-            cam.transform.position += Vec3(x, y, z);
-            renderer->ClearImage();
-        }                          
-    }
+	if (keys[GLFW_KEY_W]) {
+		z += -1;
+	}
+	if (keys[GLFW_KEY_S]) {
+		z += 1;
+	}
+	if (keys[GLFW_KEY_A]) {
+		x += -1;
+	}
+	if (keys[GLFW_KEY_D]) {
+		x += 1;
+	}
+	if (keys[GLFW_KEY_E]) {
+		y += 1;
+	}
+	if (keys[GLFW_KEY_Q]) {
+		y += -1;
+	}
 
+	if (x != 0 || y != 0 || z != 0) {
+		cam.transform.position += Vec3(x, y, z) * deltaTime * 2.0f;
+		renderer->ClearImage();
+	}
+}
+
+// Is called whenever a key is pressed/released via GLFW
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
+{
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	if (action == GLFW_PRESS)
+		keys[key] = true;
+	else if (action == GLFW_RELEASE)
+		keys[key] = false;
 }
 
 
