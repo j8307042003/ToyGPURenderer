@@ -5,7 +5,7 @@ class ParallelRenderer : public Renderer {
 public:
 	void StartRender();
 	void UpdateFrame() {}
-
+	void ClearImage() {}
 private:
 	bool stopFlag;
 	std::thread renderThread;

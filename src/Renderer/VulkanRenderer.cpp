@@ -3,6 +3,10 @@
 #include "VulkanLib/vkHelper.h"
 #include <vector>
 #include <typeinfo>
+#include <chrono>
+#include <ratio>
+
+
 
 
 Vec3 make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3) {
@@ -35,8 +39,21 @@ VulkanRenderer::VulkanRenderer() {
 	VkShaderModule shaderModule = createShaderModule(vulkanInstance.device, filename);
 	pipeline = vulkanInstance.BuildComputeShaderPipeline(renderBufferAttribute, shaderModule);
 
+	// Load Clear Image Shader
+	filename = "clearImg.spv";
+	VkShaderModule clearShaderModule = createShaderModule(vulkanInstance.device, filename);
+	clearPipeline = vulkanInstance.BuildComputeShaderPipeline( 
+		{
+			Shader_Attribute_Buffer,
+			Shader_Attribute_Unifrom,
+			Shader_Attribute_Buffer
+		},
+		clearShaderModule
+	);
+
+
 	commandPool = createCommandPool(vulkanInstance.device, vulkanInstance.queueFamily);
-	commandBuffers = AllocateCommandBuffer(vulkanInstance.device, commandPool, 1);
+	commandBuffers = AllocateCommandBuffer(vulkanInstance.device, commandPool, 2);
 
 
 }
@@ -49,6 +66,8 @@ VulkanRenderer::~VulkanRenderer() {
 void VulkanRenderer::StartRender() {
 	InitBuffer();
 	SetData();
+	InitRenderCommand();
+	InitClearImageCommand();
 
 	iteratorCount = 0;
 	renderThread = std::thread(&VulkanRenderer::RenderTask, this);
@@ -122,7 +141,7 @@ void VulkanRenderer::SetData() {
 
 	// Set up buffer
 	VkWriteDescriptorSet writeDescriptorSets[buffers.size()];
-	std::cout << "buffer size " << buffers.size() << std::endl;
+	// std::cout << "buffer size " << buffers.size() << std::endl;
 	for(int i = 0; i < buffers.size(); ++i) {
 		VkWriteDescriptorSet writeDescriptorSet = createWriteDescriptorSet(
 			pipeline.descriptorSet, 
@@ -136,10 +155,41 @@ void VulkanRenderer::SetData() {
 	vkUpdateDescriptorSets(vulkanInstance.device, buffers.size(), &writeDescriptorSets[0], 0, NULL);
 
 
+	//Init Clear Image shader 
+	VkWriteDescriptorSet clearWriteDescriptorSets[3] = 
+	{
+		// Image
+		createWriteDescriptorSet(
+			clearPipeline.descriptorSet, 
+			GetDescriptorType(renderBufferAttribute[0]), 
+			1, 
+			&buffers[0].descriptorBufInfo, 
+			0
+		),
+		// Render setting
+		createWriteDescriptorSet(
+			clearPipeline.descriptorSet, 
+			GetDescriptorType(renderBufferAttribute[1]), 
+			1, 
+			&buffers[1].descriptorBufInfo, 
+			1
+		),
+		// Integrator
+		createWriteDescriptorSet(
+			clearPipeline.descriptorSet, 
+			GetDescriptorType(renderBufferAttribute[7]), 
+			1, 
+			&buffers[7].descriptorBufInfo, 
+			2
+		),						
+	};
+
+	vkUpdateDescriptorSets(vulkanInstance.device, 3, &clearWriteDescriptorSets[0], 0, NULL);
+
+
+
+
 	VkDevice & device = vulkanInstance.device;
-
-
-
 	// Set Buffer Data
 
 	//0 Render Image
@@ -178,6 +228,11 @@ void VulkanRenderer::SetData() {
 	//9 BVH Tree
 	if (s->tree.nodes.size() > 0 ) CopyDataToDeviceMemory(device, buffers[9].memory, sizeof(bvh_node) * s->tree.nodes.size(), s->tree.nodes.data());
 
+
+
+}
+
+void VulkanRenderer::InitRenderCommand() {
 	vkGetDeviceQueue(vulkanInstance.device, vulkanInstance.queueFamily, 0, &queue);  	
 
 	int width = cam->GetWidth();
@@ -191,8 +246,24 @@ void VulkanRenderer::SetData() {
 	  pipeline.pipeline, 
 	  pipeline.pipelineLayout,
 	  &pipeline.descriptorSet
-	);	
+	);		
+}
 
+void VulkanRenderer::InitClearImageCommand() {
+	vkGetDeviceQueue(vulkanInstance.device, vulkanInstance.queueFamily, 0, &queue);  	
+
+	int width = cam->GetWidth();
+	int height = cam->GetHeight();
+
+	
+	AddComputeShaderCommand(
+	  width / 16, height / 16, 1,
+	  vulkanInstance.device,
+	  commandBuffers[1], 
+	  clearPipeline.pipeline, 
+	  clearPipeline.pipelineLayout,
+	  &clearPipeline.descriptorSet
+	);
 }
 
 void VulkanRenderer::SubmitRender() {
@@ -200,6 +271,13 @@ void VulkanRenderer::SubmitRender() {
 
 	if (cam == nullptr) return;
 	submitCommand(vulkanInstance.device, commandBuffers[0], queue);
+
+}
+
+void VulkanRenderer::SubmitClear() {
+
+	if (cam == nullptr) return;
+	submitCommand(vulkanInstance.device, commandBuffers[1], queue);
 
 }
 
@@ -216,15 +294,15 @@ void VulkanRenderer::InitBuffer() {
 
 
 	//init render data
-	render_data = { uint(cam->GetWidth()), uint(cam->GetHeight()), int(time(NULL)), 0};
+	render_data = { uint(cam->GetWidth()), uint(cam->GetHeight()), int(time(NULL)), 0, {}, 0};
 
 
 
 
 	ClenaBuffer();
 
-  	const int kShapeInstanceSize = 1000000;
-  	const int kMaterialInstanceSize = 100000;
+  	const int kShapeInstanceSize = 1000;
+  	const int kMaterialInstanceSize = 1000;
   	uint imageBufferSize = sizeof(unsigned int) * cam->GetWidth() * cam->GetHeight();
 	size_t shapeBufSize = sizeof(int) + sizeof(ShapeInstance) * kShapeInstanceSize;
 
@@ -278,11 +356,19 @@ void VulkanRenderer::RenderTask() {
 	};
 
 
+    auto start = std::chrono::steady_clock::now();
+
 	while(true) {
 		iteratorCount++;
 		render_data.sampleCount = iteratorCount;
 		render_data.time = time(NULL) + iteratorCount;
+		render_data.camera_pos = cam->transform.position;
 		CopyDataToDeviceMemory(vulkanInstance.device, buffers[1].memory, buffers[1].size, &render_data);
+
+		if (clearFlag) {
+			SubmitClear();
+			clearFlag = false;
+		}
 
 		SubmitRender();
     	// memcpy(cam->GetBuffer(), mem, imageBufferSize);
@@ -312,8 +398,16 @@ void VulkanRenderer::RenderTask() {
 		}
 		*/
 
-    	if (iteratorCount % 10 == 0 ) 
-    		std::cout << "sample count " << iteratorCount << std::endl;
+    	//if (iteratorCount % 10 == 0 ) 
+    	//	std::cout << "sample count " << iteratorCount << std::endl;
+
+		if (iteratorCount == 20) {
+			auto end = std::chrono::steady_clock::now();
+
+			// Store the time difference between start and end
+			auto diff = end - start;
+			std::cout << "Render time " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
+		}    	
 	}
 }
 
@@ -323,4 +417,9 @@ void VulkanRenderer::UpdateFrame() {
     memcpy(cam->GetBuffer(), mem, imageBufferSize);
 }
 
+
+
+void VulkanRenderer::ClearImage() {
+	clearFlag = true;
+}
 

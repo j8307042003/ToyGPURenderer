@@ -79,13 +79,13 @@ Vec3 Triangle::make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3) {
 	Vec3 d1 = v2 - v1;
 	Vec3 d2 = v3 - v1;
 
-	std::cout << "Make Triangle " << std::endl;
-	std::cout << "V1 " << v1.tostring() << std::endl;
-	std::cout << "V2 " << v2.tostring() << std::endl;
-	std::cout << "V3 " << v3.tostring() << std::endl;
-	std::cout << "d1 " << d1.tostring() << std::endl;
-	std::cout << "d2 " << d2.tostring() << std::endl;
-	std::cout << "normal " << ((Vec3::Cross(d1, d2)).normalized()).tostring() << std::endl << std::endl;
+	//std::cout << "Make Triangle " << std::endl;
+	//std::cout << "V1 " << v1.tostring() << std::endl;
+	//std::cout << "V2 " << v2.tostring() << std::endl;
+	//std::cout << "V3 " << v3.tostring() << std::endl;
+	//std::cout << "d1 " << d1.tostring() << std::endl;
+	//std::cout << "d2 " << d2.tostring() << std::endl;
+	//std::cout << "normal " << ((Vec3::Cross(d1, d2)).normalized()).tostring() << std::endl << std::endl;
 
 
 	return (Vec3::Cross(d1, d2)).normalized();

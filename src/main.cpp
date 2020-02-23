@@ -19,23 +19,14 @@
 #include <GLFW/glfw3.h>
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 Scene scene;
 Camera cam;
+Renderer * renderer;
 
 int main(){
 
-	Vec3 v3 = Vec3(1.0f, 2.0f, 3.0f);
-	Vec3 v3_2 = Vec3(2.0, 3.0, 10.0f);
-	std::cout << "Test Proj";
-	std::cout << v3.x << "  " << v3.y << std::endl;
-
-	//v3 += v3_2;
-	std::cout << v3.x << "  " << v3.y << std::endl;
-
     Quaternion q;
-
-    std::cout << "Dot " << Vec3::Dot(v3, v3_2) << std::endl;
-    std::cout << "Angle" << Vec3::Angle(v3, v3_2) << std::endl;
 
     GLFWwindow* window;
 
@@ -43,8 +34,8 @@ int main(){
     if (!glfwInit())
         return -1;
 
-    scene = make_test_scene1();
-    // scene = make_test_scene2();
+    // scene = make_test_scene1();
+    scene = make_test_scene2();
     scene.BuildTree();
 
     std::vector<AABB> boxes;
@@ -77,14 +68,15 @@ int main(){
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetKeyCallback(window, key_callback);
     glfwSwapInterval(1);
 
-    cam = Camera(width, height, Vec3(0.0f, 0.0f, 0.0f));
+    cam = Camera(width, height, Vec3(0.0f, 0.0f, -10.0f));
     // cam.FullRender();
     // cam.RenderScene(&scene);
     std::cout << "cam init done";
     // Renderer * renderer = new ParallelRenderer();
-    Renderer * renderer = new VulkanRenderer();
+    renderer = new VulkanRenderer();
     renderer->SetRenderData(&scene, &cam);
     renderer->StartRender();
 
@@ -147,18 +139,52 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         glfwGetCursorPos(window, &xpos, &ypos);
         std::cout << "-----------------" << std::endl;
         std::cout << std::endl << "x " << xpos << ". y " << ypos << std::endl;
-
+        /*
         const int maxStack = 512;
         void* bundleStack = malloc(40 * maxStack);
 
         cam.RenderScenePixel(&scene, xpos, ypos, bundleStack, 1);
 
         free(bundleStack);
-        
+        */
+        renderer->ClearImage();
         // cam.RenderScenePixel(&scene, xpos, ypos);
         // cam.TryRayCast(&scene, {5, 0.321, -19.0747}, {-0.2535, 0.01632, -0.9671});
         std::cout << "-----------------" << std::endl;
 
     }
 }
+
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    float x = 0, y = 0, z = 0;
+    if (action == GLFW_PRESS) {
+        if (key == GLFW_KEY_W) {
+            z += -1;
+        }
+        else if (key == GLFW_KEY_S) {
+            z += 1;
+        }
+        else if (key == GLFW_KEY_A) {
+            x += -1;
+        }    
+        else if (key == GLFW_KEY_D) {
+            x += 1;
+        }
+        else if (key == GLFW_KEY_E) {
+            y += 1;
+        }
+        else if (key == GLFW_KEY_Q) {
+            y += -1;
+        }  
+
+        if (x != 0 || y != 0 || z != 0 ) {
+            cam.transform.position += Vec3(x, y, z);
+            renderer->ClearImage();
+        }                          
+    }
+
+}
+
+
 

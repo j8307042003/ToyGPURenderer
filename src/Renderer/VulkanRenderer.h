@@ -18,6 +18,8 @@ Vec3 make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3);
 	  uint height; 
 	  int time;
 	  uint sampleCount;
+	  Vec3 camera_pos;
+	  float p0;
 	};
 
 	#pragma pack(push, 1)
@@ -98,16 +100,24 @@ class VulkanRenderer : public Renderer {
 		int iteratorCount;
 		void * mem;
 
+
+		//Clear Image Compute Shader
+		VulkanLib::PipelineObj clearPipeline;
+
+		bool clearFlag = false;
 	public:
 		VulkanRenderer();
 		~VulkanRenderer();
 		void StartRender();
 		void UpdateFrame();
-
+		void ClearImage();
 	private:
 		void SetData();
 		void SubmitRender();
+		void SubmitClear();
 		void ClenaBuffer();
 		void InitBuffer();
+		void InitRenderCommand();
+		void InitClearImageCommand();
 		void RenderTask();
 };
