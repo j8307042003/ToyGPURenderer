@@ -3,3 +3,4 @@ build/*
 !build/clearImg.spv
 !build/imageBase.comp
 !build/imageBase.spv
+!build/render.glsl
