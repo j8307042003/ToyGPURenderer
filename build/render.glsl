@@ -5,7 +5,7 @@ struct Ray {
 };
 
 
-Ray genCamRay(vec3 pos, float x, float y, int width, int height) {
+Ray genCamRay(mat4 matrix, vec3 pos, float x, float y, int width, int height) {
 	vec3 uv = vec3(x, y, 0);
 	// const float film = 0.036;
 	// const float lens = 0.05;
@@ -17,8 +17,9 @@ Ray genCamRay(vec3 pos, float x, float y, int width, int height) {
       		 );
   	vec3 q1  = -q;
   	vec3 d   = normalize(q1 - e);
-  	Ray ray = Ray(pos, d);
-  	// Ray ray = Ray(vec3(0, 2, -10), d);
+  	Ray ray = Ray((matrix * vec4(e, 1.0)).xyz, (matrix * vec4(d, 0)).xyz);
+  	// auto ray = ray3f{transform_point(frame, e), transform_direction(frame, d)};
+  	// Ray ray = Ray(pos, d);
   	return ray;
 }
 
@@ -92,9 +93,9 @@ bool RayCastTest_Sphere(SphereShape shape, Ray ray, out vec3 hitPos, out vec3 di
 bool RayCastTest_Triangle(TriangleShape shape, Ray ray, out vec3 hitPos, out vec3 direction) {
   // vec3 edge1 = shape.vertices[1] - shape.vertices[0];
   // vec3 edge2 = shape.vertices[2] - shape.vertices[0];
-  vec3 v1 = shape.v1.xyz;
-  vec3 v2 = shape.v2.xyz;
-  vec3 v3 = shape.v3.xyz;
+  //vec3 v1 = shape.v1.xyz;
+  //vec3 v2 = shape.v2.xyz;
+  //vec3 v3 = shape.v3.xyz;
 
   vec3 edge1 = shape.v2.xyz - shape.v1.xyz;
   vec3 edge2 = shape.v3.xyz - shape.v1.xyz;
@@ -108,7 +109,7 @@ bool RayCastTest_Triangle(TriangleShape shape, Ray ray, out vec3 hitPos, out vec
 
   // check determinant and exit if triangle and ray are parallel
   // (could use EPSILONS if desired)
-  if (det == 0) return false;
+  // if (det == 0) return false;
   float inv_det = 1.0 / det;
 
   // compute and check first bricentric coordinated
@@ -116,12 +117,12 @@ bool RayCastTest_Triangle(TriangleShape shape, Ray ray, out vec3 hitPos, out vec
   vec3 tvec = ray.origin - shape.v1.xyz;
   float u   = dot(tvec, pvec) * inv_det;
 
-  if (u < 0 || u > 1) return false;
+  if (u < 0.0 || u > 1.0) return false;
 
   // compute and check second bricentric coordinated
   vec3 qvec = cross(tvec, edge1);
   float v   = dot(ray.dir, qvec) * inv_det;
-  if (v < 0 || (u + v > 1)) return false;
+  if (v < 0.0 || (u + v > 1.0)) return false;
 
   // compute and check ray parameter
   float t = dot(edge2, qvec) * inv_det;
@@ -133,13 +134,14 @@ bool RayCastTest_Triangle(TriangleShape shape, Ray ray, out vec3 hitPos, out vec
   return true;
 }
 
+
+
+
+
 bool RayCastTest_Plane(PlaneShape shape, Ray ray, out vec3 hitPos, out vec3 direction) {
-	if(RayCastTest_Triangle(shape.t1, ray, hitPos, direction)) return true;
-	if(RayCastTest_Triangle(shape.t2, ray, hitPos, direction)) return true;
-
-	return false;
+	return (RayCastTest_Triangle(shape.t1, ray, hitPos, direction)) ||
+	       (RayCastTest_Triangle(shape.t2, ray, hitPos, direction));
 }
-
 
 struct Material {
 	// vec3 color;

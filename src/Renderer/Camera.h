@@ -5,6 +5,7 @@
 #include "math/Vec3.h"
 #include "RenderView.h"
 #include "Scene.h"
+#include "glm/ext/matrix_float4x4.hpp"
 
 class Camera {
 public:

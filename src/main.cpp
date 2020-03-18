@@ -25,17 +25,23 @@ Camera cam;
 Renderer * renderer;
 
 bool keys[1024];
+bool mouse_keys[64] = {};
 
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
 void Do_Movement();
+void Do_Rotate();
+
+double mouse_pos_x = 0, mouse_pos_y = 0;
+
+GLFWwindow * window = nullptr;
 
 int main(){
 
     Quaternion q;
 
-    GLFWwindow* window;
+    // GLFWwindow* window;
 
     /* Initialize the library */
     if (!glfwInit())
@@ -54,7 +60,7 @@ int main(){
     // height = 480;
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(width, height, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(width, height, "Renderer", NULL, NULL);
 
 	std::cout << "window";
     if (!window)
@@ -98,6 +104,7 @@ int main(){
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
+        Do_Rotate();
 		Do_Movement();
         renderer->UpdateFrame();
         /* Render here */
@@ -135,25 +142,22 @@ int main(){
 
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
-    if(action == GLFW_PRESS) {
-        double xpos, ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);
-        std::cout << "-----------------" << std::endl;
-        std::cout << std::endl << "x " << xpos << ". y " << ypos << std::endl;
-        /*
-        const int maxStack = 512;
-        void* bundleStack = malloc(40 * maxStack);
+    //if(action == GLFW_PRESS) {
+    //    double xpos, ypos;
+    //    glfwGetCursorPos(window, &xpos, &ypos);
+    //    std::cout << "-----------------" << std::endl;
+    //    std::cout << std::endl << "x " << xpos << ". y " << ypos << std::endl;
+    //    renderer->ClearImage();
+    //    std::cout << "-----------------" << std::endl;
+    //}
 
-        cam.RenderScenePixel(&scene, xpos, ypos, bundleStack, 1);
-
-        free(bundleStack);
-        */
-        renderer->ClearImage();
-        // cam.RenderScenePixel(&scene, xpos, ypos);
-        // cam.TryRayCast(&scene, {5, 0.321, -19.0747}, {-0.2535, 0.01632, -0.9671});
-        std::cout << "-----------------" << std::endl;
-
+    if (action == GLFW_PRESS){
+        glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
+        mouse_keys[button] = true;
     }
+    else if (action == GLFW_RELEASE)
+        mouse_keys[button] = false;
+
 }
 
 
@@ -182,9 +186,37 @@ void Do_Movement()
 	}
 
 	if (x != 0 || y != 0 || z != 0) {
-		cam.transform.position += Vec3(x, y, z) * deltaTime * 2.0f;
+        Vec3 dir = cam.transform.TransformDir({x,y,z});
+		cam.transform.position += dir * deltaTime * 2.0f;
+        cam.transform.UpdateMatrix();
 		renderer->ClearImage();
 	}
+
+}
+
+
+void Do_Rotate()
+{
+    if (mouse_keys[GLFW_MOUSE_BUTTON_1]) {
+        double now_pos_x, now_pos_y;
+        glfwGetCursorPos(window, &now_pos_x, &now_pos_y);
+
+        float delta_x = now_pos_x - mouse_pos_x;
+        float delta_y = now_pos_y - mouse_pos_y;
+        if( abs(delta_x) < 5 && abs(delta_y) < 5 )
+            return;
+
+        mouse_pos_x = now_pos_x;
+        mouse_pos_y = now_pos_y;
+
+        const float kRotRatio = 1 / 100.0f;
+        cam.transform.rotation = 
+            cam.transform.rotation * Quaternion( delta_y * kRotRatio, delta_x * kRotRatio, 0 );
+        cam.transform.UpdateMatrix();
+        renderer->ClearImage();
+
+
+    }
 }
 
 // Is called whenever a key is pressed/released via GLFW

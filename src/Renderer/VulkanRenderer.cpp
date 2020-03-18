@@ -7,7 +7,7 @@
 #include <ratio>
 
 
-
+typedef unsigned int uint;
 
 Vec3 make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3) {
   Vec3 d1 = v2 - v1;
@@ -120,7 +120,8 @@ void VulkanRenderer::SetData() {
 			planeDatas.push_back({plane.Vertices[0], plane.Vertices[1], plane.Vertices[2], plane.Vertices[3]});
 		}
 
-		shapeDatas.push_back({shapeType, shapeNum, i});
+		int materialIdx = s->GetShapeMaterialIdx(&shape);
+		shapeDatas.push_back({shapeType, shapeNum, materialIdx >= 0 ? materialIdx : i});
 	}
 
 	for ( int i = 0; i < s->materials.size(); ++i) {
@@ -140,7 +141,7 @@ void VulkanRenderer::SetData() {
 
 
 	// Set up buffer
-	VkWriteDescriptorSet writeDescriptorSets[buffers.size()];
+	VkWriteDescriptorSet * writeDescriptorSets = new VkWriteDescriptorSet[buffers.size()];
 	// std::cout << "buffer size " << buffers.size() << std::endl;
 	for(int i = 0; i < buffers.size(); ++i) {
 		VkWriteDescriptorSet writeDescriptorSet = createWriteDescriptorSet(
@@ -240,7 +241,9 @@ void VulkanRenderer::InitRenderCommand() {
 
 	
 	AddComputeShaderCommand(
-	  width / 16, height / 16, 1,
+	  // width / 16, height / 16, 1,
+	  // width / 8, height / 8, 1,
+	  width / 4, height / 4, 1,
 	  vulkanInstance.device,
 	  commandBuffers[0], 
 	  pipeline.pipeline, 
@@ -355,7 +358,8 @@ void VulkanRenderer::RenderTask() {
 		int   v4_x, v4_y, v4_z, v4_w;
 	};
 
-
+	cam->transform.position = {1, 2, -10};
+	cam->transform.UpdateMatrix();
     auto start = std::chrono::steady_clock::now();
 
 	while(true) {
@@ -363,6 +367,7 @@ void VulkanRenderer::RenderTask() {
 		render_data.sampleCount = iteratorCount;
 		render_data.time = time(NULL) + iteratorCount;
 		render_data.camera_pos = cam->transform.position;
+		render_data.camMatrix = cam->transform.modelMatrix;
 		CopyDataToDeviceMemory(vulkanInstance.device, buffers[1].memory, buffers[1].size, &render_data);
 
 		if (clearFlag) {
@@ -397,7 +402,7 @@ void VulkanRenderer::RenderTask() {
 			std::cout << "v3 " << debug.v3_x << "  " << debug.v3_y << "  " << debug.v3_z << "  " << debug.v3_w << std::endl;
 			std::cout << "v4 " << debug.v4_x << "  " << debug.v4_y << "  " << debug.v4_z << "  " << debug.v4_w << std::endl;
 		}
-		*/
+		*/		
 
     	//if (iteratorCount % 10 == 0 ) 
     	//	std::cout << "sample count " << iteratorCount << std::endl;

@@ -6,4 +6,5 @@ add_library(Renderer Camera.h Camera.cpp RenderView.h RenderView.cpp Scene.h Sce
 target_link_libraries(Renderer math)
 target_link_libraries(Renderer shape)
 target_link_libraries(Renderer VulkanLib)
+target_link_libraries(Renderer glm)
 target_include_directories(Renderer INTERFACE ..)

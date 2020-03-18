@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
+typedef unsigned int uint;
+
 typedef enum ShaderAttribute {
 	Shader_Attribute_Unifrom = 0x00000001,
 	Shader_Attribute_Buffer = 0x00000002,

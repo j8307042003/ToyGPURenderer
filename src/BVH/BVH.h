@@ -16,7 +16,7 @@ struct bvh_node {
 	int primitiveId;
 	int p0, p1;
 	AABB boundingBox;
-	uint isLeaf;
+	int isLeaf;
 	// char p0, p1, p2;
 	int left;
 	int right;

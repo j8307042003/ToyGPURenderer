@@ -4,6 +4,11 @@
 
 #include "Vec3.h"
 #include "Matrix4.h"
+// #include "glm\glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/quaternion.hpp"
+
+
 
 
 class Quaternion {
@@ -27,7 +32,21 @@ public:
 
 	Quaternion( float x, float y, float z, float w ) : x(x), y(y), z(z), w(w) {}
 
-	Matrix4 GetMatrix();
+	Quaternion( double yaw, double pitch, double roll ) {
+    	double cy = cos(yaw * 0.5);
+    	double sy = sin(yaw * 0.5);
+    	double cp = cos(pitch * 0.5);
+    	double sp = sin(pitch * 0.5);
+    	double cr = cos(roll * 0.5);
+    	double sr = sin(roll * 0.5);
+
+    	w = cy * cp * cr + sy * sp * sr;
+    	x = cy * cp * sr - sy * sp * cr;
+    	y = sy * cp * sr + cy * sp * cr;
+    	z = sy * cp * cr - cy * sp * sr;
+	}
+
+	glm::mat4 GetMatrix();
 
 
 	Quaternion operator*(const Quaternion& rhs) {
@@ -42,9 +61,22 @@ public:
 		q.x = newV.x;
 		q.y = newV.y;
 		q.z = newV.z;
-		 
+		
+		q = q.Normalized();
 		return q;
 	}
+
+	Quaternion Normalized()
+	{
+		Quaternion q1 = {0.0, 0.0, 0.0, 0.0};
+		float len_inv = 1.0 / sqrt(w * w + x * x + y * y + z * z);
+		q1.w = w * len_inv;
+		q1.x = x * len_inv;
+		q1.y = y * len_inv;
+		q1.z = z * len_inv;
+		return q1;
+	}
+
 };
 
 #endif

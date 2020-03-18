@@ -3,11 +3,21 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_subdirectory(src/math src/math/build)
+add_subdirectory(src/glm src/glm/build)
 add_subdirectory(src/shape src/shape/build)
-add_subdirectory(src/GLFW src/GLFW/build)
+
+if (APPLE)
+	add_subdirectory(src/GLFW src/GLFW/build)
+endif()
+
+if (WIN32)
+	add_subdirectory(src/GLFW ../src/GLFW)
+endif()
+
 add_subdirectory(src/BVH src/BVH/build)
 add_subdirectory(src/VulkanLib src/VulkanLib/build)
 add_subdirectory(src/Renderer src/Renderer/build)
+
 
 include_directories(src/glad)
 include_directories(src/GLFW/include)
@@ -23,6 +33,7 @@ target_link_libraries(App math)
 target_link_libraries(App shape)
 target_link_libraries(App BVH)
 target_link_libraries(App VulkanLib)
+target_link_libraries(App glm)
 target_link_libraries(App glfw ${GLFW_LIBRARIES})
 
 

@@ -1,15 +1,43 @@
 #include "Scene.h"
 #include <typeinfo>
+#include <map>
+#include <string>
 
 
 void Scene::AddShape(Shape * s) {
 	shapes.push_back(s);
 }
 
+void Scene::AddShape(Shape * s, std::string mat_name) {
+	std::map<std::string,int>::iterator it = materialMap.find(mat_name);
+	if (it == materialMap.end()) {
+		std::cout << "Add Shape Failed. Due to add Shape with not existed material : " + mat_name << std::endl;
+		return;
+	}
+
+	shapes.push_back(s);
+	shapeMaterialMap[s] = it->second;
+}
+
 
 void Scene::AddMaterial(material * s) {
 	materials.push_back(s);
 }
+
+void Scene::AddMaterial(std::string name, material * m) {
+	materials.push_back(m);
+	materialMap[name] = materials.size()-1;
+}
+
+int Scene::GetShapeMaterialIdx(Shape * s) {
+	std::map<Shape*,int>::iterator it = shapeMaterialMap.find(s);
+	if (it == shapeMaterialMap.end()) {
+		return -1;
+	}
+
+	return it->second;
+}
+
 
 
 void Scene::BuildTree() {

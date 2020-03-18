@@ -38,7 +38,7 @@ VulkanLib::PipelineObj VulkanLib::VulkanInstance::BuildComputeShaderPipeline(std
 
 
 	// build desciptor set layout
-  	VkDescriptorSetLayoutBinding layoutBindings[attributeCount];
+  	VkDescriptorSetLayoutBinding * layoutBindings = new VkDescriptorSetLayoutBinding[attributeCount];
 	for( int i = 0; i < attributeCount; ++i) {
 		VkDescriptorType descriptorType = GetDescriptorType(shaderAttributes[i]);
 	    layoutBindings[i] = createDescriptorSetLayoutBinding(descriptorType, i);
@@ -46,6 +46,8 @@ VulkanLib::PipelineObj VulkanLib::VulkanInstance::BuildComputeShaderPipeline(std
 
 	VkDescriptorSetLayout setLayout = createDescriptorSetLayout(device, attributeCount, &layoutBindings[0]);
 	VkPipelineLayout pipelineLayout = createPipelineLayout(device, 1, &setLayout);
+
+	delete[] layoutBindings;
 
 	VkPipeline compPipeline;
   	VkPipelineCache pipelineCache;

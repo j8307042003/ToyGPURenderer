@@ -2,7 +2,10 @@
 #include "Renderer.h"
 #include "VulkanLib/vkHelper.h"
 #include "VulkanLib/VulkanInstance.h"
+#include "math/Matrix4.h"
+#include "glm/gtc/matrix_transform.hpp"
 
+typedef unsigned int uint;
 
 #define VkRenderer_SHAPE_TYPE_SPHERE 1
 #define VkRenderer_SHAPE_TYPE_TRIANGLE 2
@@ -20,6 +23,7 @@ Vec3 make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3);
 	  uint sampleCount;
 	  Vec3 camera_pos;
 	  float p0;
+	  glm::mat4 camMatrix;
 	};
 
 	#pragma pack(push, 1)

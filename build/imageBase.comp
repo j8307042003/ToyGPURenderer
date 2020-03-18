@@ -56,6 +56,7 @@ layout(binding = 1) uniform RenderSetting {
 	int sampleCount;
 
 	vec4 camera_pos;
+	mat4 camera_matrix;
 } renderSetting;
 
 layout(binding = 2) buffer ShapeInstanceData 
@@ -99,7 +100,9 @@ layout(std140, binding = 9) buffer BVH
 };
 
 
-layout (local_size_x = 16, local_size_y = 16) in;
+// layout (local_size_x = 16, local_size_y = 16) in;
+// layout (local_size_x = 8, local_size_y = 8) in;
+layout (local_size_x = 4, local_size_y = 4) in;
 
 uint rand_counter = 0;
 uint wang_hash(uint seed)
@@ -130,6 +133,8 @@ float rand_global(uint seed)
 
 
 bool RayCastTestInstance(ShapeInstance instance, Ray ray, out vec3 hitPos, out vec3 direction) {
+	//if (instance.shapeType != SHAPE_TYPE_SPHERE) return true;
+	//return RayCastTest_Sphere(sphereShape[instance.shapeIdx], ray, hitPos, direction);
 	switch(instance.shapeType) {
 		case SHAPE_TYPE_SPHERE: return RayCastTest_Sphere(sphereShape[instance.shapeIdx], ray, hitPos, direction);
 		case SHAPE_TYPE_TRIANGLE: return RayCastTest_Triangle(triangleShape[instance.shapeIdx], ray, hitPos, direction);
@@ -147,26 +152,22 @@ int bvh_visit_stack[kBVH_Depth];
 
 
 bool RayCastTest_BVH(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
-	int stackCount = 1;
-	bvh_visit_stack[0] = 0;
 
-	vec3 pos;
-	vec3 dir;
+	vec3 pos, dir;
 	bool bEverHit = false;
 
 	float depth = 99999999;
 	int runId = 0;
 
-	// std::cout << "Ray Test " << ray.origin.tostring() << " " << ray.dir.tostring() << std::endl;
+	int stackCount = 1;
+	bvh_visit_stack[0] = 0;
+
 	while(runId < stackCount) 
 	{
 		int treeIdx = bvh_visit_stack[runId];
-		// bvh_node node = bvh_tree[treeIdx];
-		// std::cout << "id " << bIntersect << "  " << node.idx << " " << node.boundingBox.min.tostring() << "  " << node.boundingBox.max.tostring() << std::endl  ;
 		if (bvh_tree[treeIdx].isLeaf > 0) {
 			int id = bvh_tree[treeIdx].primitiveId;
 			bool bHit = RayCastTestInstance(instances[id], ray, pos, dir);
-			// float hitDepth = length(pos - ray.origin);
 			vec3 origin_to_pos = pos - ray.origin;
 			float hitDepth = origin_to_pos.x * origin_to_pos.x + origin_to_pos.y * origin_to_pos.y + origin_to_pos.z * origin_to_pos.z;
 			if (bHit && hitDepth < depth ){
@@ -178,7 +179,6 @@ bool RayCastTest_BVH(Ray ray, out vec3 hitPos, out vec3 direction, out uint inst
 			}
 		}
 		else {
-			// bool bIntersect = RayIntersect_AABB(bvh_tree[treeIdx].boundingBox, ray);
 			bool bIntersect = RayIntersect_AABB_1(bvh_tree[treeIdx].boundingBox, ray);
 
 			if (bIntersect) {
@@ -192,31 +192,6 @@ bool RayCastTest_BVH(Ray ray, out vec3 hitPos, out vec3 direction, out uint inst
 				}
 			}
 		}
-
-		//if (bIntersect) {
-		//	if (bvh_tree[treeIdx].isLeaf > 0) {
-		//		int id = bvh_tree[treeIdx].primitiveId;
-		//		bool bHit = RayCastTestInstance(instances[id], ray, pos, dir);
-		//		float hitDepth = length(pos - ray.origin);
-		//		if (bHit && hitDepth < depth ){
-		//			depth = hitDepth;
-		//			hitPos = pos;
-		//			instanceIdx = id;
-		//			direction = dir;
-		//			bEverHit = true;
-		//		}
-		//	}
-		//	else {
-		//		if (bvh_tree[treeIdx].left > 0 ) {
-		//			bvh_visit_stack[stackCount] = bvh_tree[treeIdx].left;
-		//			stackCount++;
-		//		}
-		//		if (bvh_tree[treeIdx].right > 0 ) {
-		//			bvh_visit_stack[stackCount] = bvh_tree[treeIdx].right;
-		//			stackCount++;
-		//		}
-		//	}
-		//}
 
 		runId++;
 	}
@@ -369,7 +344,8 @@ vec4 make_GGXRandom(vec3 dir, float roughness) {
         localHemiSphereDir.x * Nb.x + localHemiSphereDir.y * dir.x + localHemiSphereDir.z * Nt.x, 
         localHemiSphereDir.x * Nb.y + localHemiSphereDir.y * dir.y + localHemiSphereDir.z * Nt.y, 
         localHemiSphereDir.x * Nb.z + localHemiSphereDir.y * dir.z + localHemiSphereDir.z * Nt.z,
-        r1 * M_PI); 	
+        theta1); 	
+        // r1 * M_PI); 	
 }
 
 
@@ -383,27 +359,19 @@ struct RayHitInfo {
 	float cosTheta;
 };
 
+// const int maxDepth = 2;
 const int maxDepth = 8;
-RayHitInfo rayHitInfoStack[maxDepth];
+RayHitInfo rayHitInfoStack[maxDepth+1];
 
 
 void ResolveRayHit(int idx) {
 	for(int i = idx; i >= 0; --i) {
-		vec3 indirect = vec3(0.0);
 		Material m = materials[rayHitInfoStack[i].materialIdx];
-		if (i < idx) {
-			vec3 engery = rayHitInfoStack[i+1].color;
-			// float cos_theta = cos(Angle(-rayHitInfoStack[i].dir, rayHitInfoStack[i].normal));
-			// float cos_theta = rayHitInfoStack[i].cosTheta;
-			// cos_theta = 1 - cos_theta;
-			float metalic = 1 - m.metalic;
-			indirect = m.color.xyz * engery * metalic + (1 - metalic) * engery;
-			// indirect = m.color.xyz * engery * (1-cos_theta) + (cos_theta) * engery;
-		}
+		vec3 engery = rayHitInfoStack[i+1].color;
+		float metalic = 1 - m.metalic;
+		vec3 indirect = m.color.xyz * engery * metalic + (1 - metalic) * engery;
 
-		// rayHitInfoStack[i].color = m.emission.xyz + indirect / cos(Angle(-rayHitInfoStack[i].dir, rayHitInfoStack[i].normal));
-		// rayHitInfoStack[i].color = m.emission.xyz + indirect * rayHitInfoStack[i].cosTheta;
-		rayHitInfoStack[i].color = m.emission.xyz + indirect;
+		rayHitInfoStack[i].color = (m.emission.xyz + (i < idx ? indirect : vec3(0)) * abs(rayHitInfoStack[i].cosTheta));
 	}
 }
 
@@ -420,38 +388,32 @@ bool Trace(Ray ray, out vec3 color) {
 	Ray traversalRay = ray;
 
 	for(int i = 0; i < maxDepth; ++i) {
-		bool hit = RayCastTest(traversalRay, hitPos, dir, instanceIdx);
-		// bool hit = RayCastTest_BVH_1(traversalRay, hitPos, dir, instanceIdx);
+		// bool hit = RayCastTest(traversalRay, hitPos, dir, instanceIdx);
+		bool hit = RayCastTest_BVH_1(traversalRay, hitPos, dir, instanceIdx);
 
 		if (!hit) {
 			if (i == 0) return false;
 			else {
 				ResolveRayHit(i-1);
 				color.xyz = rayHitInfoStack[0].color;
-				// color.xyz = vec3(float(i)/maxDepth);				
-				// color.xyz = vec3(1.0, 0, 0);
-
-				break;
+				return true;
 			}
 		}
 
 		ShapeInstance instance = instances[instanceIdx];
 		Material m = materials[instance.materialIdx];
 
-		vec3 normal = (-traversalRay.dir + dir) / 2;
+		vec3 normal = normalize((-traversalRay.dir + dir) / 2);
 		rayHitInfoStack[i].materialIdx = instance.materialIdx;
 		rayHitInfoStack[i].dir = traversalRay.dir;
 		rayHitInfoStack[i].normal = normal;
 		rayHitInfoStack[i].reflect = dir;
 		rayHitInfoStack[i].color = vec3(0.0);
 
-		// if (m->emission.length() > 0.8 || depth == maxpDepth) {
 		if (i == maxDepth - 1 || length(m.emission) > 0) {
-		// if (i == maxDepth - 1) {
 			ResolveRayHit(i);
 			color.xyz = rayHitInfoStack[0].color;
-			// color.xyz = m.emission.xyz;
-			break;
+			return true;
 		}
 
 		// vec4 ggx = make_random(normal);
@@ -459,15 +421,10 @@ bool Trace(Ray ray, out vec3 color) {
 		vec4 ggx = make_GGXRandom(dir, 1 - m.roguhness);
 		rayHitInfoStack[i].cosTheta = ggx.w;
 		traversalRay.dir = ggx.xyz;
-		traversalRay.origin = hitPos;
-		//color.xyz = traversalRay.dir;
-		//return true;
+		traversalRay.origin = hitPos + normal * 0.01;
 	}
 
 
-	// color = vec4(1.0);
-	// color = vec4(hitPos.x,hitPos.y, hitPos.z, 0.0) ;
-	// color = vec3(m.r, m.g, m.b);
 	return true;
 }
 
@@ -475,8 +432,8 @@ void main()
 {
 	int width = int(renderSetting.width);
 	int height = int(renderSetting.height);
-	Ray ray = genCamRay(renderSetting.camera_pos.xyz, gl_GlobalInvocationID.x / float(width), gl_GlobalInvocationID.y / float(height), width, height);
-	ray.dir.y *= -1;
+	Ray ray = genCamRay(renderSetting.camera_matrix, renderSetting.camera_pos.xyz, gl_GlobalInvocationID.x / float(width), gl_GlobalInvocationID.y / float(height), width, height);
+	// ray.dir.y *= -1;
 	// ray.dir.z *= -1;
 	uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
 	// uint imgPos = gl_GlobalInvocationID.x + 1280 * gl_GlobalInvocationID.y;
@@ -517,10 +474,10 @@ void main()
 	// col[imgPos].data = uint(255 * color.r) | (uint(255 * color.g) << 8) | (uint(255 * color.b) << 16) | 255 << 24;
 	col[imgPos].data = uint(color.r) | (uint(color.g) << 8) | (uint(color.b) << 16) | 255 << 24;
 	// debug.v1.w = sampleCount;
-
 	//bvh_node node = bvh_tree[6];
-	//debug.v1 = node.boundingBox.min;
-	//debug.v2 = node.boundingBox.max;
+	// debug.v1.xyz = (renderSetting.camera_matrix * vec4(1, 2, 3, 1.0)).xyz;
+	// debug.v1 = renderSetting.camera_matrix[0];
+	// debug.v2 = renderSetting.camera_matrix[1];
 	//debug.iv4.x = node.idx;
 	//debug.iv4.y = node.primitiveId;
 	//debug.iv4.z = node.isLeaf;

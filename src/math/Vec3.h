@@ -36,9 +36,9 @@ public:
 	}	
 
 	std::string tostring() const {
-  		std::ostringstream stringStream;
-  		stringStream << x << " " << y << " " << z;
-  		return stringStream.str();		
+		std::ostringstream stringStream;
+		stringStream << x << " " << y << " " << z;
+		return stringStream.str();		
 	}
 
 	static float Angle(Vec3 a, Vec3 b);
