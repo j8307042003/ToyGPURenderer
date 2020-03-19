@@ -135,7 +135,12 @@ void VulkanRenderer::SetData() {
 			m.emission.x,
 			m.emission.y,
 			m.emission.z,
-			m.specular,			
+			m.specular,
+
+			m.transparency,
+			m.indexOfRefraction,
+			0,
+			0,
 		});
 	}
 

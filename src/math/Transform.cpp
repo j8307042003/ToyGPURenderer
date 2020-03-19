@@ -2,6 +2,8 @@
 // #include "Matrix4.h"
 #include <iostream>
 #include "glm/gtc/matrix_transform.hpp"
+#include <glm/gtx/quaternion.hpp>
+
 
 Vec3 Transform::TransformPoint(Vec3 point) {
 	// Vec4 t = modelMatrix * Vec4(point, 1);
@@ -25,7 +27,8 @@ Vec3 Transform::TransformDir(Vec3 dir) {
 
 
 void Transform::UpdateMatrix() {
-	glm::mat4 rotMat = rotation.GetMatrix();
+	// glm::mat4 rotMat = rotation.GetMatrix();
+	glm::mat4 rotMat = glm::toMat4(rotation);
 	//Matrix4 translateMat 
 	//	= Matrix4( 
 	//	{1, 0, 0, position.x},

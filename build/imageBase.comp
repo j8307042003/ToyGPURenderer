@@ -375,6 +375,21 @@ void ResolveRayHit(int idx) {
 	}
 }
 
+
+float Fresnel(float etaI, float etaT, float cosThetaI) {
+	float sinThetaI = sqrt(max(0, 1 - cosThetaI * cosThetaI));
+	float sinThetaT = etaI / etaI * sinThetaI;
+	if (sinThetaT >= 1) return 1;
+	float cosThetaT = sqrt(max(0, 1 - sinThetaT * sinThetaT));
+
+	float Rparl = (etaT * cosThetaI - etaI * cosThetaT) /
+				  (etaT * cosThetaI + etaI * cosThetaT);
+	float Rparp = (etaI * cosThetaI - etaT * cosThetaT) /
+				  (etaI * cosThetaI + etaT * cosThetaT);
+
+	return (Rparl * Rparl + Rparp * Rparp) / 2;
+}
+
 bool Trace(Ray ray, out vec3 color) {
 
 	vec3 hitPos, dir;
@@ -386,7 +401,7 @@ bool Trace(Ray ray, out vec3 color) {
 	//color = m.color;
 
 	Ray traversalRay = ray;
-
+	float currentEta = 1;
 	for(int i = 0; i < maxDepth; ++i) {
 		// bool hit = RayCastTest(traversalRay, hitPos, dir, instanceIdx);
 		bool hit = RayCastTest_BVH_1(traversalRay, hitPos, dir, instanceIdx);
@@ -403,7 +418,11 @@ bool Trace(Ray ray, out vec3 color) {
 		ShapeInstance instance = instances[instanceIdx];
 		Material m = materials[instance.materialIdx];
 
+
 		vec3 normal = normalize((-traversalRay.dir + dir) / 2);
+		float reflective = Fresnel(currentEta, m.indexOfRefraction, abs(cos(Angle(normal, -traversalRay.dir))));
+
+
 		rayHitInfoStack[i].materialIdx = instance.materialIdx;
 		rayHitInfoStack[i].dir = traversalRay.dir;
 		rayHitInfoStack[i].normal = normal;
@@ -416,12 +435,22 @@ bool Trace(Ray ray, out vec3 color) {
 			return true;
 		}
 
+		int width = int(renderSetting.width);
+		uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
+
+		// bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
+		bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
+
+		dir = isReflect ? dir : traversalRay.dir;
+
 		// vec4 ggx = make_random(normal);
 		// vec4 ggx = make_GGXRandom(normal, 1 - m.roguhness);
 		vec4 ggx = make_GGXRandom(dir, 1 - m.roguhness);
 		rayHitInfoStack[i].cosTheta = ggx.w;
 		traversalRay.dir = ggx.xyz;
-		traversalRay.origin = hitPos + normal * 0.01;
+		// traversalRay.origin = hitPos + normal * 0.01;
+		traversalRay.origin = hitPos + normal * (isReflect ? 0.01 : -0.01);
+		currentEta = m.indexOfRefraction;
 	}
 
 

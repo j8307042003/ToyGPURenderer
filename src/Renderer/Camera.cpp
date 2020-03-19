@@ -7,6 +7,9 @@
 #include<iostream>
 #include<stack>
 #include<cmath>
+#include "glm/gtc/quaternion.hpp"
+#include "glm/glm.hpp"
+
 
 #ifndef M_PI
 #define M_PI 3.1415926
@@ -27,7 +30,7 @@ int EncodeInt32(int r, int g, int b, int a)
 Camera::Camera( int width, int height, Vec3 position) : 
 	view(width, height),
 	// transform(position, Quaternion(Vec3(0, 1, 0), 30))
-	transform(position, Quaternion())
+	transform(position, glm::quat({0, 0, glm::radians(180.0f)}))
 {
 	std::cout << "Init Camera";
 	//view = RenderView(width, height);

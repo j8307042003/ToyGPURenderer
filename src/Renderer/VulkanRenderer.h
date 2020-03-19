@@ -76,6 +76,11 @@ Vec3 make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3);
 		float emission_g;
 		float emission_b;
 		float roughness;
+
+		float transparency;
+		float indexOfRefraction;
+		float pad0;
+		float pad1;
 	};
 
 

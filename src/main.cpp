@@ -17,6 +17,8 @@
 // #include <glad/glad.h>
 
 #include <GLFW/glfw3.h>
+#include <glm/gtx/quaternion.hpp>
+
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -210,8 +212,10 @@ void Do_Rotate()
         mouse_pos_y = now_pos_y;
 
         const float kRotRatio = 1 / 100.0f;
+        // const float kRotRatio = 1 / 10.0f;
         cam.transform.rotation = 
-            cam.transform.rotation * Quaternion( delta_y * kRotRatio, delta_x * kRotRatio, 0 );
+            // glm::normalize(cam.transform.rotation * glm::quat( delta_y * kRotRatio, delta_x * kRotRatio, 0, 0 ));
+            glm::normalize(cam.transform.rotation * glm::quat({delta_y * kRotRatio, delta_x * kRotRatio, 0 }));
         cam.transform.UpdateMatrix();
         renderer->ClearImage();
 

@@ -137,7 +137,7 @@ Scene make_test_scene2() {
 	scene.AddMaterial("s2", new material({1, 1, 1}, {0.5, 3, 0.5}, 0.3));	
 
 	// scene.AddMaterial("s3", new material({1, 1, 1}, {0, 0, 0}, 0));	
-	scene.AddMaterial("s3", new material({1, 1, .1}, {0, 0, 0}, 0, .1));	
+	scene.AddMaterial("s3", new material({1, 1, .1}, {0, 0, 0}, .9, .2, 0.9f));	
 	scene.AddMaterial("s4", new material({1, 1, 1}, {0, 0, 0}, 0.5));	
 	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
 	scene.AddMaterial("s5", new material({1, 1, 1}, {1, 1, 1}, 0.3));	

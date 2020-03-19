@@ -152,6 +152,11 @@ struct Material {
 	float metalic;
 	vec3 emission;
 	float roguhness;
+	
+	float transparency;
+	float indexOfRefraction;
+	float pad0;
+	float pad1;
 	//float emission_r;
 	//float emission_g;
 	//float emission_b;
