@@ -299,7 +299,8 @@ vec3 uniformSampleHemisphere(float r1, float r2)
     // cos(theta) = r1 = y
     // cos^2(theta) + sin^2(theta) = 1 -> sin(theta) = srtf(1 - cos^2(theta))
     float sinTheta = sqrt(1 - r1 * r1); 
-    float phi = 2 * M_PI * r2; 
+    // float phi = 2 * M_PI * r2; 
+    float phi = r2; 
     float x = sinTheta * cos(phi); 
     float z = sinTheta * sin(phi); 
     return vec3(x, r1, z); 
@@ -315,7 +316,7 @@ vec4 make_random(vec3 dir) {
 	uint imgPos = gl_GlobalInvocationID.x + renderSetting.width * gl_GlobalInvocationID.y;
 	uint seed = imgPos * renderSetting.time;
 	float r1 = rand_global(seed);
-	float r2 = rand_global(seed);
+	float r2 = 2 * M_PI * rand_global(seed);
 
 	vec3 localHemiSphereDir = uniformSampleHemisphere(r1, r2);
     return vec4( 
@@ -326,20 +327,23 @@ vec4 make_random(vec3 dir) {
 }
 
 
-vec4 make_GGXRandom(vec3 dir, float roughness) {
+vec4 make_GGXRandom(vec3 dir, vec2 polarSet) {
 	// const Vec3 normal = 
 	// return (Vec3(myRand() - 0.5, myRand() - 0.5, myRand() - 0.5)).normalized();
 	vec3 Nb, Nt;
 	make_coordinateSys(dir, Nb, Nt);
 
-	uint imgPos = gl_GlobalInvocationID.x + renderSetting.width * gl_GlobalInvocationID.y;
-	uint seed = imgPos * renderSetting.time;
-	float r1 = rand_global(seed);
-	float r2 = rand_global(seed);
+	//uint imgPos = gl_GlobalInvocationID.x + renderSetting.width * gl_GlobalInvocationID.y;
+	//uint seed = imgPos * renderSetting.time;
+	//float r1 = rand_global(seed);
+	//float r2 = rand_global(seed);
 
-	float theta1 = atan((roughness * sqrt(r1)) / (sqrt(1 - r1)));
-	theta1 = cos(theta1);
-	vec3 localHemiSphereDir = uniformSampleHemisphere(theta1, r2);
+	//float theta1 = atan((roughness * sqrt(r1)) / (sqrt(1 - r1)));
+	//theta1 = cos(theta1);
+	// vec3 localHemiSphereDir = uniformSampleHemisphere(theta1, r2);
+	float theta1 = cos(polarSet.x);
+	vec3 localHemiSphereDir = uniformSampleHemisphere(theta1, polarSet.y);
+
     return vec4( 
         localHemiSphereDir.x * Nb.x + localHemiSphereDir.y * dir.x + localHemiSphereDir.z * Nt.x, 
         localHemiSphereDir.x * Nb.y + localHemiSphereDir.y * dir.y + localHemiSphereDir.z * Nt.y, 
@@ -348,7 +352,15 @@ vec4 make_GGXRandom(vec3 dir, float roughness) {
         // r1 * M_PI); 	
 }
 
+vec2 random_polar(float roughness) {
+	uint imgPos = gl_GlobalInvocationID.x + renderSetting.width * gl_GlobalInvocationID.y;
+	uint seed = imgPos * renderSetting.time;
+	float r1 = rand_global(seed);
+	float r2 = rand_global(seed);
 
+	float theta1 = atan((roughness * sqrt(r1)) / (sqrt(1 - r1)));
+	return vec2(theta1, 2 * M_PI * r2);	
+}
 
 struct RayHitInfo {
 	vec3 dir;
@@ -390,6 +402,11 @@ float Fresnel(float etaI, float etaT, float cosThetaI) {
 	return (Rparl * Rparl + Rparp * Rparp) / 2;
 }
 
+float snell(float etaI, float etaT, float cosThetaI) {
+	float sinThetaI = sqrt(1 - cosThetaI * cosThetaI);
+	return (etaI * sinThetaI) / etaT;
+}
+
 bool Trace(Ray ray, out vec3 color) {
 
 	vec3 hitPos, dir;
@@ -418,9 +435,9 @@ bool Trace(Ray ray, out vec3 color) {
 		ShapeInstance instance = instances[instanceIdx];
 		Material m = materials[instance.materialIdx];
 
-
 		vec3 normal = normalize((-traversalRay.dir + dir) / 2);
-		float reflective = Fresnel(currentEta, m.indexOfRefraction, abs(cos(Angle(normal, -traversalRay.dir))));
+		float cosTheta = abs(cos(Angle(normal, -traversalRay.dir)));
+		float reflective = Fresnel(currentEta, m.indexOfRefraction, cosTheta);
 
 
 		rayHitInfoStack[i].materialIdx = instance.materialIdx;
@@ -438,14 +455,23 @@ bool Trace(Ray ray, out vec3 color) {
 		int width = int(renderSetting.width);
 		uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
 
-		// bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
-		bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
+		bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
+		// bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
 
 		dir = isReflect ? dir : traversalRay.dir;
 
 		// vec4 ggx = make_random(normal);
 		// vec4 ggx = make_GGXRandom(normal, 1 - m.roguhness);
-		vec4 ggx = make_GGXRandom(dir, 1 - m.roguhness);
+		vec2 polarSet = random_polar(1 - m.roguhness);
+		if (!isReflect) {
+			float eta = currentEta / m.indexOfRefraction;
+			float sinThetaT = snell(currentEta, m.indexOfRefraction, cosTheta);
+			float cosThetaT = sqrt(1 - sinThetaT * sinThetaT);
+
+		    dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
+		}
+
+		vec4 ggx = make_GGXRandom(dir, polarSet);
 		rayHitInfoStack[i].cosTheta = ggx.w;
 		traversalRay.dir = ggx.xyz;
 		// traversalRay.origin = hitPos + normal * 0.01;
