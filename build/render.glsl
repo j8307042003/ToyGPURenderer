@@ -91,8 +91,6 @@ bool RayCastTest_Sphere(SphereShape shape, Ray ray, out vec3 hitPos, out vec3 di
 }
 
 bool RayCastTest_Triangle(TriangleShape shape, Ray ray, out vec3 hitPos, out vec3 direction) {
-  // vec3 edge1 = shape.vertices[1] - shape.vertices[0];
-  // vec3 edge2 = shape.vertices[2] - shape.vertices[0];
   //vec3 v1 = shape.v1.xyz;
   //vec3 v2 = shape.v2.xyz;
   //vec3 v3 = shape.v3.xyz;

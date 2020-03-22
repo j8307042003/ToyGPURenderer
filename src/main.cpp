@@ -189,7 +189,7 @@ void Do_Movement()
 
 	if (x != 0 || y != 0 || z != 0) {
         Vec3 dir = cam.transform.TransformDir({x,y,z});
-		cam.transform.position += dir * deltaTime * 2.0f;
+		cam.transform.position += dir * deltaTime * 4.0f;
         cam.transform.UpdateMatrix();
 		renderer->ClearImage();
 	}
@@ -215,7 +215,7 @@ void Do_Rotate()
         // const float kRotRatio = 1 / 10.0f;
         cam.transform.rotation = 
             // glm::normalize(cam.transform.rotation * glm::quat( delta_y * kRotRatio, delta_x * kRotRatio, 0, 0 ));
-            glm::normalize(cam.transform.rotation * glm::quat({delta_y * kRotRatio, delta_x * kRotRatio, 0 }));
+            glm::normalize(glm::quat({delta_y * kRotRatio, delta_x * kRotRatio, 0 }) * cam.transform.rotation);
         cam.transform.UpdateMatrix();
         renderer->ClearImage();
 

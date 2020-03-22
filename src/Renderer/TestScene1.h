@@ -125,20 +125,26 @@ Scene make_test_scene2() {
 
 
 	//walls
-	scene.AddMaterial("Right Wall", new material({0.7, 0.3, 0.3}, {0, 0, 0}, 0.3));	 //Right Wall
-	scene.AddMaterial("Left Wall ", new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.3));	 //Left Wall
+	scene.AddMaterial("Right Wall", new material({0.7, 0.3, 0.3}, {0, 0, 0}, 0.2f));	 //Right Wall
+	scene.AddMaterial("Left Wall ", new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.2f));	 //Left Wall
 	scene.AddMaterial("Behind Wall", new material({1, 1, 1}, {6, 6, 6}, 1)); //behind wall
-	scene.AddMaterial("End Wall", new material({1, 1, 1}, {0, 0, 0}, 0.3)); //End Wall	
-	scene.AddMaterial("Floor Wall", new material({1, 1, 1}, {0, 0, 0}, 0.3));	 //Floor
+	scene.AddMaterial("End Wall", new material({1, 1, 1}, {0, 0, 0}, 0.2)); //End Wall	
+	scene.AddMaterial("Floor Wall", new material({1, 1, 1}, {0, 0, 0}, 0.99, .99));	 //Floor
 	scene.AddMaterial("Ceil Wall", new material({0.8, 0.8, 0.8}, {0.9, 0.9, 0.9}, 0.4));	 //Ceil
+	// scene.AddMaterial("Ceil Wall", new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0.1f));	 //Ceil
+	scene.AddMaterial("Ceil Light", new material({0.8, 0.8, 0.8}, {1, 1, 1}, 0.4));	 //Ceil
+
+	scene.AddMaterial("transparent wall", new material({1, 1, 1}, {0, 0, 0}, .95, .95, .99, 1.33)); //End Wall	
 
 	//spheres
 	scene.AddMaterial("s1", new material({1, 1, 1}, {3, 0.5, 0.5}, 0.7));	
+	// scene.AddMaterial("s1", new material({1, 1, 1}, {0, 0, 0}, 0.7));	
 	scene.AddMaterial("s2", new material({1, 1, 1}, {0.5, 3, 0.5}, 0.3));	
+	// scene.AddMaterial("s2", new material({1, 1, 1}, {0, 0, 0}, 0.3));	
 
-	// scene.AddMaterial("s3", new material({1, 1, 1}, {0, 0, 0}, 0));	
-	scene.AddMaterial("s3", new material({1, 1, 1}, {0, 0, 0}, .99, .8, .96f, 1.33f));	
-	scene.AddMaterial("s4", new material({1, 1, 1}, {0, 0, 0}, 0.5));	
+	scene.AddMaterial("s3", new material({1, 1, 1}, {0, 0, 0}, 0.9, .9));	
+	// scene.AddMaterial("s3", new material({1, 1, 1}, {0, 0, 0}, .99, .8, .96f, 1.33f));	
+	scene.AddMaterial("s4", new material({1, 1, 1}, {0, 0, 0}, 0));	
 	// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 1));	
 	scene.AddMaterial("s5", new material({1, 1, 1}, {1, 1, 1}, 0.3));	
 
@@ -149,7 +155,8 @@ Scene make_test_scene2() {
 		int row = i / item;
 		int rowIdx = i % item;
 		std::string sphereMatName = "s auto gen " + std::to_string(i); 
-		scene.AddMaterial(sphereMatName, new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, i / (float)item, .7));	
+		scene.AddMaterial(sphereMatName, new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, .9999, .9999, 1, 1.33));	
+		// scene.AddMaterial(sphereMatName, new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, .95, .95, 0, 1.33));	
 		scene.AddShape(new Sphere({ (((i % item) - 0.5f * item) / item) * wallOffsetX * 2 + 0.5f, (row - totalRow / 2) * (wallHeight / totalRow) * 2, -wallWidth / 2.0f}, 0.5), 
 						sphereMatName);	
 		// scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.95f));	
@@ -209,6 +216,49 @@ Scene make_test_scene2() {
 		{ wallOffsetX,  wallHeight, -wallWidth}
 	),"Ceil Wall");	
 		
+	//Ceil
+	scene.AddShape(new Plane(
+		{-wallOffsetX / 3.0f,  wallHeight - 0.2f,  wallWidth / 2.0f}, 
+		{-wallOffsetX / 3.0f,  wallHeight - 0.2f, -wallWidth / 2.0f}, 
+		{ wallOffsetX / 3.0f,  wallHeight - 0.2f,  wallWidth / 2.0f},
+		{ wallOffsetX / 3.0f,  wallHeight - 0.2f, -wallWidth / 2.0f}
+	),"Ceil Light");
+
+
+	//End Wall
+	scene.AddShape(new Plane(
+		{-wallOffsetX / 5.0f,   wallHeight, -wallWidth / 3.0f}, 
+		{-wallOffsetX / 5.0f,  -wallHeight, -wallWidth / 3.0f}, 
+		{ wallOffsetX / 5.0f,   wallHeight, -wallWidth / 3.0f},	
+		{ wallOffsetX / 5.0f,  -wallHeight, -wallWidth / 3.0f}
+	),"transparent wall");
+
+
+	float transparentWallWidth = 1.0;
+	//End Wall2
+	scene.AddShape(new Plane(
+		{-wallOffsetX / 5.0f,   wallHeight, -wallWidth / 3.0f + transparentWallWidth}, 
+		{-wallOffsetX / 5.0f,  -wallHeight, -wallWidth / 3.0f + transparentWallWidth}, 
+		{ wallOffsetX / 5.0f,   wallHeight, -wallWidth / 3.0f + transparentWallWidth},	
+		{ wallOffsetX / 5.0f,  -wallHeight, -wallWidth / 3.0f + transparentWallWidth}
+	),"transparent wall");
+
+	//End Wall2
+	scene.AddShape(new Plane(
+		{-wallOffsetX / 5.0f,   wallHeight, -wallWidth / 3.0f}, 
+		{-wallOffsetX / 5.0f,  -wallHeight, -wallWidth / 3.0f}, 
+		{-wallOffsetX / 5.0f,   wallHeight, -wallWidth / 3.0f + transparentWallWidth},	
+		{-wallOffsetX / 5.0f,  -wallHeight, -wallWidth / 3.0f + transparentWallWidth}
+	),"transparent wall");	
+
+	//End Wall2
+	scene.AddShape(new Plane(
+		{wallOffsetX / 5.0f,   wallHeight, -wallWidth / 3.0f}, 
+		{wallOffsetX / 5.0f,  -wallHeight, -wallWidth / 3.0f}, 
+		{wallOffsetX / 5.0f,   wallHeight, -wallWidth / 3.0f + transparentWallWidth},	
+		{wallOffsetX / 5.0f,  -wallHeight, -wallWidth / 3.0f + transparentWallWidth}
+	),"transparent wall");	
+
 
 	// scene.AddShape(new Sphere({0, 0, wallWidth / 2}, 1));	
 	scene.AddShape(new Sphere({-2.5, -wallHeight + 2, -wallWidth / 1.2f}, 2), "s1");	

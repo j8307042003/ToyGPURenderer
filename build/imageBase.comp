@@ -309,14 +309,17 @@ vec3 uniformSampleHemisphere(float r1, float r2)
 
 
 
-vec4 make_random(vec3 dir) {
+vec4 make_random(vec3 dir, vec2 polarSet) {
 	vec3 Nb, Nt;
 	make_coordinateSys(dir, Nb, Nt);
 
 	uint imgPos = gl_GlobalInvocationID.x + renderSetting.width * gl_GlobalInvocationID.y;
 	uint seed = imgPos * renderSetting.time;
-	float r1 = rand_global(seed);
-	float r2 = 2 * M_PI * rand_global(seed);
+	// float r1 = rand_global(seed);
+	// float r2 = 2 * M_PI * rand_global(seed);
+	float r1 = polarSet.x;
+	float r2 = polarSet.y;
+
 
 	vec3 localHemiSphereDir = uniformSampleHemisphere(r1, r2);
     return vec4( 
@@ -369,6 +372,7 @@ struct RayHitInfo {
 	uint materialIdx;
 	vec3 color;	
 	float cosTheta;
+	float metalic;
 };
 
 // const int maxDepth = 2;
@@ -380,7 +384,8 @@ void ResolveRayHit(int idx) {
 	for(int i = idx; i >= 0; --i) {
 		Material m = materials[rayHitInfoStack[i].materialIdx];
 		vec3 engery = rayHitInfoStack[i+1].color;
-		float metalic = 1 - m.metalic;
+		// float metalic = 1 - m.metalic;
+		float metalic = 1 - rayHitInfoStack[i].metalic;
 		vec3 indirect = m.color.xyz * engery * metalic + (1 - metalic) * engery;
 
 		rayHitInfoStack[i].color = (m.emission.xyz + (i < idx ? indirect : vec3(0)) * abs(rayHitInfoStack[i].cosTheta));
@@ -419,6 +424,7 @@ bool Trace(Ray ray, out vec3 color) {
 
 	Ray traversalRay = ray;
 	float currentEta = 1;
+	int currentMaterialIdx = -1;
 	for(int i = 0; i < maxDepth; ++i) {
 		// bool hit = RayCastTest(traversalRay, hitPos, dir, instanceIdx);
 		bool hit = RayCastTest_BVH_1(traversalRay, hitPos, dir, instanceIdx);
@@ -434,12 +440,16 @@ bool Trace(Ray ray, out vec3 color) {
 
 		ShapeInstance instance = instances[instanceIdx];
 		Material m = materials[instance.materialIdx];
+		bool sameMaterial = currentMaterialIdx == instance.materialIdx;
+		float eta_t = sameMaterial ? 1 : m.indexOfRefraction;
+
 
 		vec3 normal = normalize((-traversalRay.dir + dir) / 2);
-		float cosTheta = abs(cos(Angle(normal, -traversalRay.dir)));
-		float reflective = Fresnel(currentEta, m.indexOfRefraction, cosTheta);
+		// float cosTheta = abs(cos(Angle(normal, -traversalRay.dir)));
+		float cosTheta = dot(normal, -traversalRay.dir);
+		float reflective = Fresnel(currentEta, eta_t, cosTheta);
 
-
+		currentMaterialIdx = int(instance.materialIdx);
 		rayHitInfoStack[i].materialIdx = instance.materialIdx;
 		rayHitInfoStack[i].dir = traversalRay.dir;
 		rayHitInfoStack[i].normal = normal;
@@ -455,28 +465,38 @@ bool Trace(Ray ray, out vec3 color) {
 		int width = int(renderSetting.width);
 		uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
 
-		bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
-		// bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
-
-		dir = isReflect ? dir : traversalRay.dir;
-
-		// vec4 ggx = make_random(normal);
-		// vec4 ggx = make_GGXRandom(normal, 1 - m.roguhness);
+		// bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
+		bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
+		isReflect = isReflect && !sameMaterial;
 		vec2 polarSet = random_polar(1 - m.roguhness);
 		if (!isReflect) {
-			float eta = currentEta / m.indexOfRefraction;
-			float sinThetaT = snell(currentEta, m.indexOfRefraction, cosTheta);
-			float cosThetaT = sqrt(1 - sinThetaT * sinThetaT);
+			// float eta = currentEta / eta_t;
+			float eta = currentEta / eta_t;
+ 			float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
+       		float sin2ThetaT = eta * eta * sin2ThetaI;			
+			//float sinThetaT = snell(currentEta, eta_t, cosTheta);
+			//float cosThetaT = sqrt(1 - sinThetaT * sinThetaT);
+			float cosThetaT = sqrt(1.0 - sin2ThetaT);
 
+		    // dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
 		    dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
 		}
 
-		vec4 ggx = make_GGXRandom(dir, polarSet);
-		rayHitInfoStack[i].cosTheta = ggx.w;
-		traversalRay.dir = ggx.xyz;
+		vec4 result;
+		if (rand_global(imgPos * renderSetting.time) > m.metalic) {
+			result = make_random(dir, polarSet);
+			rayHitInfoStack[i].metalic = 0;
+		} else {
+			result = make_GGXRandom(dir, polarSet);
+			rayHitInfoStack[i].metalic = 1;
+		}
+		// rayHitInfoStack[i].cosTheta = ggx.w;
+		rayHitInfoStack[i].cosTheta = cosTheta;
+		traversalRay.dir = result.xyz;
 		// traversalRay.origin = hitPos + normal * 0.01;
 		traversalRay.origin = hitPos + normal * (isReflect ? 0.01 : -0.01);
-		currentEta = m.indexOfRefraction;
+		currentEta = eta_t;
+		if (sameMaterial) i--;
 	}
 
 
