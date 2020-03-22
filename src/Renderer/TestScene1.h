@@ -127,19 +127,20 @@ Scene make_test_scene2() {
 	//walls
 	scene.AddMaterial("Right Wall", new material({0.7, 0.3, 0.3}, {0, 0, 0}, 0.2f));	 //Right Wall
 	scene.AddMaterial("Left Wall ", new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.2f));	 //Left Wall
-	scene.AddMaterial("Behind Wall", new material({1, 1, 1}, {6, 6, 6}, 1)); //behind wall
+	// scene.AddMaterial("Behind Wall", new material({1, 1, 1}, {1, 1, 1}, 1)); //behind wall
+	scene.AddMaterial("Behind Wall", new material({1, 1, 1}, {0, 0, 0}, 1)); //behind wall
 	scene.AddMaterial("End Wall", new material({1, 1, 1}, {0, 0, 0}, 0.2)); //End Wall	
 	scene.AddMaterial("Floor Wall", new material({1, 1, 1}, {0, 0, 0}, 0, 0));	 //Floor
-	scene.AddMaterial("Ceil Wall", new material({0.8, 0.8, 0.8}, {0.9, 0.9, 0.9}, 0.4));	 //Ceil
-	// scene.AddMaterial("Ceil Wall", new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0.1f));	 //Ceil
+	// scene.AddMaterial("Ceil Wall", new material({0.8, 0.8, 0.8}, {0.9, 0.9, 0.9}, 0.4));	 //Ceil
+	scene.AddMaterial("Ceil Wall", new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0.1f));	 //Ceil
 	scene.AddMaterial("Ceil Light", new material({0.8, 0.8, 0.8}, {1, 1, 1}, 0.4));	 //Ceil
 
 	scene.AddMaterial("transparent wall", new material({1, 1, 1}, {0, 0, 0}, .95, .95, .99, 1.33)); //End Wall	
 
 	//spheres
-	scene.AddMaterial("s1", new material({1, 1, 1}, {3, 0.5, 0.5}, 0.7));	
+	scene.AddMaterial("s1", new material({1, 1, 1}, {1, 0.5, 0.5}, 0.7));	
 	// scene.AddMaterial("s1", new material({1, 1, 1}, {0, 0, 0}, 0.7));	
-	scene.AddMaterial("s2", new material({1, 1, 1}, {0.5, 3, 0.5}, 0.3));	
+	scene.AddMaterial("s2", new material({1, 1, 1}, {0.5, 1, 0.5}, 0.3));	
 	// scene.AddMaterial("s2", new material({1, 1, 1}, {0, 0, 0}, 0.3));	
 
 	scene.AddMaterial("s3", new material({1, 1, 1}, {0, 0, 0}, 0.9, .9));	

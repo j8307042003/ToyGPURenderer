@@ -317,7 +317,7 @@ vec4 make_random(vec3 dir, vec2 polarSet) {
 	uint seed = imgPos * renderSetting.time;
 	// float r1 = rand_global(seed);
 	// float r2 = 2 * M_PI * rand_global(seed);
-	float r1 = polarSet.x;
+	float r1 = cos(polarSet.x);
 	float r2 = polarSet.y;
 
 
@@ -493,7 +493,9 @@ bool Trace(Ray ray, out vec3 color) {
 			rayHitInfoStack[i].metalic = 1;
 		}
 		// rayHitInfoStack[i].cosTheta = ggx.w;
-		rayHitInfoStack[i].cosTheta = cosTheta;
+		// rayHitInfoStack[i].cosTheta = cosTheta;
+		// rayHitInfoStack[i].cosTheta = dot(normal, result.xyz);
+		rayHitInfoStack[i].cosTheta = cos(polarSet.x);
 		traversalRay.dir = result.xyz;
 		// traversalRay.origin = hitPos + normal * 0.01;
 		traversalRay.origin = hitPos + normal * (isReflect ? 0.01 : -0.01);
