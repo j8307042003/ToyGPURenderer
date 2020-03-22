@@ -468,7 +468,6 @@ bool Trace(Ray ray, out vec3 color) {
 		// bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
 		bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
 		isReflect = isReflect && !sameMaterial;
-		vec2 polarSet = random_polar(1 - m.roguhness);
 		if (!isReflect) {
 			// float eta = currentEta / eta_t;
 			float eta = currentEta / eta_t;
@@ -483,10 +482,13 @@ bool Trace(Ray ray, out vec3 color) {
 		}
 
 		vec4 result;
+		vec2 polarSet;
 		if (rand_global(imgPos * renderSetting.time) > m.metalic) {
-			result = make_random(dir, polarSet);
+			polarSet = random_polar(1);
+			result = make_random(normal, polarSet);
 			rayHitInfoStack[i].metalic = 0;
 		} else {
+			polarSet = random_polar(1 - m.roguhness);
 			result = make_GGXRandom(dir, polarSet);
 			rayHitInfoStack[i].metalic = 1;
 		}

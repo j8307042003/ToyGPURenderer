@@ -129,7 +129,7 @@ Scene make_test_scene2() {
 	scene.AddMaterial("Left Wall ", new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.2f));	 //Left Wall
 	scene.AddMaterial("Behind Wall", new material({1, 1, 1}, {6, 6, 6}, 1)); //behind wall
 	scene.AddMaterial("End Wall", new material({1, 1, 1}, {0, 0, 0}, 0.2)); //End Wall	
-	scene.AddMaterial("Floor Wall", new material({1, 1, 1}, {0, 0, 0}, 0.99, .99));	 //Floor
+	scene.AddMaterial("Floor Wall", new material({1, 1, 1}, {0, 0, 0}, 0, 0));	 //Floor
 	scene.AddMaterial("Ceil Wall", new material({0.8, 0.8, 0.8}, {0.9, 0.9, 0.9}, 0.4));	 //Ceil
 	// scene.AddMaterial("Ceil Wall", new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0.1f));	 //Ceil
 	scene.AddMaterial("Ceil Light", new material({0.8, 0.8, 0.8}, {1, 1, 1}, 0.4));	 //Ceil
