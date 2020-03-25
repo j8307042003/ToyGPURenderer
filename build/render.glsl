@@ -252,7 +252,60 @@ bool RayIntersect_AABB_1(AABB aabb, Ray ray) {
 }
 
 
+float RayIntersect_AABB_2(AABB aabb, Ray ray) {
+   float t[9];
+   t[1] = (aabb.min.x - ray.origin.x)/ ray.dir.x;
+   t[2] = (aabb.max.x - ray.origin.x)/ ray.dir.x;
+   t[3] = (aabb.min.y - ray.origin.y)/ ray.dir.y;
+   t[4] = (aabb.max.y - ray.origin.y)/ ray.dir.y;
+   t[5] = (aabb.min.z - ray.origin.z)/ ray.dir.z;
+   t[6] = (aabb.max.z - ray.origin.z)/ ray.dir.z;
+   t[7] = max(max(min(t[1], t[2]), min(t[3], t[4])), min(t[5], t[6]));
+   t[8] = min(min(max(t[1], t[2]), max(t[3], t[4])), max(t[5], t[6]));
+   // t[9] = (t[8] < 0 || t[7] > t[8]) ? NOHIT : t[7];
+   return (t[8] < 0 || t[7] > t[8]) ? -1 : t[7];
+   // return t[9];	
+}
 
+
+float mymin3(float a, float b, float c)
+{
+    return min(c, min(a, b));
+}
+
+float mymax3(float a, float b, float c)
+{
+    return max(c, max(a, b));
+}
+
+//float copysign(float a, float b)
+//{
+//    return sign(b) >= 0.f ? a : -a;
+//}
+
+vec3 safe_invdir(vec3 d)
+{
+    float dirx = d.x;
+    float diry = d.y;
+    float dirz = d.z;
+    float ooeps = 1e-5;
+    vec3 invdir;
+    invdir.x = 1.0 / (abs(dirx) > ooeps ? dirx : (sign(dirx) >= 0.f ? ooeps : -ooeps));
+    invdir.y = 1.0 / (abs(diry) > ooeps ? diry : (sign(diry) >= 0.f ? ooeps : -ooeps));
+    invdir.z = 1.0 / (abs(dirz) > ooeps ? dirz : (sign(dirz) >= 0.f ? ooeps : -ooeps));
+    return invdir;
+}
+
+vec2 fast_intersect_aabb( AABB aabb, vec3 invdir, vec3 oxinvdir)
+{
+    vec3 f = fma(aabb.max.xyz, invdir, oxinvdir);
+    vec3 n = fma(aabb.min.xyz, invdir, oxinvdir);
+    vec3 tmax = max(f, n);
+    vec3 tmin = min(f, n);
+    float t1 = mymin3(tmax.x, tmax.y, tmax.z);
+    float t0 = mymax3(tmin.x, tmin.y, tmin.z);
+    return vec2(t0, t1);
+}
 
 
 
