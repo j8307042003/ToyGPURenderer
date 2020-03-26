@@ -101,8 +101,8 @@ layout(std140, binding = 9) buffer BVH
 
 
 // layout (local_size_x = 16, local_size_y = 16) in;
-// layout (local_size_x = 8, local_size_y = 8) in;
-layout (local_size_x = 4, local_size_y = 4) in;
+layout (local_size_x = 8, local_size_y = 8) in;
+// layout (local_size_x = 4, local_size_y = 4) in;
 
 uint rand_counter = 0;
 uint wang_hash(uint seed)
@@ -145,7 +145,7 @@ bool RayCastTestInstance(ShapeInstance instance, Ray ray, out vec3 hitPos, out v
 }
 
 
-
+/*
 
 const int kBVH_Depth = 32;
 int bvh_visit_stack[kBVH_Depth];
@@ -211,7 +211,87 @@ bool RayCastTest_BVH_1(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 
 	return bEverHit;
 }
+*/
 
+
+
+
+int get_right_sibling(int idx) {
+	int right = idx + 1;
+	return instanceCount > right ? right : -1;
+}
+
+
+bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
+
+	vec3 pos;
+	vec3 dir;
+	bool bEverHit = false;
+
+	float depth = 99999999;
+
+    vec3 invdir = safe_invdir(ray.dir.xyz);
+    vec3 oxinvdir = -ray.origin.xyz * invdir;
+
+    int currentIdx = 0;
+    bool jumpNextLeft = false;
+	while(currentIdx >= 0) {
+    	bool walkLeft = false;
+		bvh_node node = bvh_tree[currentIdx];
+		bool isRight = currentIdx % 2 == 0;
+
+		if (jumpNextLeft) {
+			if (isRight) {
+				currentIdx = (currentIdx - 1) >> 1;
+			} else {
+				currentIdx = currentIdx + 1;
+				jumpNextLeft = false;
+			}
+			
+			continue;
+		}
+
+		if (node.isLeaf > 0) {
+			int id = node.primitiveId;
+			bool bHit = RayCastTestInstance(instances[id], ray, pos, dir);
+			vec3 origin_to_pos = pos - ray.origin;
+			float hitDepth = origin_to_pos.x * origin_to_pos.x + origin_to_pos.y * origin_to_pos.y + origin_to_pos.z * origin_to_pos.z;
+			if (bHit && hitDepth < depth ){
+				depth = hitDepth;
+				hitPos = pos;
+				instanceIdx = id;
+				direction = dir;
+				bEverHit = true;
+			}				
+		}
+		else {
+
+			vec2 s =  fast_intersect_aabb(node.boundingBox, invdir, oxinvdir);
+            bool bIntersect = (s.x <= s.y);
+
+			if (bIntersect && node.left > 0) {							
+				walkLeft = true;
+			}		
+
+		}
+
+		if (walkLeft) {							
+			currentIdx = node.left;
+		}
+		else {
+			if (isRight) {
+				jumpNextLeft = true;
+				currentIdx = (currentIdx - 1) >> 1;
+			} else{
+				currentIdx = get_right_sibling(currentIdx);
+			}
+		}		
+
+	}
+
+
+	return bEverHit;
+}
 
 
 
@@ -370,7 +450,6 @@ float snell(float etaI, float etaT, float cosThetaI) {
 }
 
 bool Trace(Ray ray, out vec3 color) {
-
 	vec3 hitPos, dir;
 	uint instanceIdx;
 	//bool hit = RayCastTest(ray, hitPos, dir, instanceIdx);
@@ -385,7 +464,8 @@ bool Trace(Ray ray, out vec3 color) {
 	RayHitInfo rayHitInfo;
 	for(int i = 0; i < maxDepth; ++i) {
 		// bool hit = RayCastTest(traversalRay, hitPos, dir, instanceIdx);
-		bool hit = RayCastTest_BVH_1(traversalRay, hitPos, dir, instanceIdx);
+		// bool hit = RayCastTest_BVH_1(traversalRay, hitPos, dir, instanceIdx);
+		bool hit = RayCastTest_BVH_2(traversalRay, hitPos, dir, instanceIdx);
 
 		if (!hit) {
 			if (i == 0) return false;
@@ -423,8 +503,8 @@ bool Trace(Ray ray, out vec3 color) {
 		int width = int(renderSetting.width);
 		uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
 
-		// bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
-		bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
+		bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
+		// bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
 		isReflect = isReflect && !sameMaterial;
 		if (!isReflect) {
 			// float eta = currentEta / eta_t;
@@ -473,7 +553,7 @@ bool Trace(Ray ray, out vec3 color) {
 	return true;
 }
 
-
+/*
 bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
 	int stackCount = 1;
 	bvh_visit_stack[0] = 0;
@@ -495,19 +575,7 @@ bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 		int treeIdx = bvh_visit_stack[stackCount];
 
 		if (bvh_tree[treeIdx].isLeaf > 0) {
-			/*
-			int id = bvh_tree[treeIdx].primitiveId;
-			bool bHit = RayCastTestInstance(instances[id], ray, pos, dir);
-			vec3 origin_to_pos = pos - ray.origin;
-			float hitDepth = origin_to_pos.x * origin_to_pos.x + origin_to_pos.y * origin_to_pos.y + origin_to_pos.z * origin_to_pos.z;
-			if (bHit && hitDepth < depth ){
-				depth = hitDepth;
-				hitPos = pos;
-				instanceIdx = id;
-				direction = dir;
-				bEverHit = true;
-			}
-			*/
+
 		}
 		else {
 			vec2 s =  fast_intersect_aabb(bvh_tree[treeIdx].boundingBox, invdir, oxinvdir);
@@ -544,7 +612,7 @@ bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 
 	return bEverHit;
 }
-
+*/
 
 
 void main()

@@ -207,7 +207,8 @@ void VulkanRenderer::SetData() {
 	//2 Shape Instance
 	size_t shapeBufSize = sizeof(int) + sizeof(ShapeInstance) * shapeDatas.size();
 	void * shapeInstanceMem = new char[shapeBufSize];
-	int shapeSize = shapeDatas.size();
+	// int shapeSize = shapeDatas.size();
+	int shapeSize = s->tree.nodes.size();
 	memcpy(shapeInstanceMem, &shapeSize, sizeof(int));
 	shapeInstanceMem = static_cast<char*>(shapeInstanceMem) + sizeof(int);
 	memcpy(shapeInstanceMem, shapeDatas.data(), sizeof(ShapeInstance) * shapeDatas.size());
@@ -247,8 +248,8 @@ void VulkanRenderer::InitRenderCommand() {
 	
 	AddComputeShaderCommand(
 	  // width / 16, height / 16, 1,
-	  // width / 8, height / 8, 1,
-	  width / 4, height / 4, 1,
+	  width / 8, height / 8, 1,
+	  // width / 4, height / 4, 1,
 	  vulkanInstance.device,
 	  commandBuffers[0], 
 	  pipeline.pipeline, 
