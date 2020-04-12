@@ -2,9 +2,9 @@
 
 struct SamplerIntegrator
 {
-	uint r;
-	uint g;
-	uint b;
+	float r;
+	float g;
+	float b;
 	uint count;
 };
 
@@ -40,11 +40,13 @@ struct bvh_node {
 
 struct Color
 {
-	uint data;
+	// uint data;
+	// vec3 data;
+	float data;
 };
 
 //layout(std140, binding = 0) buffer Ver
-layout(binding = 0) buffer Ver
+layout(binding = 0, std430) buffer Ver
 {
    Color col[];
 };
@@ -145,13 +147,13 @@ bool RayCastTestInstance(ShapeInstance instance, Ray ray, out vec3 hitPos, out v
 }
 
 
-/*
+
 
 const int kBVH_Depth = 32;
 int bvh_visit_stack[kBVH_Depth];
 
 
-bool RayCastTest_BVH_1(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
+bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
 	int stackCount = 1;
 	bvh_visit_stack[0] = 0;
 
@@ -211,11 +213,11 @@ bool RayCastTest_BVH_1(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 
 	return bEverHit;
 }
-*/
 
 
 
 
+/*
 int get_right_sibling(int idx) {
 	int right = idx + 1;
 	return instanceCount > right ? right : -1;
@@ -240,17 +242,18 @@ bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 		bvh_node node = bvh_tree[currentIdx];
 		bool isRight = currentIdx % 2 == 0;
 
-		if (jumpNextLeft) {
-			if (isRight) {
-				currentIdx = (currentIdx - 1) >> 1;
-			} else {
-				currentIdx = currentIdx + 1;
-				jumpNextLeft = false;
-			}
-			
-			continue;
-		}
+		//if (jumpNextLeft) {
+		//	if (isRight) {
+		//		currentIdx = (currentIdx - 1) >> 1;
+		//	} else {
+		//		currentIdx = currentIdx + 1;
+		//		jumpNextLeft = false;
+		//	}
+		//	
+		//	continue;
+		//}
 
+		if (!jumpNextLeft) {
 		if (node.isLeaf > 0) {
 			int id = node.primitiveId;
 			bool bHit = RayCastTestInstance(instances[id], ray, pos, dir);
@@ -274,16 +277,17 @@ bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 			}		
 
 		}
-
+		}
 		if (walkLeft) {							
 			currentIdx = node.left;
 		}
 		else {
 			if (isRight) {
-				jumpNextLeft = true;
+				if (!jumpNextLeft) jumpNextLeft = true;
 				currentIdx = (currentIdx - 1) >> 1;
 			} else{
 				currentIdx = get_right_sibling(currentIdx);
+				if (jumpNextLeft) jumpNextLeft = false;
 			}
 		}		
 
@@ -295,7 +299,7 @@ bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 
 
 
-
+*/
 
 
 /*
@@ -398,7 +402,8 @@ vec2 random_polar(float roughness) {
 	float r1 = rand_global(seed);
 	float r2 = rand_global(seed);
 
-	float theta1 = atan((roughness * sqrt(r1)) / (sqrt(1 - r1)));
+	// float theta1 = atan((roughness * sqrt(r1)) / (sqrt(1 - r1)));
+	float theta1 = acos(sqrt((1.0f - r1) / ((roughness * roughness - 1.0f) * r1 + 1.0f)));
 	return vec2(theta1, 2 * M_PI * r2);	
 }
 
@@ -413,9 +418,21 @@ struct RayHitInfo {
 };
 
 // const int maxDepth = 2;
-const int maxDepth = 8;
+const int maxDepth = 16;
 RayHitInfo rayHitInfoStack[maxDepth+1];
 
+
+// dE(p, Wi) = Li(p, Wi) * cos(Theta_i) dWi
+void dE_BRDF() {
+
+}
+
+
+// dLr(Wr) / dEi(Wi)
+void Fr() {
+
+
+}
 
 void ResolveRayHit(int idx) {
 	for(int i = idx; i >= 0; --i) {
@@ -425,14 +442,14 @@ void ResolveRayHit(int idx) {
 		float metalic = 1 - rayHitInfoStack[i].metalic;
 		vec3 indirect = m.color.xyz * engery * metalic + (1 - metalic) * engery;
 
-		rayHitInfoStack[i].color = (m.emission.xyz + (i < idx ? indirect : vec3(0)) * abs(rayHitInfoStack[i].cosTheta));
+		rayHitInfoStack[i].color = (m.emission.xyz + (i < idx ? indirect : vec3(0)) *  abs(rayHitInfoStack[i].cosTheta));
 	}
 }
 
 
 float Fresnel(float etaI, float etaT, float cosThetaI) {
 	float sinThetaI = sqrt(max(0, 1 - cosThetaI * cosThetaI));
-	float sinThetaT = etaI / etaI * sinThetaI;
+	float sinThetaT = etaI / etaT * sinThetaI;
 	if (sinThetaT >= 1) return 1;
 	float cosThetaT = sqrt(max(0, 1 - sinThetaT * sinThetaT));
 
@@ -441,7 +458,7 @@ float Fresnel(float etaI, float etaT, float cosThetaI) {
 	float Rparp = (etaI * cosThetaI - etaT * cosThetaT) /
 				  (etaI * cosThetaI + etaT * cosThetaT);
 
-	return (Rparl * Rparl + Rparp * Rparp) / 2;
+	return clamp((Rparl * Rparl + Rparp * Rparp) / 2, 0, 1);
 }
 
 float snell(float etaI, float etaT, float cosThetaI) {
@@ -469,11 +486,11 @@ bool Trace(Ray ray, out vec3 color) {
 
 		if (!hit) {
 			if (i == 0) return false;
-			//else {
-			//	ResolveRayHit(i-1);
-			//	color.xyz = rayHitInfoStack[0].color;
-			//	return true;
-			//}
+			else {
+				ResolveRayHit(i-1);
+				color.xyz = rayHitInfoStack[0].color;
+				return true;
+			}
 		}
 
 		ShapeInstance instance = instances[instanceIdx];
@@ -482,19 +499,15 @@ bool Trace(Ray ray, out vec3 color) {
 		float eta_t = sameMaterial ? 1 : m.indexOfRefraction;
 
 
-		vec3 normal = normalize((-traversalRay.dir + dir) / 2);
-		// float cosTheta = abs(cos(Angle(normal, -traversalRay.dir)));
+		vec3 normal = normalize((-traversalRay.dir + dir));
 		float cosTheta = dot(normal, -traversalRay.dir);
 		float reflective = Fresnel(currentEta, eta_t, cosTheta);
 
 		currentMaterialIdx = int(instance.materialIdx);
 		rayHitInfoStack[i].materialIdx = instance.materialIdx;
-		//rayHitInfoStack[i].dir = traversalRay.dir;
-		//rayHitInfoStack[i].normal = normal;
-		//rayHitInfoStack[i].reflect = dir;
 		rayHitInfoStack[i].color = vec3(0.0);
 
-		if (i == maxDepth - 1 || length(m.emission) > 0 || !hit) {
+		if (i == maxDepth - 1 || (m.emission.x + m.emission.y + m.emission.z) > 0 /*|| !hit*/) {
 			ResolveRayHit(hit ? i : i-1);
 			color.xyz = rayHitInfoStack[0].color;
 			return true;
@@ -503,14 +516,24 @@ bool Trace(Ray ray, out vec3 color) {
 		int width = int(renderSetting.width);
 		uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
 
-		bool isReflect = rand_global(imgPos * renderSetting.time) > ( (1 - reflective ) * m.transparency);
+
+		//bool bIsTransparent = rand_global(imgPos * renderSetting.time) <= m.transparency;
+
+		uint seed = imgPos * renderSetting.time;
+		//reflective += m.metalic; 
+		// bool isReflect = rand_global(imgPos * renderSetting.time) < (reflective * (1 - m.roguhness)) + m.metalic;
+		// bool isReflect = rand_global(imgPos * renderSetting.time) < (reflective + m.roguhness) + m.metalic;
+		bool isReflect = rand_global(seed) < (reflective) + m.metalic;
 		// bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
+		//color.xyz = vec3( (reflective * (1 - m.roguhness)));
+		//return true;
+		/*
 		isReflect = isReflect && !sameMaterial;
-		if (!isReflect) {
+		if ((!isReflect) && bIsTransparent) {
 			// float eta = currentEta / eta_t;
 			float eta = currentEta / eta_t;
- 			float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
-       		float sin2ThetaT = eta * eta * sin2ThetaI;			
+			float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
+			float sin2ThetaT = eta * eta * sin2ThetaI;			
 			//float sinThetaT = snell(currentEta, eta_t, cosTheta);
 			//float cosThetaT = sqrt(1 - sinThetaT * sinThetaT);
 			float cosThetaT = sqrt(1.0 - sin2ThetaT);
@@ -518,17 +541,38 @@ bool Trace(Ray ray, out vec3 color) {
 		    // dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
 		    dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
 		}
+		*/
 
 		vec4 result;
 		vec2 polarSet;
 		float weight;
 
+		/*
 		//diffuse term
-		if (rand_global(imgPos * renderSetting.time) > m.metalic) {
-			polarSet = random_polar(1);
-			result = make_random(normal, polarSet);
-			rayHitInfoStack[i].metalic = m.metalic;
-			weight = 1;
+		if (!isReflect) {
+			//Transmission
+			bool bTransmit = rand_global(seed) < m.transparency;
+			if (bTransmit) {
+				float eta = currentEta / eta_t;
+				float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
+				float sin2ThetaT = eta * eta * sin2ThetaI;			
+				float cosThetaT = sqrt(1.0 - sin2ThetaT);
+				dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
+
+
+				polarSet = random_polar(1 - m.roguhness);
+				result = make_GGXRandom(dir, polarSet);
+				rayHitInfoStack[i].metalic = 0;
+				weight = cos(polarSet.x);;
+
+			} else {
+				// diffuse
+				polarSet = random_polar(1);
+				result = make_GGXRandom(normal, polarSet);
+				rayHitInfoStack[i].metalic = 0;
+				weight = 1;
+			}
+
 		} 
 		//specular term
 		else {
@@ -537,21 +581,66 @@ bool Trace(Ray ray, out vec3 color) {
 			rayHitInfoStack[i].metalic = 1 - m.metalic;
 			weight = cos(polarSet.x);
 		}
-		// rayHitInfoStack[i].cosTheta = ggx.w;
-		// rayHitInfoStack[i].cosTheta = cosTheta;
-		// rayHitInfoStack[i].cosTheta = dot(normal, result.xyz);
-		// rayHitInfoStack[i].cosTheta = cos(polarSet.x);
+		*/
+	
+
+		float roguhness = 0;
+		vec3 spwanRayDir;
+		bool bTransmit = rand_global(seed) < m.transparency;
+
+		if ((!isReflect) && bTransmit) {
+			float eta = currentEta / eta_t;
+			float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
+			float sin2ThetaT = eta * eta * sin2ThetaI;			
+			float cosThetaT = sqrt(1.0 - sin2ThetaT);
+			dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
+		}
+
+
+		bool diffuse = !isReflect && !bTransmit;
+		//diffuse
+		if (diffuse){
+			roguhness = 1;
+			spwanRayDir = normal;
+			rayHitInfoStack[i].metalic = 0;
+		} else {
+		//specualr relfection, transmission
+			roguhness = 1 - m.roguhness;
+			spwanRayDir = dir;
+			rayHitInfoStack[i].metalic = bTransmit ? 0 : 1 - m.metalic;
+		}
+
+		polarSet = random_polar(roguhness);
+		result = make_GGXRandom(spwanRayDir, polarSet);
+		weight = diffuse ? 1 : cos(polarSet.x);
+
 		rayHitInfoStack[i].cosTheta = weight;
 		traversalRay.dir = result.xyz;
+		traversalRay.origin = hitPos + normal * (((!isReflect) && bTransmit) ? -0.01 : 0.01);
 		// traversalRay.origin = hitPos + normal * 0.01;
-		traversalRay.origin = hitPos + normal * (isReflect ? 0.01 : -0.01);
-		currentEta = eta_t;
-		if (sameMaterial) i--;
+		currentEta = sameMaterial ? eta_t : m.indexOfRefraction;
+		// if (sameMaterial) i--;
 	}
 
 
 	return true;
 }
+
+
+// BRDF
+// Diffuse + Specular
+
+
+// BSDF
+// Transmission ( Diffuse + Transparent ) + Specular
+
+
+// metallic    : mix(transmission, specular)
+// tranparency : mix(diffuse, transparent)  
+// Frensel? 
+//
+
+
 
 /*
 bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
@@ -627,6 +716,10 @@ void main()
 	vec3 color = vec3(0);
 	bool intersect = Trace(ray, color);
 
+
+
+
+
 	//vec3 hitPos, dir;
 	//uint instanceIdx;
 	//intersect = RayCastTest(ray, hitPos, dir, instanceIdx);
@@ -644,9 +737,13 @@ void main()
 
 	SamplerIntegrator it = integrator[imgPos];
 	if (intersect) {
-		it.r += uint(min(255, color.r * 255));
-		it.g += uint(min(255, color.g * 255));
-		it.b += uint(min(255, color.b * 255));
+		//it.r += uint(min(255, color.r * 255));
+		//it.g += uint(min(255, color.g * 255));
+		//it.b += uint(min(255, color.b * 255));
+		it.r += min(1, color.r);
+		it.g += min(1, color.g);
+		it.b += min(1, color.b);
+
 		it.count += 1;
 		integrator[imgPos] = it;
 		// integrator[imgPos].b += uint(color.b * 255);
@@ -663,7 +760,43 @@ void main()
 	//}
 
 	// col[imgPos].data = uint(255 * color.r) | (uint(255 * color.g) << 8) | (uint(255 * color.b) << 16) | 255 << 24;
-	col[imgPos].data = uint(color.r) | (uint(color.g) << 8) | (uint(color.b) << 16) | 255 << 24;
+	// col[imgPos].data = uint(color.r) | (uint(color.g) << 8) | (uint(color.b) << 16) | 255 << 24;
+	// col[imgPos].data = vec3(color.r, color.g, color.b);
+
+
+	/* easy dof
+	vec3 hitPos, dir;
+	uint instanceIdx;
+	bool hit = RayCastTest_BVH_2(ray, hitPos, dir, instanceIdx);	
+	float depth = length(hitPos - renderSetting.camera_pos.xyz);
+	const int kDofSample = 16;
+	const float range_min = 2.8;
+	const float range_max = 3;
+	color /= kDofSample+1;
+	const float pi2 = 2 * M_PI;
+
+
+	vec2 diffv2 = vec2(depth) - vec2(range_min, range_max);
+
+	float diff = min( abs(diffv2.x), abs(diffv2.y) );
+	if (diffv2.x > 0 && diffv2.y < 0) diff = 0;
+	diff = min(diff, 3);
+
+	for (int i = 0; i < kDofSample; i++)
+	{
+		float theta = (i * pi2) / kDofSample;
+		uint x = int(cos(theta) * diff) + gl_GlobalInvocationID.x;
+		uint y = int(sin(theta) * diff) + gl_GlobalInvocationID.y;
+		uint imgPos = x + width * y;
+		SamplerIntegrator it = integrator[imgPos];
+
+		color += (vec3(it.r, it.g, it.b) / it.count) / (kDofSample+1);
+	}
+	*/
+	uint colorPos = imgPos*3;
+	col[colorPos].data = color.r;
+	col[colorPos+1].data = color.g;
+	col[colorPos+2].data = color.b;
 	// debug.v1.w = sampleCount;
 	//bvh_node node = bvh_tree[6];
 	// debug.v1.xyz = (renderSetting.camera_matrix * vec4(1, 2, 3, 1.0)).xyz;

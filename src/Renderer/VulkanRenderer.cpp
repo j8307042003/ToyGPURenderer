@@ -65,8 +65,11 @@ VulkanRenderer::~VulkanRenderer() {
 
 void VulkanRenderer::StartRender() {
 	InitBuffer();
+	std::cout << "init buffer!" << std::endl;
 	SetData();
+	std::cout << "set up date done!" << std::endl;
 	InitRenderCommand();
+	std::cout << "init render command!" << std::endl;
 	InitClearImageCommand();
 
 	iteratorCount = 0;
@@ -123,6 +126,8 @@ void VulkanRenderer::SetData() {
 		int materialIdx = s->GetShapeMaterialIdx(&shape);
 		shapeDatas.push_back({shapeType, shapeNum, materialIdx >= 0 ? materialIdx : i});
 	}
+	std::cout << "shape instance done!" << std::endl;
+
 
 	for ( int i = 0; i < s->materials.size(); ++i) {
 		material & m = *s->materials[i];
@@ -143,6 +148,7 @@ void VulkanRenderer::SetData() {
 			0,
 		});
 	}
+	std::cout << "shape material done!" << std::endl;
 
 
 	// Set up buffer
@@ -159,6 +165,7 @@ void VulkanRenderer::SetData() {
 	}
 
 	vkUpdateDescriptorSets(vulkanInstance.device, buffers.size(), &writeDescriptorSets[0], 0, NULL);
+	std::cout << "update descriptorSet done!" << std::endl;
 
 
 	//Init Clear Image shader 
@@ -221,20 +228,25 @@ void VulkanRenderer::SetData() {
 	if (sphereDatas.size() > 0 ) CopyDataToDeviceMemory(device, buffers[3].memory, sizeof(SphereShape) * sphereDatas.size(), sphereDatas.data());
 
 	//4 Shape Triangle
+	std::cout << "triangle data size : " << traingleDatas.size() << std::endl;
 	if (traingleDatas.size() > 0 ) CopyDataToDeviceMemory(device, buffers[4].memory, sizeof(TriangleShape) * traingleDatas.size(), traingleDatas.data());
+	std::cout << "triangle data copy done : " << std::endl;
 
 	//5 Shape Plane
+	std::cout << "plane data size : " << planeDatas.size() << std::endl;
 	if (planeDatas.size() > 0 ) CopyDataToDeviceMemory(device, buffers[5].memory, sizeof(PlaneShape) * planeDatas.size(), planeDatas.data());
 
 	//6 Material
+	std::cout << "material data size : " << materials.size() << std::endl;
 	if (materials.size() > 0 ) CopyDataToDeviceMemory(device, buffers[6].memory, sizeof(GPU_Material) * materials.size(), materials.data());
 
 	//7 Sample Integrator	
 	CopyDataToDeviceMemory(device, buffers[7].memory, sizeof(SampleIntegrator) * cam->GetWidth() * cam->GetHeight(), cam->GetIntegrator());
 
 	//9 BVH Tree
+	std::cout << "bvh data size : " << s->tree.nodes.size() << std::endl;	
 	if (s->tree.nodes.size() > 0 ) CopyDataToDeviceMemory(device, buffers[9].memory, sizeof(bvh_node) * s->tree.nodes.size(), s->tree.nodes.data());
-
+	std::cout << "copy buffer done!" << std::endl;
 
 
 }
@@ -312,8 +324,8 @@ void VulkanRenderer::InitBuffer() {
 
   	const int kShapeInstanceSize = 1000;
   	const int kMaterialInstanceSize = 1000;
-  	uint imageBufferSize = sizeof(unsigned int) * cam->GetWidth() * cam->GetHeight();
-	size_t shapeBufSize = sizeof(int) + sizeof(ShapeInstance) * kShapeInstanceSize;
+  	uint imageBufferSize = 3 * sizeof(float) * cam->GetWidth() * cam->GetHeight();
+	size_t shapeBufSize = sizeof(int) + sizeof(ShapeInstance) * kShapeInstanceSize * 30000;
 
 	VkDevice & device = vulkanInstance.device;
 	VkPhysicalDeviceMemoryProperties & deviceMemProps = vulkanInstance.deviceMemProps;
@@ -329,7 +341,7 @@ void VulkanRenderer::InitBuffer() {
 		//3 Shape Sphere
 		BuildBuffer(device, deviceMemProps, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(SphereShape) * kShapeInstanceSize),
 		//4 Shape Triangle
-		BuildBuffer(device, deviceMemProps, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, std::max(1, (int)(sizeof(TriangleShape) * kShapeInstanceSize))),
+		BuildBuffer(device, deviceMemProps, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, std::max(1, (int)(sizeof(TriangleShape) * kShapeInstanceSize * 3000))),
 		//5 Shape Plane
 		BuildBuffer(device, deviceMemProps, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(PlaneShape) * kShapeInstanceSize),
 		//6 Material
@@ -339,16 +351,16 @@ void VulkanRenderer::InitBuffer() {
 		//8 Debug
 		BuildBuffer(device, deviceMemProps, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(SampleIntegrator)),
 		//9 BVH
-		BuildBuffer(device, deviceMemProps, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(bvh_node) * kShapeInstanceSize),
+		BuildBuffer(device, deviceMemProps, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(bvh_node) * kShapeInstanceSize * 3000),
 	};
 
 }
 
 
 void VulkanRenderer::RenderTask() {
-	int imageBufferSize = sizeof(unsigned int) * cam->GetWidth() * cam->GetHeight();
+	int imageBufferSize = 3 * sizeof(float) * cam->GetWidth() * cam->GetHeight();
 	// void * mem;
-	vkMapMemory(vulkanInstance.device, buffers[0].memory, 0, imageBufferSize, 0, &mem);
+	// vkMapMemory(vulkanInstance.device, buffers[0].memory, 0, imageBufferSize, 0, &mem);
 
 	std::cout << "Width : " << render_data.width << std::endl;
 	std::cout << "Height : " << render_data.height << std::endl;
@@ -369,6 +381,8 @@ void VulkanRenderer::RenderTask() {
     auto start = std::chrono::steady_clock::now();
 
 	while(true) {
+		if (!running) continue;
+
 		iteratorCount++;
 		render_data.sampleCount = iteratorCount;
 		render_data.time = time(NULL) + iteratorCount;
@@ -424,9 +438,11 @@ void VulkanRenderer::RenderTask() {
 }
 
 void VulkanRenderer::UpdateFrame() {
-	int imageBufferSize = sizeof(unsigned int) * cam->GetWidth() * cam->GetHeight();
+	int imageBufferSize = 3 * sizeof(float) * cam->GetWidth() * cam->GetHeight();
 
+	vkMapMemory(vulkanInstance.device, buffers[0].memory, 0, imageBufferSize, 0, &mem);
     memcpy(cam->GetBuffer(), mem, imageBufferSize);
+    vkUnmapMemory(vulkanInstance.device, buffers[0].memory);
 }
 
 

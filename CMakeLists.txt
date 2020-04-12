@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+SET(ASSIMP_BUILD_TESTS CACHE BOOL OFF)
+
 add_subdirectory(src/math src/math/build)
 add_subdirectory(src/glm src/glm/build)
 add_subdirectory(src/shape src/shape/build)
@@ -23,6 +25,10 @@ include_directories(src/glad)
 include_directories(src/GLFW/include)
 
 
+###assimp
+add_subdirectory(src/assimp src/assimp/build)
+LINK_DIRECTORIES (${Assimp_BINARY_DIR} ${AssetImporter_BINARY_DIR}/lib)
+include_directories(src/assimp/include)
 
 
 project(App)

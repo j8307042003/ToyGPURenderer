@@ -319,7 +319,7 @@ void submitCommand(VkDevice & device, VkCommandBuffer & commandBuffer, VkQueue &
 		throw std::runtime_error("submit failed!");
 	}
 	
-	vkWaitForFences(device, 1, &fence, true, 0);
+	vkWaitForFences(device, 1, &fence, true, 1000 * 1000 * 1000);
 	VkResult result = vkQueueWaitIdle(queue);
 
 

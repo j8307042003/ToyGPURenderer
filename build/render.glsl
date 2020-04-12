@@ -124,7 +124,7 @@ bool RayCastTest_Triangle(TriangleShape shape, Ray ray, out vec3 hitPos, out vec
 
   // compute and check ray parameter
   float t = dot(edge2, qvec) * inv_det;
-  if (t < 0.05) return false;
+  if (t < 0.01) return false;
 
   // intersection occurred: set params and exit
   hitPos = ray.origin + t * ray.dir;

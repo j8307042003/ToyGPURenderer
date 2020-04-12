@@ -19,6 +19,8 @@
 #include <GLFW/glfw3.h>
 #include <glm/gtx/quaternion.hpp>
 
+#define GL_RGBA32F 0x8814
+#define GL_RGB32F 0x8815
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -38,6 +40,9 @@ void Do_Rotate();
 double mouse_pos_x = 0, mouse_pos_y = 0;
 
 GLFWwindow * window = nullptr;
+
+float rot_x = 0;
+float rot_y = 0;
 
 int main(){
 
@@ -77,7 +82,7 @@ int main(){
     glfwSetKeyCallback(window, key_callback);
     glfwSwapInterval(1);
 
-    cam = Camera(width, height, Vec3(0.0f, 0.0f, -10.0f));
+    cam = Camera(width, height, Vec3(200.0f, 0.0f, -200.0f));
     std::cout << "cam init done";
     // Renderer * renderer = new ParallelRenderer();
     renderer = new VulkanRenderer();
@@ -91,14 +96,18 @@ int main(){
 	glBindTexture(GL_TEXTURE_2D, textureId);    
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
-             GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0,
+             GL_RGB, GL_FLOAT, cam.GetBuffer());
+             // GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());
 
     glMatrixMode(GL_PROJECTION);
     glOrtho(0, width, 0, height, -1, 1);
     glMatrixMode(GL_MODELVIEW);
 
     std::cout << "begin render" << std::endl; 
+
+   
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
@@ -108,7 +117,14 @@ int main(){
 
         Do_Rotate();
 		Do_Movement();
+        // std::cout << "update frame" << std::endl;
         renderer->UpdateFrame();
+
+
+
+        //stall gpu renderer. clean up gpu usage for image display
+        renderer->Stall();
+
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -117,7 +133,9 @@ int main(){
 
 		glEnable(GL_TEXTURE_2D);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
-			        GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());    
+                    GL_RGB, GL_FLOAT, cam.GetBuffer());    
+                    // GL_RGBA, GL_FLOAT, outputPtr);    
+			        // GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());    
 		glBegin(GL_QUADS);
 		glTexCoord2i(0, 0); glVertex2i(0, 0);
 		glTexCoord2i(0, 1); glVertex2i(0, height);
@@ -134,7 +152,7 @@ int main(){
         /* Poll for and process events */
         glfwPollEvents();
 
-
+        renderer->Resume();
     }
 
     glfwTerminate();
@@ -211,11 +229,16 @@ void Do_Rotate()
         mouse_pos_x = now_pos_x;
         mouse_pos_y = now_pos_y;
 
-        const float kRotRatio = 1 / 100.0f;
+        const float kRotRatio = 1 / 10.0f;
+
+        rot_x += delta_x * kRotRatio;
+        rot_y += delta_y * kRotRatio;
+
         // const float kRotRatio = 1 / 10.0f;
         cam.transform.rotation = 
             // glm::normalize(cam.transform.rotation * glm::quat( delta_y * kRotRatio, delta_x * kRotRatio, 0, 0 ));
-            glm::normalize(glm::quat({delta_y * kRotRatio, delta_x * kRotRatio, 0 }) * cam.transform.rotation);
+            glm::normalize(glm::quat(glm::radians(glm::vec3{rot_y, -rot_x, 180 })));
+            // glm::normalize(cam.transform.rotation * glm::quat({delta_y * kRotRatio, delta_x * kRotRatio, 0 }));
         cam.transform.UpdateMatrix();
         renderer->ClearImage();
 

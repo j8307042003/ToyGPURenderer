@@ -14,7 +14,8 @@ void RenderView::InitBuffer() {
 		// delete buffer;
 	}
 	
-	buffer = new unsigned int[width * height];
+	// buffer = new unsigned int[width * height];
+	buffer = (unsigned int *)new float[3 * width * height];
 	sampleIntegrators = new SampleIntegrator[width * height]();
 	std::cout << "Buffer Size  " << width * height << std::endl;
 }

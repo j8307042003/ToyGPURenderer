@@ -19,6 +19,7 @@ public:
 
 	void AddShape(Shape * s);
 	void AddShape(Shape * s, std::string mat_name);
+	void AddModel(std::string modelFile, std::string mat_name);
 	void AddMaterial(material * m);
 	void AddMaterial(std::string name, material * m);
 
