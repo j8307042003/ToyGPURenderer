@@ -135,7 +135,7 @@ int main(){
 
 
         //stall gpu renderer. clean up gpu usage for image display
-        //renderer->Stall();
+        renderer->Stall();
 
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);

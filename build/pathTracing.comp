@@ -190,8 +190,8 @@ bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 			// bool bIntersect = RayIntersect_AABB_1(node.boundingBox, ray);
 
 			vec2 s =  fast_intersect_aabb(node.boundingBox, invdir, oxinvdir);
-            bool bIntersect = (s.x <= s.y) && (depth >= s.x) ;
-            // bool bIntersect = (s.x <= s.y);
+            // bool bIntersect = (s.x <= s.y) && (depth >= s.x) ;
+            bool bIntersect = (s.x <= s.y);
 
            	// float t = (s.x <= s.y) ? s.x : -1;
 

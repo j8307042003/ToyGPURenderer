@@ -259,7 +259,7 @@ void VulkanRenderer::InitRenderCommand() {
 
 	
 	AddComputeShaderCommand(
-	  //width / 16, height / 16, 1,
+	  // width / 16, height / 16, 1,
 	  width / 8, height / 8, 1,
 	  // width / 4, height / 4, 1,
 	  vulkanInstance.device,

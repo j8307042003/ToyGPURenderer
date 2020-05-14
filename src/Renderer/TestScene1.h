@@ -191,8 +191,8 @@ Scene make_test_scene2() {
 
 	// scene.AddModel("teapot.obj", "s1", 0.03);
 	// scene.AddModel("fireplace_room.obj", "s1", 10);
-	//scene.AddModel("dragon.obj", "s1", 1);
-	scene.AddModel("Mesh001.obj", "dragon", .1);
+	// scene.AddModel("dragon.obj", "s1", 1);
+	// scene.AddModel("Mesh001.obj", "dragon", .1);
 	// scene.AddModel("testObj.obj", "dragon", 1);
 
 	//Right Wall
