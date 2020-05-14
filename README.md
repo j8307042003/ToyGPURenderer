@@ -7,8 +7,10 @@ using vulkan compute shader to compute each pixel's color( ray tracing, shading,
 
 ## Requirement
 cmake
+
 vulkan sdk(Molten on mac)
-studio(windows)
+
+visual studio(windows)
 
 
 ## Build
