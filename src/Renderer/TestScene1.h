@@ -131,13 +131,13 @@ Scene make_test_scene2() {
 	scene.AddMaterial("Behind Wall", new material({1, 1, 1}, {0, 0, 0}, 0)); //behind wall
 	scene.AddMaterial("End Wall", new material({1, 1, 1}, {0, 0, 0}, 0)); //End Wall	
 	scene.AddMaterial("Floor Wall", new material({1, 1, 1}, {0, 0, 0}, 0.0f, 0));	 //Floor
-	// scene.AddMaterial("Ceil Wall", new material({1, 1, 1}, {1, 1, 1}, 0.4));	 //Ceil
-	scene.AddMaterial("Ceil Wall", new material({1, 1, 1}, {0, 0, 0}, 0.1f));	 //Ceil
+	scene.AddMaterial("Ceil Wall", new material({1, 1, 1}, {1, 1, 1}, 0.4));	 //Ceil
+	// scene.AddMaterial("Ceil Wall", new material({1, 1, 1}, {0, 0, 0}, 0.1f));	 //Ceil
 	scene.AddMaterial("Ceil Light", new material({1, 1, 1}, {1, 1, 1}, 0.4));	 //Ceil
 	// scene.AddMaterial("Ceil Light", new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0.4));	 //Ceil
 
 	// scene.AddMaterial("transparent wall", new material({1, 1, 1}, {0, 0, 0}, .95, .95, .99, 1.33)); //End Wall	
-	scene.AddMaterial("transparent wall", new material({1, 1, 1}, {0, 0, 0}, .99, 0, 1, 1.33)); //End Wall	
+	scene.AddMaterial("transparent wall", new material({1, 1, 1}, {0, 0, 0}, .99, 0, 0, 1.33)); //End Wall	
 
 	//spheres
 	/*
@@ -164,7 +164,7 @@ Scene make_test_scene2() {
 	scene.AddMaterial("s5", new material({1, 1, 1}, {1, 1, 1}, 0.3, 0.8));
 
 
-	scene.AddMaterial("dragon", new material({1, 1, 1}, {0, 0, 0}, 0.7, .8));
+	scene.AddMaterial("dragon", new material({1, 1, 1}, {0, 0, 0}, .95, 0, 1));
 
 
 
@@ -176,9 +176,9 @@ Scene make_test_scene2() {
 		int row = i / item;
 		int rowIdx = i % item;
 		std::string sphereMatName = "s auto gen " + std::to_string(i); 
-		scene.AddMaterial(sphereMatName, new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, .9999, 0, 1, 1.33));	
+		// scene.AddMaterial(sphereMatName, new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, .9999, 0, 1, 1.33));	
 		// scene.AddMaterial(sphereMatName, new material({1, 1, 1}, {0, 0, 0}, .95, 0, .5, 1.5));	
-		// scene.AddMaterial(sphereMatName, new material({1, 1, 1}, {0, 0, 0}, .9999, .9999, 1, 1.33));	
+		scene.AddMaterial(sphereMatName, new material({1, 1, 1}, {0, 0, 0}, .9999, 0, 1, 1.33));	
 		// scene.AddMaterial(sphereMatName, new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, .1, .1, 0, 1.33));	
 		// scene.AddMaterial(sphereMatName, new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, ((float) row) / item, 1, 0, 1.33));	
 		//scene.AddMaterial(sphereMatName, new material({((float) row) / item, ((float) rowIdx) / item, 0}, {0, 0, 0}, 1.0f, 0.0, 0, 2.5));	
@@ -189,9 +189,10 @@ Scene make_test_scene2() {
 
 
 
-	// scene.AddModel("teapot.obj", "s1");
-	// scene.AddModel("dragon.obj", "s1");
-
+	// scene.AddModel("teapot.obj", "s1", 0.03);
+	// scene.AddModel("fireplace_room.obj", "s1", 10);
+	scene.AddModel("dragon.obj", "s4", 1);
+	// scene.AddModel("testObj.obj", "dragon", 1);
 
 	//Right Wall
 	scene.AddShape(new Plane(

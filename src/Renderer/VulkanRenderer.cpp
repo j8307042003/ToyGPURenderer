@@ -376,8 +376,8 @@ void VulkanRenderer::RenderTask() {
 		int   v4_x, v4_y, v4_z, v4_w;
 	};
 
-	cam->transform.position = {1, 2, -10};
-	cam->transform.UpdateMatrix();
+	//cam->transform.position = {1, 2, -10};
+	//cam->transform.UpdateMatrix();
     auto start = std::chrono::steady_clock::now();
 
 	while(true) {

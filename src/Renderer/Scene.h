@@ -19,7 +19,7 @@ public:
 
 	void AddShape(Shape * s);
 	void AddShape(Shape * s, std::string mat_name);
-	void AddModel(std::string modelFile, std::string mat_name);
+	void AddModel(std::string modelFile, std::string mat_name, float scale = 1);
 	void AddMaterial(material * m);
 	void AddMaterial(std::string name, material * m);
 

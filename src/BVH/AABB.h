@@ -7,6 +7,7 @@
 #include "shape/Plane.h"
 #include "shape/Sphere.h"
 #include "shape/Triangle.h"
+#include <limits>
 
 class AABB {
 public:
@@ -15,10 +16,41 @@ public:
 	Vec3 max;
 	float pad1;
 
-	AABB() : min({0,0,0}), max({0,0,0}) {}
+	AABB() {
+        float minNum = std::numeric_limits<float>::lowest();
+        float maxNum = std::numeric_limits<float>::max();
+        min = Vec3(maxNum, maxNum, maxNum);
+        max = Vec3(minNum, minNum, minNum);		
+	}
 	AABB(Vec3 min, Vec3 max) : min(min), max(max) {}
 
+	Vec3 Diagonal() const {
+		return max - min;
+	}
+
+	int MaxExtent() const {
+		auto d = Diagonal();
+		if(d.x > d.y && d.x > d.z) return 0;
+		else if (d.y > d.z) return 1;
+		else return 2;
+	}
+
 	bool RayIntersect(const Ray & ray);
+	Vec3 Center() {return (max + min) / 2;}
+	Vec3 Offset(Vec3 pos) const {
+		Vec3 o = pos - min;
+		if (max.x > min.x) o.x /= max.x - min.x;
+		if (max.y > min.y) o.y /= max.y - min.y;
+		if (max.z > min.z) o.z /= max.z - min.z;
+		return o;
+	}
+
+	float SurfaceArea() const {
+		auto size = Diagonal();
+		if (size.x < 0 || size.y < 0 || size.z < 0) return 0;
+		return 2 * ( size.x * size.y + size.x * size.z + size.y * size.z );
+	}
+
 };
 
 static AABB aabbZero({0,0,0}, {0,0,0});

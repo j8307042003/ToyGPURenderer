@@ -4,6 +4,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 SET(ASSIMP_BUILD_TESTS CACHE BOOL OFF)
 
+if (APPLE)
+	#define Molten sdk path here!
+	Set(MacVulkanSDK /Users/pine/lib/vulkansdk-macos-1.1.130.0)
+
+	Set(VULKAN_SDK ${MacVulkanSDK}/macOS)
+	Set(VK_LAYER_PATH ${MacVulkanSDK}/macOS/etc/vulkan/explicit_layer.d)
+	Set(VK_ICD_FILENAMES ${MacVulkanSDK}/macOS/etc/vulkan/icd.d/MoltenVK_icd.json)
+	Set(Vulkan_LIBRARY ${MacVulkanSDK}/MoltenVK/macOS/dynamic/libMoltenVK.dylib)
+	Set(Vulkan_INCLUDE_DIR ${MacVulkanSDK}/MoltenVK/include)
+	Set(DYLD_LIBRARY_PATH ${MacVulkanSDK}/macOS/lib)
+	Set(VK_SDK_PATH ${MacVulkanSDK}/MoltenVK/)
+	Set(PATH ${MacVulkanSDK}/macOS/bin:$PATH)
+endif()
+
+
+
+
+
 add_subdirectory(src/math src/math/build)
 add_subdirectory(src/glm src/glm/build)
 add_subdirectory(src/shape src/shape/build)

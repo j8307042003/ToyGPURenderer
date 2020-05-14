@@ -89,6 +89,20 @@ int main(){
     renderer->SetRenderData(&scene, &cam);
     renderer->StartRender();
 
+    /*
+    cam.transform.position = {0, 0.74, -25.8};
+    rot_y = 5.164;
+    rot_x = 180;
+    cam.transform.rotation = 
+        glm::normalize(glm::quat(glm::radians(glm::vec3{rot_y, -rot_x, 180 })));    
+    */
+    // cam.transform.position = {1.427+2, 0.244, -30.5};
+    cam.transform.position = {-0.671992, 0.378616, -30.7013}; // dragon
+    // rot_y = 12.3; rot_x = 100;
+    rot_y = 16.3185; rot_x = -127.658; // dragon
+    cam.transform.rotation = 
+        glm::normalize(glm::quat(glm::radians(glm::vec3{rot_y, -rot_x, 180 })));     
+    cam.transform.UpdateMatrix();    
 
 	unsigned int textureId;
 	glGenTextures(1, &textureId);
@@ -210,6 +224,8 @@ void Do_Movement()
 		cam.transform.position += dir * deltaTime * 4.0f;
         cam.transform.UpdateMatrix();
 		renderer->ClearImage();
+        std::cout << "position : " << cam.transform.position.tostring() << std::endl;
+
 	}
 
 }
@@ -242,6 +258,7 @@ void Do_Rotate()
         cam.transform.UpdateMatrix();
         renderer->ClearImage();
 
+        std::cout << "rotation : " << rot_y << "  " << rot_x << std::endl;
 
     }
 }

@@ -25,7 +25,7 @@ void Scene::AddShape(Shape * s, std::string mat_name) {
 }
 
 
-void Scene::AddModel(std::string modelFile, std::string mat_name) {
+void Scene::AddModel(std::string modelFile, std::string mat_name, float scale) {
 	std::map<std::string,int>::iterator it = materialMap.find(mat_name);
 	if (it == materialMap.end()) {
 		std::cout << "Add Shape Failed. Due to add Shape with not existed material : " + mat_name << std::endl;
@@ -34,7 +34,6 @@ void Scene::AddModel(std::string modelFile, std::string mat_name) {
 
     aiPropertyStore* props = aiCreatePropertyStore();
 
-    const float scale = 0.03;
 	// auto scene = aiImportFile("dragon.obj",aiProcessPreset_TargetRealtime_MaxQuality);
 	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
 	if (scene) {
@@ -62,7 +61,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name) {
 				Triangle * triangle = new Triangle(vectors[0], vectors[1], vectors[2]);
 				shapes.push_back(triangle);
 				shapeMaterialMap[triangle] = it->second;
-				if (shapes.size() > 100000) return;
+				// if (shapes.size() > 10000) return;
 			}		
 
 
@@ -114,7 +113,10 @@ void Scene::BuildTree() {
 		boundingBoxList.push_back(aabb);
 	}
 
-	build_bvh_simple(tree, boundingBoxList);
+	build_bvh_SAH(tree, boundingBoxList);
+	std::cout << "size : " << tree.nodes.size() << std::endl;
+	// build_bvh_simple(tree, boundingBoxList);
+	std::cout << "size : " << tree.nodes.size() << std::endl;
 }
 
 

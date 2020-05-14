@@ -190,6 +190,7 @@ bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 			// bool bIntersect = RayIntersect_AABB_1(node.boundingBox, ray);
 
 			vec2 s =  fast_intersect_aabb(node.boundingBox, invdir, oxinvdir);
+            // bool bIntersect = (s.x <= s.y) && (depth >= s.x) ;
             bool bIntersect = (s.x <= s.y);
 
            	// float t = (s.x <= s.y) ? s.x : -1;
@@ -418,7 +419,7 @@ struct RayHitInfo {
 };
 
 // const int maxDepth = 2;
-const int maxDepth = 16;
+const int maxDepth = 8;
 RayHitInfo rayHitInfoStack[maxDepth+1];
 
 
@@ -479,6 +480,7 @@ bool Trace(Ray ray, out vec3 color) {
 	float currentEta = 1;
 	int currentMaterialIdx = -1;
 	RayHitInfo rayHitInfo;
+	bool transmissing = false;
 	for(int i = 0; i < maxDepth; ++i) {
 		// bool hit = RayCastTest(traversalRay, hitPos, dir, instanceIdx);
 		// bool hit = RayCastTest_BVH_1(traversalRay, hitPos, dir, instanceIdx);
@@ -495,7 +497,7 @@ bool Trace(Ray ray, out vec3 color) {
 
 		ShapeInstance instance = instances[instanceIdx];
 		Material m = materials[instance.materialIdx];
-		bool sameMaterial = currentMaterialIdx == instance.materialIdx;
+		bool sameMaterial = transmissing && (currentMaterialIdx == instance.materialIdx);
 		float eta_t = sameMaterial ? 1 : m.indexOfRefraction;
 
 
@@ -587,8 +589,12 @@ bool Trace(Ray ray, out vec3 color) {
 		float roguhness = 0;
 		vec3 spwanRayDir;
 		bool bTransmit = rand_global(seed) < m.transparency;
+		//isReflect = sameMaterial && transmissing ? false : isReflect;
+		//bTransmit = sameMaterial && transmissing ? true : bTransmit;
 
+		transmissing = false;
 		if ((!isReflect) && bTransmit) {
+			transmissing = true;
 			float eta = currentEta / eta_t;
 			float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
 			float sin2ThetaT = eta * eta * sin2ThetaI;			
@@ -704,6 +710,91 @@ bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint in
 */
 
 
+int RayCastTest_BVH_Depth(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
+	int stackCount = 1;
+	bvh_visit_stack[0] = 0;
+
+	vec3 pos;
+	vec3 dir;
+	bool bEverHit = false;
+
+	float depth = 99999999;
+	int runId = 0;
+
+    vec3 invdir = safe_invdir(ray.dir.xyz);
+    vec3 oxinvdir = -ray.origin.xyz * invdir;
+    int walking_depth = 0;
+	while(stackCount != 0) {
+		// walking_depth++;
+		// if (stackCount == 0 ) return bEverHit;
+		stackCount--;
+		int treeIdx = bvh_visit_stack[stackCount];
+
+		bvh_node node = bvh_tree[treeIdx];
+		if (node.isLeaf > 0) {
+			int id = node.primitiveId;
+			bool bHit = RayCastTestInstance(instances[id], ray, pos, dir);
+			vec3 origin_to_pos = pos - ray.origin;
+			float hitDepth = origin_to_pos.x * origin_to_pos.x + origin_to_pos.y * origin_to_pos.y + origin_to_pos.z * origin_to_pos.z;
+			if (bHit && hitDepth < depth ){
+				depth = hitDepth;
+				hitPos = pos;
+				instanceIdx = id;
+				direction = dir;
+				bEverHit = true;
+				walking_depth = node.idx;
+			}
+		}
+		else {
+			// bool bIntersect = RayIntersect_AABB_1(node.boundingBox, ray);
+
+			vec2 s =  fast_intersect_aabb(node.boundingBox, invdir, oxinvdir);
+            // bool bIntersect = (s.x <= s.y) && (depth >= s.x) ;
+            bool bIntersect = (s.x <= s.y);
+
+           	// float t = (s.x <= s.y) ? s.x : -1;
+
+
+
+			if (bIntersect) {
+				if (node.left > 0 ) {
+					bvh_visit_stack[stackCount] = node.left;
+					stackCount++;
+				}
+				if (node.right > 0 ) {
+					bvh_visit_stack[stackCount] = node.right;
+					stackCount++;
+				}
+			}			
+		}
+
+	}
+
+
+	return walking_depth;
+}
+
+
+//preview for real time
+vec3 PreviewMode(Ray ray) 
+{
+	vec3 hitPos, dir;
+	uint instanceIdx;
+	bool hit = RayCastTest_BVH_2(ray, hitPos, dir, instanceIdx);
+	if (!hit) return vec3(0);
+	//int depth = RayCastTest_BVH_Depth(ray, hitPos, dir, instanceIdx);
+	//return vec3(float(depth) / instanceCount);
+
+	vec3 normal = normalize((-ray.dir + dir));
+	ShapeInstance instance = instances[instanceIdx];
+	Material m = materials[instance.materialIdx];
+
+	//directional diffuse lighting only
+	float directional = max(0, dot(normal, normalize(vec3(1, 1, 0))));
+	// mix directional and albedo
+	return m.color * (0.5 + directional / 2);
+}
+
 void main()
 {
 	int width = int(renderSetting.width);
@@ -716,7 +807,8 @@ void main()
 	vec3 color = vec3(0);
 	bool intersect = Trace(ray, color);
 
-
+	// bool intersect = true;
+	// color.xyz = PreviewMode(ray);
 
 
 

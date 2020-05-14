@@ -79,16 +79,51 @@ bool RayCastTest_Sphere(SphereShape shape, Ray ray, out vec3 hitPos, out vec3 di
 	float c = dot( oc, oc ) - shape.radius * shape.radius;
 	float h = b*b - c;
 	if( h<0.0 ) return false;
-	float t = -b - sqrt( h );
+
+  float sqrt_h = sqrt(h);
+	float t = -b - sqrt_h;
+
+  float dir = 1;
+  if (t < 0.0) {
+    t = -b + sqrt_h;
+    dir = -1;
+  }
 	if (t < 0.0) return false;
+
  	hitPos = ray.dir * t + ray.origin;
-	const vec3 normal = normalize(hitPos - shape.position.xyz);
+	const vec3 normal = normalize(hitPos - shape.position.xyz) * dir;
 	direction = reflect(ray.dir, normal); 		
 
 
 	return true;
 
 }
+
+bool RayCastTest_Sphere_(SphereShape shape, Ray ray, out vec3 hitPos, out vec3 direction) {
+// float hit_sphere(const vec3& center, float radius, const ray& r){
+    vec3 oc = ray.origin - shape.position.xyz;
+    float a = dot(ray.dir, ray.dir);
+    float b = 2.0 * dot(oc, ray.dir);
+    float c = dot(oc,oc) - shape.radius * shape.radius;
+    float discriminant = b*b - 4*a*c;
+    if(discriminant < 0){
+        return false;
+    }
+    else{
+        float sqrt_discriminant = sqrt(discriminant);
+        float t0 = (-b - sqrt_discriminant) / (2.0*a);
+        float t1 = (-b + sqrt_discriminant) / (2.0*a);
+
+        float t = t0;
+        if (t0 < 0) t = t1;
+
+        hitPos = ray.origin + t * ray.dir;
+        const vec3 normal = normalize(hitPos - shape.position.xyz);
+        direction = reflect(ray.dir, normal);     
+    }
+}
+
+
 
 bool RayCastTest_Triangle(TriangleShape shape, Ray ray, out vec3 hitPos, out vec3 direction) {
   //vec3 v1 = shape.v1.xyz;
@@ -128,7 +163,8 @@ bool RayCastTest_Triangle(TriangleShape shape, Ray ray, out vec3 hitPos, out vec
 
   // intersection occurred: set params and exit
   hitPos = ray.origin + t * ray.dir;
-  direction = reflect(ray.dir, shape.normal.xyz);
+  vec3 normal = dot(ray.dir, shape.normal.xyz) < 0 ? shape.normal.xyz : -shape.normal.xyz;
+  direction = reflect(ray.dir, normal);
   return true;
 }
 

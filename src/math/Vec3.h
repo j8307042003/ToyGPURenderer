@@ -81,6 +81,17 @@ public:
 
 	Vec3& operator+=(const Vec3& rhs);
 	Vec3& operator-=(const Vec3& rhs);
+
+	float operator[] (int index) const
+	{
+		switch(index) {
+			case 0: return x;
+			case 1: return y;
+			case 2: return z;
+		}
+
+		return 0;
+	}
 };
 
 inline Vec3 Vec3::operator-(const Vec3 & rhs){
