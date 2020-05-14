@@ -53,5 +53,8 @@ void main()
 	integrator[imgPos].b = 0;
 	integrator[imgPos].count = 0;
 
-	col[imgPos].data = 0;
+	uint colorPos = imgPos*3;
+	col[colorPos].data = 0;
+	col[colorPos+1].data = 0;
+	col[colorPos+2].data = 0;
 }

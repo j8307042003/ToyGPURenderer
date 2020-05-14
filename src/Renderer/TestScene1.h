@@ -130,10 +130,10 @@ Scene make_test_scene2() {
 	// scene.AddMaterial("Behind Wall", new material({1, 1, 1}, {1, 1, 1}, 1)); //behind wall
 	scene.AddMaterial("Behind Wall", new material({1, 1, 1}, {0, 0, 0}, 0)); //behind wall
 	scene.AddMaterial("End Wall", new material({1, 1, 1}, {0, 0, 0}, 0)); //End Wall	
-	scene.AddMaterial("Floor Wall", new material({1, 1, 1}, {0, 0, 0}, 0.0f, 0));	 //Floor
+	scene.AddMaterial("Floor Wall", new material({ 1, 1, 1 }, { 0, 0, 0 }, 0.0f, 0));	 //Floor
 	scene.AddMaterial("Ceil Wall", new material({1, 1, 1}, {1, 1, 1}, 0.4));	 //Ceil
 	// scene.AddMaterial("Ceil Wall", new material({1, 1, 1}, {0, 0, 0}, 0.1f));	 //Ceil
-	scene.AddMaterial("Ceil Light", new material({1, 1, 1}, {1, 1, 1}, 0.4));	 //Ceil
+	scene.AddMaterial("Ceil Light", new material({ 1, 1, 1 }, { 1, 1, 1 }, 0.4));	 //Ceil
 	// scene.AddMaterial("Ceil Light", new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0.4));	 //Ceil
 
 	// scene.AddMaterial("transparent wall", new material({1, 1, 1}, {0, 0, 0}, .95, .95, .99, 1.33)); //End Wall	
@@ -191,7 +191,8 @@ Scene make_test_scene2() {
 
 	// scene.AddModel("teapot.obj", "s1", 0.03);
 	// scene.AddModel("fireplace_room.obj", "s1", 10);
-	scene.AddModel("dragon.obj", "s4", 1);
+	//scene.AddModel("dragon.obj", "s1", 1);
+	scene.AddModel("Mesh001.obj", "dragon", .1);
 	// scene.AddModel("testObj.obj", "dragon", 1);
 
 	//Right Wall

@@ -76,7 +76,7 @@ uint32_t findQueueFamilies(VkPhysicalDevice device) {
 	    if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 	        result = i;
 	        everSet = true;
-	        std::cout << "Success!" << std::endl;
+	        //std::cout << "Success!" << std::endl;
 	    }
 	
 	    i++;
@@ -261,7 +261,7 @@ void createComputePipeline(VkDevice & device, const VkPipelineLayout & pipelineL
 	if (vkCreateComputePipelines(device, pipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create compute pipeline");
 	}
-	std::cout << "Create compute pipeline Success!" << std::endl;
+	//std::cout << "Create compute pipeline Success!" << std::endl;
 }
 
 void createComputePipeline(VkDevice & device, const VkPipelineLayout & pipelineLayout, const VkShaderModule & shaderModule, VkShaderStageFlagBits shaderStageFlagBits, VkPipeline & pipeline, VkPipelineCache & pipelineCache) {
@@ -319,7 +319,7 @@ void submitCommand(VkDevice & device, VkCommandBuffer & commandBuffer, VkQueue &
 		throw std::runtime_error("submit failed!");
 	}
 	
-	vkWaitForFences(device, 1, &fence, true, 1000 * 1000 * 1000);
+	//vkWaitForFences(device, 1, &fence, true, 1000 * 1000 * 1000);
 	VkResult result = vkQueueWaitIdle(queue);
 
 
@@ -385,7 +385,7 @@ void createBuffer(const VkDevice & device, const VkPhysicalDeviceMemoryPropertie
 	result = vkCreateBuffer(device, &bufCreateInfo, nullptr, &buffer);
 	vkGetBufferMemoryRequirements(device, buffer, &memReqs);
 	memAllocInfo.allocationSize = memReqs.size;
-	std::cout << "allocate size " << memReqs.size << std::endl;
+	//std::cout << "allocate size " << memReqs.size << std::endl;
 	getMemoryType(deviceMemProps, memReqs.memoryTypeBits, usage, &memAllocInfo.memoryTypeIndex);
 	result = vkAllocateMemory(device, &memAllocInfo, nullptr, &deviceMem);
 	assert(result == VK_SUCCESS);

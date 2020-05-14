@@ -32,7 +32,6 @@ Camera::Camera( int width, int height, Vec3 position) :
 	// transform(position, Quaternion(Vec3(0, 1, 0), 30))
 	transform(position, glm::quat({0, 0, glm::radians(180.0f)}))
 {
-	std::cout << "Init Camera";
 	//view = RenderView(width, height);
 }
 

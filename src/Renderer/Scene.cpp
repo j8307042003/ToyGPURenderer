@@ -34,15 +34,18 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, float scale) {
 
     aiPropertyStore* props = aiCreatePropertyStore();
 
-	// auto scene = aiImportFile("dragon.obj",aiProcessPreset_TargetRealtime_MaxQuality);
+	//auto scene = aiImportFile("dragon.obj",aiProcessPreset_TargetRealtime_MaxQuality);	
 	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
+	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_MaxQuality, NULL, props);
 	if (scene) {
-		std::cout << "num of mNumMeshes : " << scene->mNumMeshes << std::endl;
+		//std::cout << "num of mNumMeshes : " << scene->mNumMeshes << std::endl;
 		for( int i = 0; i < scene->mNumMeshes; ++i) {
 			aiMesh* mesh = scene->mMeshes[i];
 
+			/*
 			if (mesh->mNumVertices != 3)
 				std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
+			*/
 
 			for (int j = 0; j < mesh->mNumFaces; j++)
 			{
@@ -65,7 +68,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, float scale) {
 			}		
 
 
-			std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
+			//std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
 
 		}
 	}
@@ -114,9 +117,9 @@ void Scene::BuildTree() {
 	}
 
 	build_bvh_SAH(tree, boundingBoxList);
-	std::cout << "size : " << tree.nodes.size() << std::endl;
+	//std::cout << "size : " << tree.nodes.size() << std::endl;
 	// build_bvh_simple(tree, boundingBoxList);
-	std::cout << "size : " << tree.nodes.size() << std::endl;
+	//std::cout << "size : " << tree.nodes.size() << std::endl;
 }
 
 

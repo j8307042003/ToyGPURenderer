@@ -4,7 +4,7 @@
 #include<iostream>
 
 RenderView::RenderView(int width, int height) : width(width), height(height) {
-	std::cout << "Init Buff " << this->width << "  " << this->height << std::endl;
+	//std::cout << "Init Buff " << this->width << "  " << this->height << std::endl;
 	InitBuffer();
 }
 
@@ -17,7 +17,7 @@ void RenderView::InitBuffer() {
 	// buffer = new unsigned int[width * height];
 	buffer = (unsigned int *)new float[3 * width * height];
 	sampleIntegrators = new SampleIntegrator[width * height]();
-	std::cout << "Buffer Size  " << width * height << std::endl;
+	//std::cout << "Buffer Size  " << width * height << std::endl;
 }
 
 

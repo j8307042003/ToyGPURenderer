@@ -46,7 +46,6 @@ float rot_y = 0;
 
 int main(){
 
-    Quaternion q;
 
     // GLFWwindow* window;
 
@@ -69,7 +68,6 @@ int main(){
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(width, height, "Renderer", NULL, NULL);
 
-	std::cout << "window";
     if (!window)
     {
         glfwTerminate();
@@ -83,7 +81,7 @@ int main(){
     glfwSwapInterval(1);
 
     cam = Camera(width, height, Vec3(200.0f, 0.0f, -200.0f));
-    std::cout << "cam init done";
+    //std::cout << "cam init done";
     // Renderer * renderer = new ParallelRenderer();
     renderer = new VulkanRenderer();
     renderer->SetRenderData(&scene, &cam);
@@ -137,7 +135,7 @@ int main(){
 
 
         //stall gpu renderer. clean up gpu usage for image display
-        renderer->Stall();
+        //renderer->Stall();
 
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);

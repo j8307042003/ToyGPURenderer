@@ -74,7 +74,7 @@ inline void build_bvh_simple(bvh_tree & tree, std::vector<AABB> & boundingBoxs) 
 		// std::cout << "Add leaf " << i << std::endl;
 	}
 
-	std::cout << "Tree size " << treeSize << std::endl;
+	//std::cout << "Tree size " << treeSize << std::endl;
 	//for (int j = pow_n-1; j >= 0 ; --j ) {
 	//	int head = j == 0 ? 0 : pow(2, j-1) - 1;
 	//	int tail = head << 1;
@@ -343,7 +343,7 @@ inline void build_bvh_SAH(bvh_tree & tree, std::vector<AABB> & boundingBoxs) {
 	int depth = 1;
 	RecursiveBuild(tree.nodes, root, depth);
 
-	std::cout << "Done output tree max depth " << depth << std::endl;
+	//std::cout << "Done output tree max depth " << depth << std::endl;
 
 }
 
