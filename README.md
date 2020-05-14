@@ -32,6 +32,11 @@ cmake ..
 cmake --build .
 ```
 
+### Windows Warning
+when rendering complex scene that makes compute shader take a lot time.
+windows system will kill the gpu task. you can turn TDR off or modify TDR delay
+https://docs.microsoft.com/en-us/windows-hardware/drivers/display/timeout-detection-and-recovery
+
 
 ### Usage
 
