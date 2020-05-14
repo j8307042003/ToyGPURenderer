@@ -3,6 +3,8 @@ build/*
 !build/clearImg.spv
 !build/imageBase.comp
 !build/imageBase.spv
+!build/pathTracing.comp
+!build/pathTracing.spv
 !build/render.glsl
 src/GLFW/src/glfw.dir
 *.vcxproj

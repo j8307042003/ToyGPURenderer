@@ -35,7 +35,7 @@ VulkanRenderer::VulkanRenderer() {
 
 
 	// Load shader module
-	std::string filename = "imageBase.spv";
+	std::string filename = "pathTracing.spv";
 	VkShaderModule shaderModule = createShaderModule(vulkanInstance.device, filename);
 	pipeline = vulkanInstance.BuildComputeShaderPipeline(renderBufferAttribute, shaderModule);
 
