@@ -7,6 +7,8 @@ using vulkan compute shader to compute each pixel's color( ray tracing, shading,
 ![image](https://github.com/j8307042003/ToyGPURenderer/blob/master/gallery/result_3.png)
 
 
+![image](https://github.com/j8307042003/ToyGPURenderer/blob/master/gallery/result_.png)
+
 ## Requirement
 cmake
 
