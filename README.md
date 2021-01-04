@@ -1,6 +1,6 @@
 
 
-# My WIP GPU-accelerated toy path tracing.
+# My WIP GPU-accelerated toy path tracing renderer.
 
 using vulkan compute shader to compute each pixel's color( ray tracing, shading, sample integrator).
 
