@@ -253,7 +253,7 @@ inline void BuildBVH_SAH(int start, int end, std::vector<bvhPrimitiveInfo> & pri
 			}
 		}
 		
-		bvhPrimitiveInfo * primitiveMid = std::partition(&primitives[start], &primitives[end+1],
+		bvhPrimitiveInfo * primitiveMid = std::partition(&primitives[start], &primitives[end],
 			[=] (const bvhPrimitiveInfo & primitiveInfo) {
 				int b = nBuckets * centroid.Offset(primitiveInfo.center)[dim];
 				if (b == nBuckets) b--;
