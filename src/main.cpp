@@ -1,71 +1,32 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<iostream>
-#include"math/Vec3.h"
-#include"math/Quaternion.h"
-#include"Renderer/Camera.h"
-#include"Renderer/TestScene1.h"
-#include"Renderer/Renderer.h"
-#include"Renderer/ParallelRenderer.h"
-#include"Renderer/VulkanRenderer.h"
+//#include"math/Vec3.h"
+//#include"math/Quaternion.h"
+//#include"Renderer/Camera.h"
+//#include"Renderer/TestScene1.h"
+//#include"Renderer/Renderer.h"
+//#include"Renderer/ParallelRenderer.h"
+//#include"Renderer/VulkanRenderer.h"
 
-#include<vector>
-#include"BVH/BVH.h"
-#include"BVH/AABB.h"
 
-#define GL_SILENCE_DEPRECATION
-// #include <glad/glad.h>
+#include "Core/AppBuilder.h"
 
-#include <GLFW/glfw3.h>
-#include <glm/gtx/quaternion.hpp>
-
-#define GL_RGBA32F 0x8814
-#define GL_RGB32F 0x8815
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-Scene scene;
-Camera cam;
-Renderer * renderer;
-
-bool keys[1024];
-bool mouse_keys[64] = {};
-
-GLfloat deltaTime = 0.0f;
-GLfloat lastFrame = 0.0f;
-
-void Do_Movement();
-void Do_Rotate();
-
-double mouse_pos_x = 0, mouse_pos_y = 0;
-
-GLFWwindow * window = nullptr;
-
-float rot_x = 0;
-float rot_y = 0;
 
 int main(){
-
-
-    // GLFWwindow* window;
-
-    /* Initialize the library */
-    if (!glfwInit())
-        return -1;
-
     // scene = make_test_scene1();
-    scene = make_test_scene2();
-    scene.BuildTree();
+    // scene = make_test_scene2();
+    // scene.BuildTree();
+
+    const char * text = "Sample Text Input.";
+    Application * app = AppBuilder::MakeApp(text);
+    app->Run();
 
 
+	return 0;
+}
 
-    int width = 1280; //640;
-    int height = 960; //480;
-
-    // width = 320;
-    // height = 480;
-
-    /* Create a windowed mode window and its OpenGL context */
+/*
     window = glfwCreateWindow(width, height, "Renderer", NULL, NULL);
 
     if (!window)
@@ -74,7 +35,6 @@ int main(){
         return -1;
     }
 
-    /* Make the window's context current */
     glfwMakeContextCurrent(window);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetKeyCallback(window, key_callback);
@@ -87,13 +47,6 @@ int main(){
     renderer->SetRenderData(&scene, &cam);
     renderer->StartRender();
 
-    /*
-    cam.transform.position = {0, 0.74, -25.8};
-    rot_y = 5.164;
-    rot_x = 180;
-    cam.transform.rotation = 
-        glm::normalize(glm::quat(glm::radians(glm::vec3{rot_y, -rot_x, 180 })));    
-    */
     // cam.transform.position = {1.427+2, 0.244, -30.5};
     cam.transform.position = {-0.671992, 0.378616, -30.7013}; // dragon
     // rot_y = 12.3; rot_x = 100;
@@ -102,14 +55,14 @@ int main(){
         glm::normalize(glm::quat(glm::radians(glm::vec3{rot_y, -rot_x, 180 })));     
     cam.transform.UpdateMatrix();    
 
-	unsigned int textureId;
-	glGenTextures(1, &textureId);
+    unsigned int textureId;
+    glGenTextures(1, &textureId);
 
-	glBindTexture(GL_TEXTURE_2D, textureId);    
+    glBindTexture(GL_TEXTURE_2D, textureId);    
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);  
     // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0,
              GL_RGB, GL_FLOAT, cam.GetBuffer());
              // GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());
 
@@ -120,15 +73,14 @@ int main(){
     std::cout << "begin render" << std::endl; 
 
    
-    /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
-		GLfloat currentFrame = glfwGetTime();
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
+        GLfloat currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
 
         Do_Rotate();
-		Do_Movement();
+        Do_Movement();
         // std::cout << "update frame" << std::endl;
         renderer->UpdateFrame();
 
@@ -137,42 +89,42 @@ int main(){
         //stall gpu renderer. clean up gpu usage for image display
         renderer->Stall();
 
-        /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
 
-		glBindTexture(GL_TEXTURE_2D, textureId);	
+        glBindTexture(GL_TEXTURE_2D, textureId);    
 
-		glEnable(GL_TEXTURE_2D);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
+        glEnable(GL_TEXTURE_2D);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
                     GL_RGB, GL_FLOAT, cam.GetBuffer());    
                     // GL_RGBA, GL_FLOAT, outputPtr);    
-			        // GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());    
-		glBegin(GL_QUADS);
-		glTexCoord2i(0, 0); glVertex2i(0, 0);
-		glTexCoord2i(0, 1); glVertex2i(0, height);
-		glTexCoord2i(1, 1); glVertex2i(width, height);
-		glTexCoord2i(1, 0); glVertex2i(width, 0);
-		glEnd();
-		glDisable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, 0);
+                    // GL_RGBA, GL_UNSIGNED_BYTE, cam.GetBuffer());    
+        glBegin(GL_QUADS);
+        glTexCoord2i(0, 0); glVertex2i(0, 0);
+        glTexCoord2i(0, 1); glVertex2i(0, height);
+        glTexCoord2i(1, 1); glVertex2i(width, height);
+        glTexCoord2i(1, 0); glVertex2i(width, 0);
+        glEnd();
+        glDisable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
 
-        /* Swap front and back buffers */
         glfwSwapBuffers(window);
 
-        /* Poll for and process events */
         glfwPollEvents();
 
         renderer->Resume();
     }
 
     glfwTerminate();
-
-	return 0;
-}
+*/
 
 
+/*
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void Do_Movement();
+void Do_Rotate();
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
     //if(action == GLFW_PRESS) {
     //    double xpos, ypos;
@@ -275,3 +227,4 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 
 
+*/

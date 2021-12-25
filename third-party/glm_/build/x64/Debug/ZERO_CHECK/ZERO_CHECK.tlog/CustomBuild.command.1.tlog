@@ -1,0 +1,10 @@
+^C:\CODE\TOYGPURENDERER\THIRD-PARTY\GLM\BUILD\CMAKEFILES\DABB70089EFBE009BBF37A95B4173192\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Code/ToyGPURenderer/third-party/glm -BC:/Code/ToyGPURenderer/third-party/glm/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Code/ToyGPURenderer/third-party/glm/build/Project.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -1,0 +1,833 @@
+#version 450
+
+struct SamplerIntegrator
+{
+	float r;
+	float g;
+	float b;
+	uint count;
+};
+
+struct DebugStruct 
+{
+	vec4 v1;
+	vec4 v2;
+	vec4 v3;
+	ivec4 iv4;	
+};
+
+
+
+
+
+
+
+DebugStruct debug;
+#include "render.glsl"
+
+struct bvh_node {
+	int idx;
+	int primitiveId;
+	AABB boundingBox;
+	int isLeaf;
+	int left;
+	int right;
+};
+
+
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+struct Color
+{
+	// uint data;
+	// vec3 data;
+	float data;
+};
+
+//layout(std140, binding = 0) buffer Ver
+layout(binding = 0, std430) buffer Ver
+{
+   Color col[];
+};
+
+layout(binding = 1) uniform RenderSetting {
+	uint width;
+	uint height;
+	int time;
+	int sampleCount;
+
+	vec4 camera_pos;
+	mat4 camera_matrix;
+} renderSetting;
+
+layout(binding = 2) buffer ShapeInstanceData 
+{
+	uint instanceCount;
+	ShapeInstance instances[];
+};
+
+layout(binding = 3) buffer ShapeSphereData 
+{
+	SphereShape sphereShape[];
+};
+layout(binding = 4) buffer ShapeTriangleData 
+{
+	TriangleShape triangleShape[];
+};
+
+layout(binding = 5) buffer ShapePlaneData 
+{
+	PlaneShape planeShape[];
+};
+
+layout(binding = 6) buffer ShapeMaterialData 
+{
+	Material materials[];
+};
+
+layout(binding = 7) buffer Integrator
+{
+	SamplerIntegrator integrator[];
+};
+
+layout(binding = 8) buffer DebugStr
+{
+	DebugStruct debug;
+} debugUniform;
+
+layout(std140, binding = 9) buffer BVH
+{
+	bvh_node bvh_tree[];
+};
+
+
+// layout (local_size_x = 16, local_size_y = 16) in;
+layout (local_size_x = 8, local_size_y = 8) in;
+// layout (local_size_x = 4, local_size_y = 4) in;
+
+uint rand_counter = 0;
+uint wang_hash(uint seed)
+{
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return seed;
+}
+
+uint rand_xorshift(uint rng_state)
+{
+    // Xorshift algorithm from George Marsaglia's paper
+    rng_state ^= (rng_state << 13);
+    rng_state ^= (rng_state >> 17);
+    rng_state ^= (rng_state << 5);
+    return rng_state;
+}
+
+float rand_global(uint seed)
+{
+	rand_counter++;
+	seed = wang_hash(seed+rand_counter);
+	return float(rand_xorshift(seed)) * (1.0 / 4294967296.0);
+}
+
+
+bool RayCastTestInstance(ShapeInstance instance, Ray ray, out vec3 hitPos, out vec3 direction) {
+	//if (instance.shapeType != SHAPE_TYPE_SPHERE) return true;
+	//return RayCastTest_Sphere(sphereShape[instance.shapeIdx], ray, hitPos, direction);
+	switch(instance.shapeType) {
+		case SHAPE_TYPE_SPHERE: return RayCastTest_Sphere(sphereShape[instance.shapeIdx], ray, hitPos, direction);
+		case SHAPE_TYPE_TRIANGLE: return RayCastTest_Triangle(triangleShape[instance.shapeIdx], ray, hitPos, direction);
+		case SHAPE_TYPE_PLANE: return RayCastTest_Plane(planeShape[instance.shapeIdx], ray, hitPos, direction);
+	}
+
+	return false;
+}
+
+
+
+
+const int kBVH_Depth = 32;
+int bvh_visit_stack[kBVH_Depth];
+
+
+bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
+	int stackCount = 1;
+	bvh_visit_stack[0] = 0;
+
+	vec3 pos;
+	vec3 dir;
+	bool bEverHit = false;
+
+	float depth = 99999999;
+	int runId = 0;
+
+    vec3 invdir = safe_invdir(ray.dir.xyz);
+    vec3 oxinvdir = -ray.origin.xyz * invdir;
+
+	while(stackCount != 0) {
+		// if (stackCount == 0 ) return bEverHit;
+		stackCount--;
+		int treeIdx = bvh_visit_stack[stackCount];
+
+		bvh_node node = bvh_tree[treeIdx];
+		if (node.isLeaf > 0) {
+			int id = node.primitiveId;
+			bool bHit = RayCastTestInstance(instances[id], ray, pos, dir);
+			vec3 origin_to_pos = pos - ray.origin;
+			float hitDepth = origin_to_pos.x * origin_to_pos.x + origin_to_pos.y * origin_to_pos.y + origin_to_pos.z * origin_to_pos.z;
+			if (bHit && hitDepth < depth ){
+				depth = hitDepth;
+				hitPos = pos;
+				instanceIdx = id;
+				direction = dir;
+				bEverHit = true;
+			}
+		}
+		else {
+			// bool bIntersect = RayIntersect_AABB_1(node.boundingBox, ray);
+
+			vec2 s =  fast_intersect_aabb(node.boundingBox, invdir, oxinvdir);
+            // bool bIntersect = (s.x <= s.y) && (depth >= s.x) ;
+            bool bIntersect = (s.x <= s.y);
+
+           	// float t = (s.x <= s.y) ? s.x : -1;
+
+
+
+			if (bIntersect) {
+				if (node.left > 0 ) {
+					bvh_visit_stack[stackCount] = node.left;
+					stackCount++;
+				}
+				if (node.right > 0 ) {
+					bvh_visit_stack[stackCount] = node.right;
+					stackCount++;
+				}
+			}			
+		}
+
+	}
+
+
+	return bEverHit;
+}
+
+
+
+
+/*
+int get_right_sibling(int idx) {
+	int right = idx + 1;
+	return instanceCount > right ? right : -1;
+}
+
+
+bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
+
+	vec3 pos;
+	vec3 dir;
+	bool bEverHit = false;
+
+	float depth = 99999999;
+
+    vec3 invdir = safe_invdir(ray.dir.xyz);
+    vec3 oxinvdir = -ray.origin.xyz * invdir;
+
+    int currentIdx = 0;
+    bool jumpNextLeft = false;
+	while(currentIdx >= 0) {
+    	bool walkLeft = false;
+		bvh_node node = bvh_tree[currentIdx];
+		bool isRight = currentIdx % 2 == 0;
+
+		//if (jumpNextLeft) {
+		//	if (isRight) {
+		//		currentIdx = (currentIdx - 1) >> 1;
+		//	} else {
+		//		currentIdx = currentIdx + 1;
+		//		jumpNextLeft = false;
+		//	}
+		//	
+		//	continue;
+		//}
+
+		if (!jumpNextLeft) {
+		if (node.isLeaf > 0) {
+			int id = node.primitiveId;
+			bool bHit = RayCastTestInstance(instances[id], ray, pos, dir);
+			vec3 origin_to_pos = pos - ray.origin;
+			float hitDepth = origin_to_pos.x * origin_to_pos.x + origin_to_pos.y * origin_to_pos.y + origin_to_pos.z * origin_to_pos.z;
+			if (bHit && hitDepth < depth ){
+				depth = hitDepth;
+				hitPos = pos;
+				instanceIdx = id;
+				direction = dir;
+				bEverHit = true;
+			}				
+		}
+		else {
+
+			vec2 s =  fast_intersect_aabb(node.boundingBox, invdir, oxinvdir);
+            bool bIntersect = (s.x <= s.y);
+
+			if (bIntersect && node.left > 0) {							
+				walkLeft = true;
+			}		
+
+		}
+		}
+		if (walkLeft) {							
+			currentIdx = node.left;
+		}
+		else {
+			if (isRight) {
+				if (!jumpNextLeft) jumpNextLeft = true;
+				currentIdx = (currentIdx - 1) >> 1;
+			} else{
+				currentIdx = get_right_sibling(currentIdx);
+				if (jumpNextLeft) jumpNextLeft = false;
+			}
+		}		
+
+	}
+
+
+	return bEverHit;
+}
+
+
+
+*/
+
+
+/*
+
+bool RayCastTest(Ray ray, out vec3 hitPos, out vec3 dir, out uint instanceIdx) {
+	float depth = 99999;
+	// for(uint i = 0; i < instanceCount; ++i) {
+	for(uint i = 0; i < instanceCount; ++i) {
+		vec3 test_hitPos, test_dir;
+		bool hit = RayCastTestInstance(instances[i], ray, test_hitPos, test_dir);
+		float hitDepth = length(test_hitPos - ray.origin);
+		if (hit && hitDepth < depth) {
+			hitPos = test_hitPos;
+			dir = test_dir;
+			instanceIdx = i;
+			depth = hitDepth;
+		}
+	}
+
+	return depth < 99999;
+}
+*/
+
+void make_coordinateSys(vec3 normal, out vec3 normal_t, out vec3 normal_b) {
+	if (abs(normal.x) > abs(normal.y))
+		normal_t = vec3(normal.z, 0, -normal.x);
+	else
+		normal_t = vec3(0, -normal.z, normal.y);
+
+
+	normal_b = cross(normal, normal_t);		
+}
+
+#define M_PI 3.1415926535897932384626433832795
+
+vec3 uniformSampleHemisphere(float r1, float r2) 
+{ 
+    // cos(theta) = r1 = y
+    // cos^2(theta) + sin^2(theta) = 1 -> sin(theta) = srtf(1 - cos^2(theta))
+    float sinTheta = sqrt(1 - r1 * r1); 
+    // float phi = 2 * M_PI * r2; 
+    float phi = r2; 
+    float x = sinTheta * cos(phi); 
+    float z = sinTheta * sin(phi); 
+    return vec3(x, r1, z); 
+} 
+ 
+
+
+
+vec4 make_random(vec3 dir, vec2 polarSet) {
+	vec3 Nb, Nt;
+	make_coordinateSys(dir, Nb, Nt);
+
+	uint imgPos = gl_GlobalInvocationID.x + renderSetting.width * gl_GlobalInvocationID.y;
+	uint seed = imgPos * renderSetting.time;
+	// float r1 = rand_global(seed);
+	// float r2 = 2 * M_PI * rand_global(seed);
+	float r1 = cos(polarSet.x);
+	float r2 = polarSet.y;
+
+
+	vec3 localHemiSphereDir = uniformSampleHemisphere(r1, r2);
+    return vec4( 
+        localHemiSphereDir.x * Nb.x + localHemiSphereDir.y * dir.x + localHemiSphereDir.z * Nt.x, 
+        localHemiSphereDir.x * Nb.y + localHemiSphereDir.y * dir.y + localHemiSphereDir.z * Nt.y, 
+        localHemiSphereDir.x * Nb.z + localHemiSphereDir.y * dir.z + localHemiSphereDir.z * Nt.z,
+        r1 * M_PI); 	
+}
+
+
+vec4 make_GGXRandom(vec3 dir, vec2 polarSet) {
+	// const Vec3 normal = 
+	// return (Vec3(myRand() - 0.5, myRand() - 0.5, myRand() - 0.5)).normalized();
+	vec3 Nb, Nt;
+	make_coordinateSys(dir, Nb, Nt);
+
+	//uint imgPos = gl_GlobalInvocationID.x + renderSetting.width * gl_GlobalInvocationID.y;
+	//uint seed = imgPos * renderSetting.time;
+	//float r1 = rand_global(seed);
+	//float r2 = rand_global(seed);
+
+	//float theta1 = atan((roughness * sqrt(r1)) / (sqrt(1 - r1)));
+	//theta1 = cos(theta1);
+	// vec3 localHemiSphereDir = uniformSampleHemisphere(theta1, r2);
+	float theta1 = cos(polarSet.x);
+	vec3 localHemiSphereDir = uniformSampleHemisphere(theta1, polarSet.y);
+
+    return vec4( 
+        localHemiSphereDir.x * Nb.x + localHemiSphereDir.y * dir.x + localHemiSphereDir.z * Nt.x, 
+        localHemiSphereDir.x * Nb.y + localHemiSphereDir.y * dir.y + localHemiSphereDir.z * Nt.y, 
+        localHemiSphereDir.x * Nb.z + localHemiSphereDir.y * dir.z + localHemiSphereDir.z * Nt.z,
+        theta1); 	
+        // r1 * M_PI); 	
+}
+
+vec2 random_polar(float roughness) {
+	uint imgPos = gl_GlobalInvocationID.x + renderSetting.width * gl_GlobalInvocationID.y;
+	uint seed = imgPos * renderSetting.time;
+	float r1 = rand_global(seed);
+	float r2 = rand_global(seed);
+
+	// float theta1 = atan((roughness * sqrt(r1)) / (sqrt(1 - r1)));
+	float theta1 = acos(sqrt((1.0f - r1) / ((roughness * roughness - 1.0f) * r1 + 1.0f)));
+	return vec2(theta1, 2 * M_PI * r2);	
+}
+
+struct RayHitInfo {
+	//vec3 dir;
+	//vec3 normal;
+	//vec3 reflect;
+	uint materialIdx;
+	vec3 color;	
+	float cosTheta;
+	float metalic;
+};
+
+// const int maxDepth = 2;
+const int maxDepth = 8;
+RayHitInfo rayHitInfoStack[maxDepth+1];
+
+
+// dE(p, Wi) = Li(p, Wi) * cos(Theta_i) dWi
+void dE_BRDF() {
+
+}
+
+
+// dLr(Wr) / dEi(Wi)
+
+void ResolveRayHit(int idx) {
+	for(int i = idx; i >= 0; --i) {
+		Material m = materials[rayHitInfoStack[i].materialIdx];
+		vec3 engery = rayHitInfoStack[i+1].color;
+		// float metalic = 1 - m.metalic;
+		float metalic = 1 - rayHitInfoStack[i].metalic;
+		vec3 indirect = m.color.xyz * engery * metalic + (1 - metalic) * engery;
+
+		rayHitInfoStack[i].color = (m.emission.xyz + (i < idx ? indirect : vec3(0)) *  abs(rayHitInfoStack[i].cosTheta));
+	}
+}
+
+
+float Fresnel(float etaI, float etaT, float cosThetaI) {
+	float sinThetaI = sqrt(max(0, 1 - cosThetaI * cosThetaI));
+	float sinThetaT = etaI / etaT * sinThetaI;
+	if (sinThetaT >= 1) return 1;
+	float cosThetaT = sqrt(max(0, 1 - sinThetaT * sinThetaT));
+
+	float Rparl = (etaT * cosThetaI - etaI * cosThetaT) /
+				  (etaT * cosThetaI + etaI * cosThetaT);
+	float Rparp = (etaI * cosThetaI - etaT * cosThetaT) /
+				  (etaI * cosThetaI + etaT * cosThetaT);
+
+	return clamp((Rparl * Rparl + Rparp * Rparp) / 2, 0, 1);
+}
+
+float snell(float etaI, float etaT, float cosThetaI) {
+	float sinThetaI = sqrt(1 - cosThetaI * cosThetaI);
+	return (etaI * sinThetaI) / etaT;
+}
+
+bool Trace(Ray ray, out vec3 color) {
+	vec3 hitPos, dir;
+	uint instanceIdx;
+	//bool hit = RayCastTest(ray, hitPos, dir, instanceIdx);
+	//if (!hit) return false;
+
+	//Material m = materials[instanceIdx];
+	//color = m.color;
+
+	Ray traversalRay = ray;
+	float currentEta = 1;
+	int currentMaterialIdx = -1;
+	RayHitInfo rayHitInfo;
+	bool transmissing = false;
+	for(int i = 0; i < maxDepth; ++i) {
+		// bool hit = RayCastTest(traversalRay, hitPos, dir, instanceIdx);
+		// bool hit = RayCastTest_BVH_1(traversalRay, hitPos, dir, instanceIdx);
+		bool hit = RayCastTest_BVH_2(traversalRay, hitPos, dir, instanceIdx);
+
+		if (!hit) {
+			if (i == 0) return false;
+			else {
+				ResolveRayHit(i-1);
+				color.xyz = rayHitInfoStack[0].color;
+				return true;
+			}
+		}
+
+		ShapeInstance instance = instances[instanceIdx];
+		Material m = materials[instance.materialIdx];
+		bool sameMaterial = transmissing && (currentMaterialIdx == instance.materialIdx);
+		float eta_t = sameMaterial ? 1 : m.indexOfRefraction;
+
+
+		vec3 normal = normalize((-traversalRay.dir + dir));
+		float cosTheta = dot(normal, -traversalRay.dir);
+		float reflective = Fresnel(currentEta, eta_t, cosTheta);
+
+		currentMaterialIdx = int(instance.materialIdx);
+		rayHitInfoStack[i].materialIdx = instance.materialIdx;
+		rayHitInfoStack[i].color = vec3(0.0);
+
+		if (i == maxDepth - 1 || (m.emission.x + m.emission.y + m.emission.z) > 0 /*|| !hit*/) {
+			ResolveRayHit(hit ? i : i-1);
+			color.xyz = rayHitInfoStack[0].color;
+			return true;
+		}
+
+		int width = int(renderSetting.width);
+		uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
+
+
+		//bool bIsTransparent = rand_global(imgPos * renderSetting.time) <= m.transparency;
+
+		uint seed = imgPos * renderSetting.time;
+		//reflective += m.metalic; 
+		// bool isReflect = rand_global(imgPos * renderSetting.time) < (reflective * (1 - m.roguhness)) + m.metalic;
+		// bool isReflect = rand_global(imgPos * renderSetting.time) < (reflective + m.roguhness) + m.metalic;
+		bool isReflect = rand_global(seed) < (reflective) + m.metalic;
+		// bool isReflect = rand_global(imgPos * renderSetting.time) > (m.transparency);
+		//color.xyz = vec3( (reflective * (1 - m.roguhness)));
+		//return true;
+		/*
+		isReflect = isReflect && !sameMaterial;
+		if ((!isReflect) && bIsTransparent) {
+			// float eta = currentEta / eta_t;
+			float eta = currentEta / eta_t;
+			float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
+			float sin2ThetaT = eta * eta * sin2ThetaI;			
+			//float sinThetaT = snell(currentEta, eta_t, cosTheta);
+			//float cosThetaT = sqrt(1 - sinThetaT * sinThetaT);
+			float cosThetaT = sqrt(1.0 - sin2ThetaT);
+
+		    // dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
+		    dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
+		}
+		*/
+
+		vec4 result;
+		vec2 polarSet;
+		float weight;
+
+		/*
+		//diffuse term
+		if (!isReflect) {
+			//Transmission
+			bool bTransmit = rand_global(seed) < m.transparency;
+			if (bTransmit) {
+				float eta = currentEta / eta_t;
+				float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
+				float sin2ThetaT = eta * eta * sin2ThetaI;			
+				float cosThetaT = sqrt(1.0 - sin2ThetaT);
+				dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
+
+
+				polarSet = random_polar(1 - m.roguhness);
+				result = make_GGXRandom(dir, polarSet);
+				rayHitInfoStack[i].metalic = 0;
+				weight = cos(polarSet.x);;
+
+			} else {
+				// diffuse
+				polarSet = random_polar(1);
+				result = make_GGXRandom(normal, polarSet);
+				rayHitInfoStack[i].metalic = 0;
+				weight = 1;
+			}
+
+		} 
+		//specular term
+		else {
+			polarSet = random_polar(1 - m.roguhness);
+			result = make_GGXRandom(dir, polarSet);
+			rayHitInfoStack[i].metalic = 1 - m.metalic;
+			weight = cos(polarSet.x);
+		}
+		*/
+	
+
+		float roguhness = 0;
+		vec3 spwanRayDir;
+		bool bTransmit = rand_global(seed) < m.transparency;
+		//isReflect = sameMaterial && transmissing ? false : isReflect;
+		//bTransmit = sameMaterial && transmissing ? true : bTransmit;
+
+		transmissing = false;
+		if ((!isReflect) && bTransmit) {
+			transmissing = true;
+			float eta = currentEta / eta_t;
+			float sin2ThetaI = max(0.0, 1.0 - cosTheta * cosTheta);
+			float sin2ThetaT = eta * eta * sin2ThetaI;			
+			float cosThetaT = sqrt(1.0 - sin2ThetaT);
+			dir = eta * traversalRay.dir + (eta * cosTheta - cosThetaT) * normal;
+		}
+
+
+		bool diffuse = !isReflect && !bTransmit;
+		//diffuse
+		if (diffuse){
+			roguhness = 1;
+			spwanRayDir = normal;
+			rayHitInfoStack[i].metalic = 0;
+		} else {
+		//specualr relfection, transmission
+			roguhness = 1 - m.roguhness;
+			spwanRayDir = dir;
+			rayHitInfoStack[i].metalic = bTransmit ? 0 : 1 - m.metalic;
+		}
+
+		polarSet = random_polar(roguhness);
+		result = make_GGXRandom(spwanRayDir, polarSet);
+		weight = diffuse ? 1 : cos(polarSet.x);
+
+		rayHitInfoStack[i].cosTheta = weight;
+		traversalRay.dir = result.xyz;
+		traversalRay.origin = hitPos + normal * (((!isReflect) && bTransmit) ? -0.01 : 0.01);
+		// traversalRay.origin = hitPos + normal * 0.01;
+		currentEta = sameMaterial ? eta_t : m.indexOfRefraction;
+		// if (sameMaterial) i--;
+	}
+
+
+	return true;
+}
+
+
+// BRDF
+// Diffuse + Specular
+
+
+// BSDF
+// Transmission ( Diffuse + Transparent ) + Specular
+
+
+// metallic    : mix(transmission, specular)
+// tranparency : mix(diffuse, transparent)  
+// Frensel? 
+//
+
+
+
+/*
+bool RayCastTest_BVH_2(Ray ray, out vec3 hitPos, out vec3 direction, out uint instanceIdx) {
+	int stackCount = 1;
+	bvh_visit_stack[0] = 0;
+
+	vec3 pos;
+	vec3 dir;
+	bool bEverHit = false;
+
+	float depth = 99999999;
+	int runId = 0;
+    vec3 invdir = safe_invdir(ray.dir.xyz);
+
+    vec3 oxinvdir = -ray.origin.xyz * invdir;
+
+
+	while(true) {
+		if (stackCount == 0 ) return bEverHit;
+		stackCount--;
+		int treeIdx = bvh_visit_stack[stackCount];
+
+		if (bvh_tree[treeIdx].isLeaf > 0) {
+
+		}
+		else {
+			vec2 s =  fast_intersect_aabb(bvh_tree[treeIdx].boundingBox, invdir, oxinvdir);
+			// float t =  RayIntersect_AABB_1(bvh_tree[treeIdx].boundingBox, ray) ? 1 : -1;
+
+
+            bool traverse_c0 = (max(s.x, 0) <= s.y);
+
+           	float t = traverse_c0 ? s.x : -1;
+			if (traverse_c0) {
+					vec3 pos = ray.origin + ray.dir * t;
+					vec3 dmin = abs(bvh_tree[treeIdx].boundingBox.min.xyz - pos);
+					vec3 dmax = abs(bvh_tree[treeIdx].boundingBox.max.xyz - pos);
+					if ( dmin.x < .01 || dmin.y < .01 || dmin.z < .01||
+						 dmax.x < .01 || dmax.y < .01 || dmax.z < .01 )
+					{
+						float m1 = mymin3(dmin.x, dmin.y, dmin.z);
+						float m2 = mymin3(dmax.x, dmax.y, dmax.z);
+						return true;				
+					}
+				if (bvh_tree[treeIdx].left > 0 ) {
+					bvh_visit_stack[stackCount] = bvh_tree[treeIdx].left;
+					stackCount++;
+				}
+				if (bvh_tree[treeIdx].right > 0 ) {
+					bvh_visit_stack[stackCount] = bvh_tree[treeIdx].right;
+					stackCount++;
+				}
+			}			
+		}
+
+	}
+
+
+	return bEverHit;
+}
+*/
+
+
+
+//preview for real time
+vec3 PreviewMode(Ray ray) 
+{
+	vec3 hitPos, dir;
+	uint instanceIdx;
+	bool hit = RayCastTest_BVH_2(ray, hitPos, dir, instanceIdx);
+	if (!hit) return vec3(0);
+
+	vec3 normal = normalize((-ray.dir + dir));
+	ShapeInstance instance = instances[instanceIdx];
+	Material m = materials[instance.materialIdx];
+
+	//directional diffuse lighting only
+	float directional = max(0, dot(normal, normalize(vec3(1, 1, 0))));
+	// mix directional and albedo
+	return m.color * (0.5 + directional / 2);
+}
+
+void main()
+{
+	int width = int(renderSetting.width);
+	int height = int(renderSetting.height);
+	Ray ray = genCamRay(renderSetting.camera_matrix, renderSetting.camera_pos.xyz, gl_GlobalInvocationID.x / float(width), gl_GlobalInvocationID.y / float(height), width, height);
+	// ray.dir.y *= -1;
+	// ray.dir.z *= -1;
+	uint imgPos = gl_GlobalInvocationID.x + width * gl_GlobalInvocationID.y;
+	// uint imgPos = gl_GlobalInvocationID.x + 1280 * gl_GlobalInvocationID.y;
+	vec3 color = vec3(0);
+	bool intersect = Trace(ray, color);
+
+	// bool intersect = true;
+	// color.xyz = PreviewMode(ray);
+
+
+
+	//vec3 hitPos, dir;
+	//uint instanceIdx;
+	//intersect = RayCastTest(ray, hitPos, dir, instanceIdx);
+	//if( intersect ) {
+	//	ShapeInstance instance = instances[instanceIdx];
+	//	Material m = materials[instance.materialIdx];		
+	//	color = m.color.xyz + m.emission.xyz;
+	//	color /= 3;
+	//}
+
+
+	//vec3 pos, direc;
+	//uint inId;
+	//if (RayCastTest_BVH_2(ray, pos, direc, inId)) color = vec3(0);
+
+	SamplerIntegrator it = integrator[imgPos];
+	if (intersect) {
+		//it.r += uint(min(255, color.r * 255));
+		//it.g += uint(min(255, color.g * 255));
+		//it.b += uint(min(255, color.b * 255));
+		it.r += min(1, color.r);
+		it.g += min(1, color.g);
+		it.b += min(1, color.b);
+
+		it.count += 1;
+		integrator[imgPos] = it;
+		// integrator[imgPos].b += uint(color.b * 255);
+	}
+
+	// uint sampleCount = renderSetting.sampleCount;
+	color = vec3(it.r / (it.count), 
+				 it.g / (it.count), 
+				 it.b / (it.count));
+
+	//if( intersect ) {
+	//	ShapeInstance instance = instances[instanceIdx];
+	//	Material m = materials[instance.materialIdx];		
+	//}
+
+	// col[imgPos].data = uint(255 * color.r) | (uint(255 * color.g) << 8) | (uint(255 * color.b) << 16) | 255 << 24;
+	// col[imgPos].data = uint(color.r) | (uint(color.g) << 8) | (uint(color.b) << 16) | 255 << 24;
+	// col[imgPos].data = vec3(color.r, color.g, color.b);
+
+
+	/* easy dof
+	vec3 hitPos, dir;
+	uint instanceIdx;
+	bool hit = RayCastTest_BVH_2(ray, hitPos, dir, instanceIdx);	
+	float depth = length(hitPos - renderSetting.camera_pos.xyz);
+	const int kDofSample = 16;
+	const float range_min = 2.8;
+	const float range_max = 3;
+	color /= kDofSample+1;
+	const float pi2 = 2 * M_PI;
+
+
+	vec2 diffv2 = vec2(depth) - vec2(range_min, range_max);
+
+	float diff = min( abs(diffv2.x), abs(diffv2.y) );
+	if (diffv2.x > 0 && diffv2.y < 0) diff = 0;
+	diff = min(diff, 3);
+
+	for (int i = 0; i < kDofSample; i++)
+	{
+		float theta = (i * pi2) / kDofSample;
+		uint x = int(cos(theta) * diff) + gl_GlobalInvocationID.x;
+		uint y = int(sin(theta) * diff) + gl_GlobalInvocationID.y;
+		uint imgPos = x + width * y;
+		SamplerIntegrator it = integrator[imgPos];
+
+		color += (vec3(it.r, it.g, it.b) / it.count) / (kDofSample+1);
+	}
+	*/
+	uint colorPos = imgPos*3;
+	col[colorPos].data = color.r;
+	col[colorPos+1].data = color.g;
+	col[colorPos+2].data = color.b;
+	// debug.v1.w = sampleCount;
+	//bvh_node node = bvh_tree[6];
+	// debug.v1.xyz = (renderSetting.camera_matrix * vec4(1, 2, 3, 1.0)).xyz;
+	// debug.v1 = renderSetting.camera_matrix[0];
+	// debug.v2 = renderSetting.camera_matrix[1];
+	//debug.iv4.x = node.idx;
+	//debug.iv4.y = node.primitiveId;
+	//debug.iv4.z = node.isLeaf;
+	//debug.iv4.w = node.left;
+
+	// debugUniform.debug = debug;
+}

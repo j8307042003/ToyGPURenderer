@@ -6,8 +6,8 @@
 #include "shape/Plane.h"
 #include "Material.h"
 
-Scene make_test_scene1() {
-	auto scene = Scene();
+Scene* make_test_scene1() {
+	auto scene = new Scene();
 
 	// scene.AddShape(new Sphere({0, 0, 10}, 2));	
 	// scene.AddShape(new Sphere({0, 0, -10}, 2));	
@@ -24,7 +24,7 @@ Scene make_test_scene1() {
 	float wallWidth  = 20;
 
 	//Right Wall
-	scene.AddShape(new Plane(
+	scene->AddShape(new Plane(
 		{wallOffsetX,  wallHeight, wallWidth},	
 		{wallOffsetX,  wallHeight, -wallWidth},
 		{wallOffsetX, -wallHeight, wallWidth}, 
@@ -32,7 +32,7 @@ Scene make_test_scene1() {
 	));
 
 	//Left Wall
-	scene.AddShape(new Plane(
+	scene->AddShape(new Plane(
 		{-wallOffsetX, -wallHeight, -wallWidth}, 
 		{-wallOffsetX,  wallHeight, -wallWidth}, 
 		{-wallOffsetX, -wallHeight, wallWidth}, 
@@ -41,7 +41,7 @@ Scene make_test_scene1() {
 
 
 	//behind Cam wall
-	scene.AddShape(new Plane(
+	scene->AddShape(new Plane(
 		{-wallOffsetX,  -wallHeight, wallWidth}, 
 		{-wallOffsetX,   wallHeight, wallWidth}, 
 		{ wallOffsetX,  -wallHeight, wallWidth}, 
@@ -49,7 +49,7 @@ Scene make_test_scene1() {
 	));	
 
 	//End Wall
-	scene.AddShape(new Plane(
+	scene->AddShape(new Plane(
 		{-wallOffsetX,   wallHeight, -wallWidth}, 
 		{-wallOffsetX,  -wallHeight, -wallWidth}, 
 		{ wallOffsetX,   wallHeight, -wallWidth},	
@@ -57,7 +57,7 @@ Scene make_test_scene1() {
 	)); 
 
 	//Floor
-	scene.AddShape(new Plane(
+	scene->AddShape(new Plane(
 		{-wallOffsetX,  -wallHeight, -wallWidth}, 
 		{-wallOffsetX,  -wallHeight,  wallWidth}, 
 		{ wallOffsetX,  -wallHeight, -wallWidth}, 
@@ -65,7 +65,7 @@ Scene make_test_scene1() {
 	));		
 
 	//Ceil
-	scene.AddShape(new Plane(
+	scene->AddShape(new Plane(
 		{-wallOffsetX,  wallHeight,  wallWidth}, 
 		{-wallOffsetX,  wallHeight, -wallWidth}, 
 		{ wallOffsetX,  wallHeight,  wallWidth},
@@ -73,31 +73,31 @@ Scene make_test_scene1() {
 	));	
 
 	// scene.AddShape(new Sphere({0, 0, wallWidth / 2}, 1));	
-	scene.AddShape(new Sphere({-2.5, 0, -wallWidth / 1.2f}, 2));	
-	scene.AddShape(new Sphere({ 1, 0, -wallWidth / 1.2f}, 2));	
+	scene->AddShape(new Sphere({-2.5, 0, -wallWidth / 1.2f}, 2));	
+	scene->AddShape(new Sphere({ 1, 0, -wallWidth / 1.2f}, 2));	
 
-	scene.AddShape(new Sphere({ 0, 5, -wallWidth / 1.5f}, 2));	
-	scene.AddShape(new Sphere({ 3, 3, -wallWidth / 1.5f}, 2));	
-	scene.AddShape(new Sphere({ -4, 3, -wallWidth / 1.5f}, 2));	
-	scene.AddShape(new Sphere({ 0,  0, -wallWidth / 1.5f}, 2));	
+	scene->AddShape(new Sphere({ 0, 5, -wallWidth / 1.5f}, 2));	
+	scene->AddShape(new Sphere({ 3, 3, -wallWidth / 1.5f}, 2));	
+	scene->AddShape(new Sphere({ -4, 3, -wallWidth / 1.5f}, 2));	
+	scene->AddShape(new Sphere({ 0,  0, -wallWidth / 1.5f}, 2));	
 
 
 	//walls
-	scene.AddMaterial(new material({0.7, 0.3, 0.3}, {0, 0, 0}, 0));	 //Right Wall
-	scene.AddMaterial(new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.4));	 //Left Wall
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0)); //behind wall
-	scene.AddMaterial(new material({1, 1, 1}, {0.2, 0.5, 0.2}, 0)); //End Wall	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0));	 //Floor
-	scene.AddMaterial(new material({0.8, 0.8, 0.8}, {1, 1, 1}, 0));	 //Ceil
+	scene->AddMaterial(new material({0.7, 0.3, 0.3}, {0, 0, 0}, 0));	 //Right Wall
+	scene->AddMaterial(new material({0.3, 0.7, 0.3}, {0, 0, 0}, 0.4));	 //Left Wall
+	scene->AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0)); //behind wall
+	scene->AddMaterial(new material({1, 1, 1}, {0.2, 0.5, 0.2}, 0)); //End Wall	
+	scene->AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0));	 //Floor
+	scene->AddMaterial(new material({0.8, 0.8, 0.8}, {1, 1, 1}, 0));	 //Ceil
 
 	//spheres
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.7));	
-	scene.AddMaterial(new material({1, 1, 1}, {0.4, 0.4, 1}, 0.3));	
+	scene->AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.7));	
+	scene->AddMaterial(new material({1, 1, 1}, {0.4, 0.4, 1}, 0.3));	
 
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	
-	scene.AddMaterial(new material({1, 0.4, 0.4}, {0, 0, 0}, 1));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	
-	scene.AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.8));	
+	scene->AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	
+	scene->AddMaterial(new material({1, 0.4, 0.4}, {0, 0, 0}, 1));	
+	scene->AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.3));	
+	scene->AddMaterial(new material({1, 1, 1}, {0, 0, 0}, 0.8));	
 
 
 
