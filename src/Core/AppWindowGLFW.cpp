@@ -8,24 +8,32 @@ static int s_glfwInitCount = 0;
 
 AppWindowGLFW::AppWindowGLFW()
 {
-	AppWindowGLFW(kDefaultWidth, kDefaultHeight);
+	InitWindow(kDefaultWidth, kDefaultHeight);
 }
 
-AppWindowGLFW::AppWindowGLFW(int width, int height) : m_width(width), m_height(height)
+AppWindowGLFW::AppWindowGLFW(int width, int height) : m_width(width), m_height(height), m_window(nullptr)
 {
+	InitWindow(width, height);
+}
+
+void AppWindowGLFW::InitWindow(int width, int height)
+{
+	m_width = width;
+	m_height = height;
+
 	if (s_glfwInitCount == 0)
 	{
 		if (!glfwInit()) return;
 		s_glfwInitCount++;
 	}
 
-    m_window = glfwCreateWindow(m_width, m_height, "Renderer", NULL, NULL);
+	this->m_window = glfwCreateWindow(m_width, m_height, "Renderer", NULL, NULL);
 
-    if (!m_window)
-    {
-        glfwTerminate();
-        return;
-    }
+	if (!m_window)
+	{
+		glfwTerminate();
+		return;
+	}
 
 	glfwSetWindowUserPointer(m_window, this);
 
@@ -41,11 +49,11 @@ AppWindowGLFW::AppWindowGLFW(int width, int height) : m_width(width), m_height(h
 		static_cast<AppWindowGLFW*>(glfwGetWindowUserPointer(w))->key_callback(w, key, scancode, action, mode);
 	};
 
-    /* Make the window's context current */
-    glfwMakeContextCurrent(m_window);
-    glfwSetMouseButtonCallback(m_window, mouseButtonCallbackFunc);
-    glfwSetKeyCallback(m_window, keyButtonCallbackFunc);
-    glfwSwapInterval(1);
+	/* Make the window's context current */
+	glfwMakeContextCurrent(m_window);
+	glfwSetMouseButtonCallback(m_window, mouseButtonCallbackFunc);
+	glfwSetKeyCallback(m_window, keyButtonCallbackFunc);
+	glfwSwapInterval(1);
 
 
 	// Init
@@ -58,6 +66,7 @@ AppWindowGLFW::AppWindowGLFW(int width, int height) : m_width(width), m_height(h
 	glOrtho(0, width, 0, height, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
 }
+
 
 
 /*

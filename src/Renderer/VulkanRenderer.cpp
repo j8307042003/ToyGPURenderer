@@ -16,7 +16,7 @@ Vec3 make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3) {
   return (Vec3::Cross(d1, d2)).normalized();
 }
 
-VulkanRenderer::VulkanRenderer() {
+VulkanRenderer::VulkanRenderer() : mem(nullptr) {
 	vulkanInstance = VulkanLib::VulkanInstance();
 
 	renderBufferAttribute = 
@@ -447,10 +447,11 @@ void VulkanRenderer::RenderTask() {
 }
 
 void VulkanRenderer::UpdateFrame() {
+	if (mem == nullptr) return;
 	int imageBufferSize = 3 * sizeof(float) * cam->GetWidth() * cam->GetHeight();
 
-    memcpy(cam->GetBuffer(), mem, imageBufferSize);
-    //vkUnmapMemory(vulkanInstance.device, buffers[0].memory);
+  memcpy(cam->GetBuffer(), mem, imageBufferSize);
+  //vkUnmapMemory(vulkanInstance.device, buffers[0].memory);
 }
 
 
