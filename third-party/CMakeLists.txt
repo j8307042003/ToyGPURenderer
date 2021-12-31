@@ -17,3 +17,10 @@ if(NOT TARGET glm)
       target_compile_options(glm INTERFACE -Wno-error=class-memaccess)
     endif()
 endif()
+
+
+# GLFW
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(glfw)
