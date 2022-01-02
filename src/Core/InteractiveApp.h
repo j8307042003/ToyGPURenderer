@@ -8,7 +8,12 @@ class InteractiveApp : public Application
 {
 public:
 	InteractiveApp(const char * args);
+	virtual ~InteractiveApp();
 	virtual void Run();
+
+private:
+	void OnEvent(WindowEvent & event);
+	void SignalCloseApp();
 
 private:
 	AppWindow * m_appWindow;

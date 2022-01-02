@@ -31,7 +31,6 @@ add_subdirectory(src/VulkanLib src/VulkanLib/build)
 add_subdirectory(src/Renderer src/Renderer/build)
 
 
-include_directories(src/glad)
 include_directories(src/GLFW/include)
 
 
@@ -54,6 +53,8 @@ source_group("Source Files" FILES ${project_cpps})
 add_executable(PineRdr src/main.cpp ${all_files})
 set_target_properties( PineRdr PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/working")
 target_include_directories(PineRdr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Core)
+target_link_libraries(PineRdr PRIVATE IMGUI)
+target_link_libraries(PineRdr PRIVATE glad)
 target_link_libraries(PineRdr PRIVATE Renderer)
 target_link_libraries(PineRdr PRIVATE math)
 target_link_libraries(PineRdr PRIVATE shape)
