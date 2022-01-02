@@ -7,6 +7,7 @@
 class Renderer {
 public:
 	Renderer(){};
+	virtual ~Renderer() = default;
 
 	void SetRenderData(Scene * s, Camera * cam);
 	virtual void StartRender() = 0;
@@ -14,6 +15,7 @@ public:
 	virtual void ClearImage() = 0;
 	virtual void Stall() {running = false;}
 	virtual void Resume() {running = true;}
+	
 protected:
 	Scene * s;
 	Camera * cam;

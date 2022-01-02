@@ -34,6 +34,9 @@ InteractiveApp::InteractiveApp(const char * args)
     const char* glsl_version = "#version 150";
     ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)m_appWindow->GetWindowHandle(), true);
     ImGui_ImplOpenGL3_Init(nullptr);
+
+	m_testGUI = {};
+	AddUI(&m_testGUI);
 }
 
 InteractiveApp::~InteractiveApp()
@@ -56,10 +59,35 @@ void InteractiveApp::OnEvent(WindowEvent & event)
 	}
 }
 
+
+void InteractiveApp::AddUI(ImguiUI * ui)
+{
+	bool bExist = std::find(m_imguiUIs.begin(), m_imguiUIs.end(), ui) != m_imguiUIs.end();
+	if (!bExist) m_imguiUIs.push_back(ui);
+}
+
+
+void InteractiveApp::RemoveUI(ImguiUI * ui)
+{
+	auto it = std::find(m_imguiUIs.begin(), m_imguiUIs.end(), ui);
+	if (it == m_imguiUIs.end()) return;
+	m_imguiUIs.erase(it);
+}
+
+
 void InteractiveApp::SignalCloseApp()
 {
 	m_running = false;
 }
+
+void TestGUI::OnGUI()
+{
+	ImGui::Begin("Test imgui window");
+	ImGui::ColorEdit4("Color", myColor);
+	ImGui::End();
+	ImGui::EndFrame();	
+}
+
 
 
 
@@ -75,22 +103,22 @@ void InteractiveApp::Run()
 		float deltaTime = currentTime - time;
 		time = currentTime;
         
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        
-        bool bShow = true;
-        ImGui::ShowDemoWindow(&bShow);
-        
-        ImGui::Begin("Test imgui window");
-        ImGui::ColorEdit4("Color", myColor);
-        ImGui::End();
-        ImGui::EndFrame();
+        // bool bShow = true;
+        // ImGui::ShowDemoWindow(&bShow);
         
 		m_renderer->UpdateFrame();
 		m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)m_cam->GetBuffer());
 		m_appWindow->Update();
         
+        
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        
+        for(int i = 0; i < m_imguiUIs.size(); ++i)
+        {
+        	m_imguiUIs[i]->OnGUI();
+        }        
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
