@@ -1,6 +1,8 @@
 #include "AppWindowGLFW.h"
 #include <functional>
-
+#include <stdio.h>
+#include <iostream>
+#include "Event/WindowEvent.h"
 #define GL_RGBA32F 0x8814
 #define GL_RGB32F 0x8815
 
@@ -8,15 +10,16 @@ static int s_glfwInitCount = 0;
 
 AppWindowGLFW::AppWindowGLFW()
 {
-	InitWindow(kDefaultWidth, kDefaultHeight);
+	init(kDefaultWidth, kDefaultHeight);
 }
 
 AppWindowGLFW::AppWindowGLFW(int width, int height) : m_width(width), m_height(height), m_window(nullptr)
 {
-	InitWindow(width, height);
+	init(width, height);
 }
 
-void AppWindowGLFW::InitWindow(int width, int height)
+
+void AppWindowGLFW::init(int width, int height)
 {
 	m_width = width;
 	m_height = height;
@@ -25,15 +28,21 @@ void AppWindowGLFW::InitWindow(int width, int height)
 	{
 		if (!glfwInit()) return;
 		s_glfwInitCount++;
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
 	}
 
 	this->m_window = glfwCreateWindow(m_width, m_height, "Renderer", NULL, NULL);
 
-	if (!m_window)
-	{
-		glfwTerminate();
-		return;
-	}
+    std::cout << "Window Create : " << (m_window != nullptr) << std::endl;
+
+    if (!m_window)
+    {
+        glfwTerminate();
+        return;
+    }
 
 	glfwSetWindowUserPointer(m_window, this);
 
@@ -83,6 +92,12 @@ void AppWindowGLFW::SetSourceImage(int width, int height, char* buffer)
 	m_sourceHeight = height;	
 }
 
+void AppWindowGLFW::SetEventCallback(const EventCallback & callback)
+{
+	m_eventCallback = callback;
+}
+
+
 
 
 void AppWindowGLFW::Update()
@@ -108,7 +123,7 @@ void AppWindowGLFW::Update()
 
 
     /* Swap front and back buffers */
-    glfwSwapBuffers(m_window);
+    //glfwSwapBuffers(m_window);
 
     /* Poll for and process events */
 	glfwPollEvents();
@@ -133,6 +148,8 @@ void AppWindowGLFW::mouse_button_callback(GLFWwindow* window, int button, int ac
     else if (action == GLFW_RELEASE)
         mouse_keys[button] = false;
 	*/
+
+
 }
 
 // Is called whenever a key is pressed/released via GLFW
@@ -147,5 +164,16 @@ void AppWindowGLFW::key_callback(GLFWwindow* window, int key, int scancode, int 
 	else if (action == GLFW_RELEASE)
 		keys[key] = false;
 	*/
+
+	if (action == GLFW_PRESS)
+	{
+		KeyPressedEvent event = {};
+		event.keyCode = key;
+		if (m_eventCallback != nullptr) 
+		{
+			m_eventCallback(event);
+		}
+	}
+
 }
 

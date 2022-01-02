@@ -42,7 +42,6 @@ void ParallelRenderer::RenderTask() {
 
 		std::thread t[threadNum];
 		for(int i = 0 ; i < threadNum; i++) {
-			//t[i] = std::thread(&ParallelRenderer::SplitRender, this, widthDiff * i, 0, (widthDiff) * (i + 1) - 1, height);
 			t[i] = std::thread(&ParallelRenderer::SplitRender, this, 0, 0, width, height, i, threadNum);
 		}
 

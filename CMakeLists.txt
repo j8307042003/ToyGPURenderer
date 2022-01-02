@@ -12,13 +12,13 @@ if (APPLE)
 	Set(MacVulkanSDK /Users/pine/lib/vulkansdk-macos-1.1.130.0)
 
 	Set(VULKAN_SDK ${MacVulkanSDK}/macOS)
-	Set(VK_LAYER_PATH ${MacVulkanSDK}/macOS/etc/vulkan/explicit_layer.d)
-	Set(VK_ICD_FILENAMES ${MacVulkanSDK}/macOS/etc/vulkan/icd.d/MoltenVK_icd.json)
-	Set(Vulkan_LIBRARY ${MacVulkanSDK}/MoltenVK/macOS/dynamic/libMoltenVK.dylib)
+	Set(VK_LAYER_PATH ${MacVulkanSDK}/macOS/share/vulkan/explicit_layer.d)
+	Set(VK_ICD_FILENAMES ${MacVulkanSDK}/MoltenVK/dylib/macOS/MoltenVK_icd.json)
+	Set(Vulkan_LIBRARY ${MacVulkanSDK}/MoltenVK/dylib/macOS/libMoltenVK.dylib)
 	Set(Vulkan_INCLUDE_DIR ${MacVulkanSDK}/MoltenVK/include)
 	Set(DYLD_LIBRARY_PATH ${MacVulkanSDK}/macOS/lib)
 	Set(VK_SDK_PATH ${MacVulkanSDK}/MoltenVK/)
-	Set(PATH ${MacVulkanSDK}/macOS/bin:$PATH)
+	Set(PATH ${MacVulkanSDK}/macOS/bin:$PATH)	
 endif()
 
 # Add third party libraries
@@ -26,21 +26,11 @@ add_subdirectory(${ThirdPartyFolder})
 
 add_subdirectory(src/math src/math/build)
 add_subdirectory(src/shape src/shape/build)
-
-if (APPLE)
-	add_subdirectory(src/GLFW src/GLFW/build)
-endif()
-
-if (WIN32)
-	add_subdirectory(src/GLFW ../src/GLFW)
-endif()
-
 add_subdirectory(src/BVH src/BVH/build)
 add_subdirectory(src/VulkanLib src/VulkanLib/build)
 add_subdirectory(src/Renderer src/Renderer/build)
 
 
-include_directories(src/glad)
 include_directories(src/GLFW/include)
 
 
@@ -63,6 +53,8 @@ source_group("Source Files" FILES ${project_cpps})
 add_executable(PineRdr src/main.cpp ${all_files})
 set_target_properties( PineRdr PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/working")
 target_include_directories(PineRdr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Core)
+target_link_libraries(PineRdr PRIVATE IMGUI)
+target_link_libraries(PineRdr PRIVATE glad)
 target_link_libraries(PineRdr PRIVATE Renderer)
 target_link_libraries(PineRdr PRIVATE math)
 target_link_libraries(PineRdr PRIVATE shape)

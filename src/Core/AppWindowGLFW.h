@@ -12,17 +12,18 @@ public:
 	AppWindowGLFW();
 	AppWindowGLFW(int width, int height);
 	virtual ~AppWindowGLFW() {}
-	virtual int getWidth() { return m_width;}
-	virtual int getHeight() { return m_height;}
-	virtual void SetSourceImage(int width, int height, char* buffer);
+	virtual int getWidth() override { return m_width;}
+	virtual int getHeight() override { return m_height;}
+	virtual void SetSourceImage(int width, int height, char* buffer) override;
+	virtual void SetEventCallback(const EventCallback & callback) override;
+    virtual void* GetWindowHandle() override {return m_window;};
+    virtual void SwapBuffer() override {glfwSwapBuffers(m_window);};
 
 private:
 	virtual void Update();
 
 private:
-	void InitWindow(int width, int height);
-
-private:
+	void init(int width, int height);
 	void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 	void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);	
 
@@ -40,6 +41,8 @@ private:
 	char* m_sourceBuffer;
 	int m_sourceWidth;
 	int m_sourceHeight;
+
+	EventCallback m_eventCallback;
 
 	int m_textureId;
 };
