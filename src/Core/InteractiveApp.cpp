@@ -85,7 +85,6 @@ void TestGUI::OnGUI()
 	ImGui::Begin("Test imgui window");
 	ImGui::ColorEdit4("Color", myColor);
 	ImGui::End();
-	ImGui::EndFrame();	
 }
 
 
@@ -119,6 +118,8 @@ void InteractiveApp::Run()
         {
         	m_imguiUIs[i]->OnGUI();
         }        
+
+		ImGui::EndFrame();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
