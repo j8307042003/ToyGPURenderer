@@ -4,5 +4,5 @@
 
 class PathTraceRdrMethod : public IRenderMethod
 {
-	virtual void Sample(RenderData * rdrData, int x, int y) override;
-}
+	virtual void Sample(RenderData* rdrData, int x, int y) override;
+};

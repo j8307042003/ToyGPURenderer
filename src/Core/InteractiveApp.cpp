@@ -2,6 +2,7 @@
 #include "InteractiveApp.h"
 #include "Renderer/VulkanRenderer.h"
 #include "Renderer/ParallelRenderer.h"
+#include "Renderer/PathTraceRenderer.h"
 #include "Renderer/TestScene1.h"
 #include <glad.h>
 #include <GLFW/glfw3.h>
@@ -15,7 +16,8 @@ InteractiveApp::InteractiveApp(const char * args)
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
 	m_appWindow->SetEventCallback(f);
 	// m_renderer = new VulkanRenderer();
-	m_renderer = new ParallelRenderer();
+	// m_renderer = new ParallelRenderer();
+	m_renderer = new PathTraceRenderer();
 	m_scene = make_test_scene1();
 	m_scene->BuildTree();
 	m_cam = new Camera(512, 512, Vec3(200.0f, 0.0f, -200.0f));
@@ -25,7 +27,7 @@ InteractiveApp::InteractiveApp(const char * args)
 
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         std::cout << "Failed to initialize OpenGL context" << std::endl;
-        return -1;
+        return;
     }
     
     ImGui::CreateContext();
@@ -106,10 +108,11 @@ void InteractiveApp::Run()
         // ImGui::ShowDemoWindow(&bShow);
         
 		m_renderer->UpdateFrame();
-		m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)m_cam->GetBuffer());
+		void* pBuffer = m_renderer->GetImage();
+		m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)pBuffer, ColorFormat::RGBByte);
 		m_appWindow->Update();
         
-        
+        /*
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -122,7 +125,7 @@ void InteractiveApp::Run()
 		ImGui::EndFrame();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
+		*/
         m_appWindow->SwapBuffer();
 	}
 }

@@ -3,7 +3,18 @@ cmake_minimum_required(VERSION 3.10)
 
 
 project(Renderer)
-add_library(Renderer Camera.h Camera.cpp RenderView.h RenderView.cpp Scene.h Scene.cpp TestScene1.h Material.h Renderer.h Renderer.cpp ParallelRenderer.h ParallelRenderer.cpp VulkanRenderer.h VulkanRenderer.cpp)
+
+file(GLOB_RECURSE project_headers *.h *.hpp)
+file(GLOB_RECURSE project_cpps *.cpp)
+
+file(GLOB_RECURSE PathTraceFolderHeader PathTrace/*.h PathTrace/*.hpp)
+file(GLOB_RECURSE PathTraceFolderCpp PathTrace/*.cpp)
+
+source_group("Header Files/PathTrace" FILES ${PathTraceFolderHeader})
+source_group("Source Files/PathTrace" FILES ${PathTraceFolderCpp})
+
+set(all_files ${project_headers} ${project_cpps} ${project_cs} ${project_ccs})
+add_library(Renderer ${all_files})
 target_link_libraries(Renderer math)
 target_link_libraries(Renderer shape)
 target_link_libraries(Renderer VulkanLib)

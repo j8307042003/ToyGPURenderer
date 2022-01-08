@@ -6,9 +6,15 @@
 class PathTraceRenderer : public Renderer
 {
 public:
-	virtual void StartRender() = 0;
-	virtual void UpdateFrame() = 0;
-	virtual void ClearImage() = 0;
+	virtual void StartRender();
+	virtual void UpdateFrame();
+	virtual void ClearImage();
+	virtual void* GetImage() override;
+
+
+private:
+	char* m_imageBuffer;
+	void TestRender(int x, int y, int width, int height);
 
 private:
 	// task lists
