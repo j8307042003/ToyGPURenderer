@@ -13,6 +13,7 @@ public:
 	const Vec3 & normal;
 
 	bool RayCastTest(const Ray * ray, Vec3 & hitPos, Vec3 & direction);
+	virtual ShapeType Type() override {return ShapeType::Triangle;}
 
 
 private:

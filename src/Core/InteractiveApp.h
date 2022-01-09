@@ -12,6 +12,8 @@ class TestGUI : public ImguiUI
 	virtual void OnGUI();
 private:
 	float myColor[4];
+public:
+	Renderer* renderer;
 };
 
 

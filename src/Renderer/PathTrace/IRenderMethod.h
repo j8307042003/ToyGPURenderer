@@ -1,11 +1,21 @@
 #pragma once
-
+#include "../Camera/Camera.h"
+#include "../Scene.h"
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
 
 struct RenderData
 {
 	// Camera
+	CameraData camData;
+	glm::vec3 camPosition;
+	glm::vec3 camDirection;
+	
 	// Scene Geometry
-	// Resolution		
+	Scene* scene;
+	SceneData* sceneData;
+	// Resolution
+
 };
 
 struct TileData
@@ -21,5 +31,5 @@ class IRenderMethod
 {
 public:
 	virtual ~IRenderMethod() = default;
-	virtual void Sample(RenderData * rdrData, int x, int y) = 0;
+	virtual glm::vec3 Sample(const RenderData & rdrData, int x, int y, glm::vec2 filmRes) = 0;
 };

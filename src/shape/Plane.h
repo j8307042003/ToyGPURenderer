@@ -24,4 +24,5 @@ public:
 		return false;
 	}
 
+	virtual ShapeType Type() override { return ShapeType::Plane; }
 };

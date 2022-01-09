@@ -10,7 +10,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include "AppWindowGLFW.h"
-InteractiveApp::InteractiveApp(const char * args)
+InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 {
 	m_appWindow = new AppWindowGLFW();
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
@@ -38,6 +38,7 @@ InteractiveApp::InteractiveApp(const char * args)
     ImGui_ImplOpenGL3_Init(nullptr);
 
 	m_testGUI = {};
+	m_testGUI.renderer = m_renderer;
 	AddUI(&m_testGUI);
 }
 
@@ -86,6 +87,8 @@ void TestGUI::OnGUI()
 {
 	ImGui::Begin("Test imgui window");
 	ImGui::ColorEdit4("Color", myColor);
+
+	ImGui::Text("Iteration : %d", ((PathTraceRenderer*)renderer)->Iteration());
 	ImGui::End();
 }
 
@@ -112,7 +115,7 @@ void InteractiveApp::Run()
 		m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)pBuffer, ColorFormat::RGBByte);
 		m_appWindow->Update();
         
-        /*
+        
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -125,7 +128,7 @@ void InteractiveApp::Run()
 		ImGui::EndFrame();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		*/
+		
         m_appWindow->SwapBuffer();
 	}
 }

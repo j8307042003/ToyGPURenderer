@@ -4,5 +4,6 @@
 
 class PathTraceRdrMethod : public IRenderMethod
 {
-	virtual void Sample(RenderData* rdrData, int x, int y) override;
+public:
+	virtual glm::vec3 Sample(const RenderData & rdrData, int x, int y, glm::vec2 filmRes) override;
 };

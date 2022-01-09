@@ -37,6 +37,8 @@ inline void build_bvh(bvh_tree & tree, std::vector<AABB> & boundingBoxs) {
 }
 
 
+
+
 inline int GetLeftChild(int i) {
 	return (i << 1) + 1;
 }

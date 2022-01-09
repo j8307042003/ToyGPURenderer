@@ -7,6 +7,9 @@
 #include <sstream>
 #include <algorithm>
 
+#define OWNVEC3
+
+
 class Vec3 {
 
 public:
@@ -82,6 +85,7 @@ public:
 	Vec3& operator+=(const Vec3& rhs);
 	Vec3& operator-=(const Vec3& rhs);
 
+
 	float operator[] (int index) const
 	{
 		switch(index) {
@@ -105,6 +109,13 @@ inline Vec3 min(const Vec3 & a, const Vec3 & b){
 inline Vec3 max(const Vec3 & a, const Vec3 & b){
 	return {std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z)};
 }
+
+
+#ifdef OWNVEC3
+
+#else
+
+#endif
 
 
 #endif
