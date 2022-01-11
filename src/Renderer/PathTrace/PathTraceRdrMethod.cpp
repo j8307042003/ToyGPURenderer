@@ -1,5 +1,6 @@
 #include "PathTraceRdrMethod.h"
 #include <limits>
+#include "../RayTrace/RayTrace.h"
 
 
 glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, glm::vec2 filmRes)
@@ -8,45 +9,28 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 
 	const ShapesData& shapesData = rdrData.sceneData->shapesData;
 
-	float hitDist = std::numeric_limits<float>::max();
-	bool bHitAny = false;
 	glm::vec3 rayHitPosition;
-	glm::vec3 rayHitDirection;
+	glm::vec3 rayHitNormal;
+	int shapeIndex = -1;
+	bool bHitAny = RayTrace(*rdrData.sceneData, ray, rayHitPosition, rayHitNormal, shapeIndex);
 
-	for (int i = 0; i < rdrData.sceneData->shapes.size(); ++i)
+
+	glm::vec3 color = {};
+
+	if(bHitAny)
 	{
-		auto& shape = rdrData.sceneData->shapes[i];
-
-		glm::vec3 hit = {};
-		glm::vec3 direction = {};
-		bool bHit = false;
-
-		switch (shape.type)
-		{
-			case ShapeType::Triangle:
-				break;
-			case ShapeType::Sphere:
-				const auto sphereData = shapesData.spheres[shape.primitiveId];
-				const auto pos = shapesData.positions[sphereData.x];
-				const float radius = shapesData.radius[sphereData.y];
-
-				glm::vec3 hit;
-				glm::vec3 direction;
-				bHit = IntersectSphere(pos, radius, ray, hit, direction);
-				break;
-		}
-
-		float d = glm::length(ray.origin - hit);
-
-		if (bHit && d < hitDist)
-		{
-			hitDist = d;
-			rayHitPosition = hit;
-			rayHitDirection = direction;
-			bHitAny = true;
-		}
+        int matId = rdrData.sceneData->shapes[shapeIndex].matIdx;
+		auto mat = rdrData.sceneData->materials[matId];
+        SurfaceData surfaceData = {};
+        surfaceData.normal = rayHitNormal;
+        HitInfo hitInfo = {};
+        Ray3f outRay = {};
+        Color att = {};
+        mat->scatter(ray, surfaceData, hitInfo, att, outRay);
+        color = att.value;
+        color = rayHitNormal * 0.5f + 0.5f;
 	}
 
-	return bHitAny ? glm::vec3(1, 1, 1) : glm::vec3(0, 0, 0);
+	return color;
 
 }

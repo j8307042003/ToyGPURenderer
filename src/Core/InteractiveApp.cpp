@@ -12,7 +12,9 @@
 #include "AppWindowGLFW.h"
 InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 {
-	m_appWindow = new AppWindowGLFW();
+	const int kWidth = 1920;
+	const int kHeight = 1080;
+	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
 	m_appWindow->SetEventCallback(f);
 	// m_renderer = new VulkanRenderer();
@@ -20,7 +22,7 @@ InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 	m_renderer = new PathTraceRenderer();
 	m_scene = make_test_scene1();
 	m_scene->BuildTree();
-	m_cam = new Camera(512, 512, Vec3(200.0f, 0.0f, -200.0f));
+	m_cam = new Camera(kWidth, kHeight, Vec3(200.0f, 0.0f, -200.0f));
 
 	m_renderer->SetRenderData(m_scene, m_cam);
     

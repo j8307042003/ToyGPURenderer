@@ -30,6 +30,7 @@ struct ShapeData
 {
 	ShapeType type;
 	int primitiveId;
+	int matIdx;
 };
 
 
@@ -48,15 +49,17 @@ struct ShapesData
 	std::vector<float> radius;
 };
 
-inline int AddShapesDataTriangle(ShapesData & shapesData, const glm::vec3 & v0, const glm::vec3 & v1, const glm::vec3 & v2)
+inline int AddShapesDataTriangle(ShapesData & shapesData, 
+	const glm::vec3 & v0, const glm::vec3 & v1, const glm::vec3 & v2, const glm::vec3 & normal
+)
 {
 	shapesData.positions.push_back(v0);
 	shapesData.positions.push_back(v1);
 	shapesData.positions.push_back(v2);
 
-	shapesData.normals.push_back(glm::vec3()); // TODO
-	shapesData.normals.push_back(glm::vec3()); // TODO
-	shapesData.normals.push_back(glm::vec3()); // TODO
+	shapesData.normals.push_back(normal); // TODO
+	shapesData.normals.push_back(normal); // TODO
+	shapesData.normals.push_back(normal); // TODO
 
 	shapesData.texcoords.push_back(glm::vec3()); // TODO
 	shapesData.texcoords.push_back(glm::vec3()); // TODO

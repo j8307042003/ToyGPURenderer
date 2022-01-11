@@ -4,11 +4,15 @@
 #include <Renderer/PathTrace/PathTraceRdrMethod.h>
 #include <thread>
 #include <chrono>
+#include <math.h> 
+
 void PathTraceRenderer::StartRender()
 {
 	const int kWidth = 512;
 	const int kHeight = 512;
-	m_imageBuffer = new char[kWidth * kHeight * 3];
+    int width = cam->GetWidth();
+    int height = cam->GetHeight();
+	m_imageBuffer = new char[width * height * 3];
 
 	MakeSceneData(*s, m_sceneData);
 	m_renderThread = std::thread(&PathTraceRenderer::RenderLoop, this);
@@ -21,14 +25,17 @@ void* PathTraceRenderer::GetImage()
 
 void PathTraceRenderer::RenderLoop()
 {
-	const int kWidth = 512;
-	const int kHeight = 512;
+	//const int kWidth = 512;
+	//const int kHeight = 512;
+    
+    int width = cam->GetWidth();
+    int height = cam->GetHeight();
 
 	m_JobScheduler.setWorkerCount(JobScheduler::getMaxWorkerCount());
 
 	const int kTilePixels = 32;
-	const int widthCellNum = kWidth / kTilePixels;
-	const int heightCellNum = kHeight / kTilePixels;
+	const int widthCellNum = ceil(width / (float)kTilePixels);
+	const int heightCellNum = ceil(height / (float)kTilePixels);
 
 	iteration = 0;
 
@@ -40,8 +47,8 @@ void PathTraceRenderer::RenderLoop()
 			{
 				int x = kTilePixels * i;
 				int y = kTilePixels * j;
-				int w = std::min(kTilePixels, kWidth - (kTilePixels * (i + 1)));
-				int h = std::min(kTilePixels, kHeight - (kTilePixels * (i + 1)));
+				int w = std::min(kTilePixels, width - (kTilePixels * i));
+				int h = std::min(kTilePixels, height - (kTilePixels * j));
 
 				std::function<void()> f = [=]() {TestRender(x, y, w, h); };
 
@@ -72,24 +79,27 @@ void PathTraceRenderer::TestRender(int x, int y, int width, int height)
 
 	PathTraceRdrMethod renderMethod = {};
 
+    int filmWidth = cam->GetWidth();
+    int filmHeight = cam->GetHeight();
+    
 	for (int i = 0; i < width; ++i)
 		for (int j = 0; j < height; ++j)
 		{
 			int nowX = x + i;
 			int nowY = y + j;
 
-			int currentPixPos = (nowX + nowY * 512) * 3;
+			int currentPixPos = (nowX + nowY * filmWidth) * 3;
 
-			auto ray = SampleCamRay(camData, camPos, glm::vec3(.0f, .0f, 1.0f), glm::vec2(512, 512), glm::vec2(nowX, nowY));
+			//auto ray = SampleCamRay(camData, camPos, glm::vec3(.0f, .0f, 1.0f), glm::vec2(filmWidth, filmHeight), glm::vec2(nowX, nowY));
 
-			auto result = renderMethod.Sample(renderData, nowX, nowY, glm::vec2(512, 512));
+			auto result = renderMethod.Sample(renderData, nowX, nowY, glm::vec2(filmWidth, filmHeight));
 
-			glm::vec3 color = (ray.direction * 0.5f + 0.5f) * 255.0f;
-			color = result * 255.0f;
+			//glm::vec3 color = (ray.direction * 0.5f + 0.5f) * 255.0f;
+            glm::vec3 color = result * 255.0f;
 
-			m_imageBuffer[currentPixPos] = 128;
-			m_imageBuffer[currentPixPos+1] = ((i == 0) | (i == (width-1)) | (j == 0) | (j == (height - 1))) ? 0 : 128;
-			m_imageBuffer[currentPixPos+2] = 0;
+			//m_imageBuffer[currentPixPos] = 128;
+			//m_imageBuffer[currentPixPos+1] = ((i == 0) | (i == (width-1)) | (j == 0) | (j == (height - 1))) ? 0 : 128;
+			//m_imageBuffer[currentPixPos+2] = 0;
 
 			m_imageBuffer[currentPixPos] = (int)color.x;
 			m_imageBuffer[currentPixPos + 1] = (int)color.y;

@@ -8,6 +8,7 @@
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 #include "glm/gtx/transform.hpp"
+#include "Material/PBMaterial.h"
 
 void Scene::AddShape(Shape * s) {
 	shapes.push_back(s);
@@ -21,6 +22,16 @@ void Scene::AddShape(Shape * s, std::string mat_name) {
 	}
 
 	shapes.push_back(s);
+
+	Plane * pPlane = dynamic_cast<Plane*>(s);
+	if (pPlane != nullptr)
+	{
+		Triangle * pT1 = &pPlane->t1;
+		Triangle * pT2 = &pPlane->t2;
+		AddShape(pT1, mat_name);
+		AddShape(pT2, mat_name);
+	}
+
 	shapeMaterialMap[s] = it->second;
 }
 
@@ -79,15 +90,27 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, float scale) {
 
 void Scene::AddMaterial(material * s) {
 	materials.push_back(s);
+	Materials.push_back(new PBMaterial());
 }
 
 void Scene::AddMaterial(std::string name, material * m) {
 	materials.push_back(m);
+    PBMaterial * mat = new PBMaterial();
+    mat->color = glm::vec3(m->color.x, m->color.y, m->color.z);
+	Materials.push_back(mat);
 	materialMap[name] = materials.size()-1;
 }
 
-int Scene::GetShapeMaterialIdx(Shape * s) {
-	std::map<Shape*,int>::iterator it = shapeMaterialMap.find(s);
+void Scene::AddMaterial(std::string name, Material * m)
+{
+	Materials.push_back(m);
+	materials.push_back( new material({}, {}, 0) ); // TODO Fix
+	materialMap[name] = Materials.size()-1;
+}
+
+
+int Scene::GetShapeMaterialIdx(Shape * s) const {
+	auto it = shapeMaterialMap.find(s);
 	if (it == shapeMaterialMap.end()) {
 		return -1;
 	}
