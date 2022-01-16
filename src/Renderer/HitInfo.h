@@ -14,4 +14,5 @@ struct HitInfo
 {
 	HITEVENT nextEvent;
 	int materialIdx;
+	glm::vec3 emission;
 };

@@ -97,6 +97,7 @@ void Scene::AddMaterial(std::string name, material * m) {
 	materials.push_back(m);
     PBMaterial * mat = new PBMaterial();
     mat->color = glm::vec3(m->color.x, m->color.y, m->color.z);
+    mat->emission = glm::vec3(m->emission.x, m->emission.y, m->emission.z);
 	Materials.push_back(mat);
 	materialMap[name] = materials.size()-1;
 }
@@ -116,6 +117,16 @@ int Scene::GetShapeMaterialIdx(Shape * s) const {
 	}
 
 	return it->second;
+}
+
+
+void Scene::AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius)
+{
+	PointLight * pointLight = new PointLight();
+	pointLight->position = position;
+	pointLight->radiance = radiance;
+	pointLight->radius = radius;
+	lights.push_back(pointLight);
 }
 
 

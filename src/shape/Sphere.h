@@ -18,8 +18,10 @@ public:
 	virtual ShapeType Type() override {return ShapeType::Sphere;}
 };
 
-inline bool IntersectSphere(const glm::vec3& position, float radius, const Ray3f& ray, glm::vec3& hit, glm::vec3& direction)
+inline bool IntersectSphere(const glm::dvec3& position, float radius, const Ray3f& ray, float t_min, float t_max, glm::dvec3& hit, glm::dvec3& direction)
 {
+
+/*	
 	const glm::vec3 diff = position - ray.origin;
 	const glm::vec3 dir  = glm::normalize(diff); 
 
@@ -39,7 +41,65 @@ inline bool IntersectSphere(const glm::vec3& position, float radius, const Ray3f
 	const glm::vec3 normal = glm::normalize(hit - position);
 	direction = glm::reflect(ray.direction, normal); 
 
-	return true;	
+	return true;
+*/
+
+/*
+	glm::vec3 oc = ray.origin - position;
+	float b = dot( oc, ray.direction );
+	float c = dot( oc, oc ) - radius * radius;
+	float h = b*b - c;
+	if( h<0.0 ) return false;
+
+  	float sqrt_h = sqrt(h);
+	float t = -b - sqrt_h;
+
+  	float dir = 1;
+  	if (t < 0.0) {
+    	t = -b + sqrt_h;
+    	dir = -1;
+  	}
+	if (t < 0.0) return false;
+
+ 	hit = ray.direction * t + ray.origin;
+	const glm::vec3 normal = glm::normalize(hit - position) * dir;
+	direction = glm::reflect(ray.direction, normal); 		
+
+
+	return true;
+*/
+
+    glm::dvec3 oc = ray.origin - position;
+    auto a = glm::length2(ray.direction);
+    auto half_b = glm::dot(oc, ray.direction);
+    auto c = glm::length2(oc) - radius*radius;
+
+    auto discriminant = half_b*half_b - a*c;
+    if (discriminant < 0) return false;
+    auto sqrtd = sqrt(discriminant);
+
+    // Find the nearest root that lies in the acceptable range.
+    auto root = (-half_b - sqrtd) / a;
+    /*
+    if (root < 0.01)
+    {
+        root = (-half_b + sqrtd) / a;
+        if (root < 0.01)
+        	return false;
+    }
+    */
+    
+    if (root < t_min || t_max < root) {
+        root = (-half_b + sqrtd) / a;
+        if (root < t_min || t_max < root)
+            return false;
+    }
+    
+
+    hit = ray.origin + ray.direction * root;
+    auto normal = glm::normalize(hit - position);
+
+    return true;
 }
 
 #endif

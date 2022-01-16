@@ -16,6 +16,7 @@ public:
 public:
 	PBRModel pbrmodel;
 	glm::vec3 color;
+	glm::vec3 emission;
 };
 
 

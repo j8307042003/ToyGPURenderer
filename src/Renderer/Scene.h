@@ -5,9 +5,12 @@
 #include "Renderer/Material.h"
 #include "Renderer/Material/Material.h"
 #include "BVH/BVH.h"
+#include "Light/PointLight.h"
+#include "Light/ILight.h"
 #include <vector>
 #include <map>
 #include <string>
+#include "Random/SysRandom.h"
 
 class Scene {
 public:
@@ -19,6 +22,7 @@ public:
 	std::map<Shape*, int> shapeMaterialMap;
 
 	std::vector<Material*> Materials = {};
+	std::vector<ILight*> lights = {};
 
 
 	void AddShape(Shape * s);
@@ -28,6 +32,8 @@ public:
 	void AddMaterial(std::string name, material * m);
 
 	void AddMaterial(std::string name, Material * m);
+
+	void AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius = 0);
 
 	int GetShapeMaterialIdx(Shape * s) const;
 
@@ -42,10 +48,32 @@ struct SceneData
 	std::vector<ShapeData> shapes;
 
 	//Light
+	std::vector<ILight*> lights;
 
 	//Material
 	std::vector<Material*> materials;
 };
+
+inline Material* GetMaterial(const SceneData & sceneData, int matIdx)
+{
+	return sceneData.materials[matIdx];
+}
+
+inline int GetShapeMatIdx(const SceneData & sceneData, int shapeIdx)
+{
+	return sceneData.shapes[shapeIdx].matIdx;
+}
+
+inline Material* GetShapeMaterial(const SceneData & sceneData, int shapeIdx)
+{
+	return GetMaterial(sceneData, GetShapeMatIdx(sceneData, shapeIdx));
+}
+
+inline ILight* SampleLight(const SceneData & sceneData)
+{
+    int lightIdx = std::min((int)sceneData.lights.size() - 1, (int)(SysRandom::Random() * sceneData.lights.size()));
+	return sceneData.lights[lightIdx];
+}
 
 inline void MakeSceneData(const Scene & scene, SceneData & sceneData)
 {
@@ -68,8 +96,8 @@ inline void MakeSceneData(const Scene & scene, SceneData & sceneData)
 
 
 				int triangleIndex = AddShapesDataTriangle(sceneData.shapesData, 
-					glm::vec3(v0.x, v0.y, v0.z), glm::vec3(v1.x, v1.y, v1.z), glm::vec3(v2.x, v2.y, v2.z),
-					glm::vec3(n.x, n.y, n.z)
+					glm::dvec3(v0.x, v0.y, v0.z), glm::dvec3(v1.x, v1.y, v1.z), glm::dvec3(v2.x, v2.y, v2.z),
+					glm::dvec3(n.x, n.y, n.z)
 					);
 				auto materialId = scene.GetShapeMaterialIdx(pShape); 		
 				ShapeData shapeData = { ShapeType::Triangle , triangleIndex, materialId };
@@ -81,7 +109,7 @@ inline void MakeSceneData(const Scene & scene, SceneData & sceneData)
 				const auto sphereShape = (Sphere*)pShape;
 				const auto p = sphereShape->position;
 
-				int sphereIndex = AddShapesDataSphere(sceneData.shapesData, glm::vec3(p.x, p.y, p.z), sphereShape->radius);
+				int sphereIndex = AddShapesDataSphere(sceneData.shapesData, glm::dvec3(p.x, p.y, p.z), sphereShape->radius);
 				auto materialId = scene.GetShapeMaterialIdx(pShape); 		
 				ShapeData shapeData = { ShapeType::Sphere , sphereIndex, materialId };
 				sceneData.shapes.push_back(shapeData);
@@ -93,4 +121,9 @@ inline void MakeSceneData(const Scene & scene, SceneData & sceneData)
 				break;
 		}
 	}
+
+
+	// Light
+	sceneData.lights = scene.lights;
+
 }

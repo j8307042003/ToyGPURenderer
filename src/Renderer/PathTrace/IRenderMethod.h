@@ -8,8 +8,8 @@ struct RenderData
 {
 	// Camera
 	CameraData camData;
-	glm::vec3 camPosition;
-	glm::vec3 camDirection;
+	glm::dvec3 camPosition;
+	glm::dvec3 camDirection;
 	
 	// Scene Geometry
 	Scene* scene;

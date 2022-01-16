@@ -30,6 +30,7 @@ inline Ray3f SampleCamRay(const CameraData & cam, const vec3 & pos, const vec3 &
       		 };
   	auto q1  = -q;
   	auto d   = glm::normalize(q1 - e);
+    d.y = -d.y;
   	// d.z = -d.z;
   	// d.y = -d.y;
   	// d = d * 0.5f + 0.5f;

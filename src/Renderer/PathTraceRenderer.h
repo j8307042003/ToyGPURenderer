@@ -16,6 +16,8 @@ public:
 
 private:
 	char* m_imageBuffer;
+	float* m_integrater;
+	int* sampleCount;
 	void RenderLoop();
 	void TestRender(int x, int y, int width, int height);
 

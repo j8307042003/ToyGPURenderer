@@ -1,10 +1,12 @@
 #include "PathTraceRdrMethod.h"
 #include <limits>
 #include "../RayTrace/RayTrace.h"
+#include <array>
 
 
 glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, glm::vec2 filmRes)
 {
+	/*
 	auto ray = SampleCamRay(rdrData.camData, rdrData.camPosition, rdrData.camDirection, filmRes, glm::vec2(x, y));
 
 	const ShapesData& shapesData = rdrData.sceneData->shapesData;
@@ -19,18 +21,105 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 
 	if(bHitAny)
 	{
-        int matId = rdrData.sceneData->shapes[shapeIndex].matIdx;
-		auto mat = rdrData.sceneData->materials[matId];
+		auto mat = GetShapeMaterial(*rdrData.sceneData, shapeIndex);
+
         SurfaceData surfaceData = {};
         surfaceData.normal = rayHitNormal;
-        HitInfo hitInfo = {};
-        Ray3f outRay = {};
-        Color att = {};
+        HitInfo hitInfo;
+        Ray3f outRay;
+        Color att;
         mat->scatter(ray, surfaceData, hitInfo, att, outRay);
         color = att.value;
         color = rayHitNormal * 0.5f + 0.5f;
 	}
+	*/
 
-	return color;
+
+	const auto cam_ray = SampleCamRay(rdrData.camData, rdrData.camPosition, rdrData.camDirection, filmRes, glm::vec2(x, y));
+	Ray3f ray = cam_ray;
+	HitInfo hitInfo;
+    glm::dvec3 rayHitPosition;
+    glm::dvec3 rayHitNormal;
+    int shapeIndex = -1;
+    
+	glm::vec3 radiance = glm::vec3(1.0f, 1.0f, 1.0f);
+	bool bAnyLightSample = false;
+	const int bounce_depth = 8;
+
+
+	struct SampleResult
+	{
+		glm::vec3 radiance;
+		glm::vec3 emission;
+	};
+
+	std::array<SampleResult, bounce_depth> sampleResults = {};
+
+	for (int i = 0; i < bounce_depth; ++i)
+	{
+		bool bHitAny = RayTrace(*rdrData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
+        if (i == bounce_depth - 1) {radiance *= bAnyLightSample ? 1.0f : 0.0f; break;};
+		if (bHitAny)
+		{
+			auto mat = GetShapeMaterial(*rdrData.sceneData, shapeIndex);
+
+        	SurfaceData surfaceData = {};
+        	surfaceData.normal = rayHitNormal;
+        	surfaceData.position = rayHitPosition;
+        	Ray3f outRay;
+        	Color att;
+        	mat->scatter(ray, surfaceData, hitInfo, att, outRay);
+
+        	ray = outRay;
+        	//radiance = radiance * att.value + hitInfo.emission;
+        	//radiance = outRay.direction * 0.5f + 0.5f;
+        	//radiance = rayHitNormal * 0.5f + 0.5f;
+
+        	sampleResults[i] = {att.value, hitInfo.emission};
+
+        	if (glm::length2(hitInfo.emission) > 0.0f)
+        	{
+        		break;
+        	}
+		}
+		else {
+        	//radiance *= 0.0f;
+            
+            glm::dvec3 unit_direction = ray.direction;
+            auto t = 0.5f *(unit_direction.y + 1.0f);
+            glm::vec3 r = (1.0f-t)*glm::dvec3(1.0, 1.0, 1.0) + t*glm::dvec3(0.5, 0.7, 1.0);
+            //radiance *= r;
+        	sampleResults[i] = {r};
+        	break;
+		}
+
+
+		auto pLight = SampleLight(*rdrData.sceneData);
+		auto lightDelta = pLight->Position() - ray.origin;
+		auto lightRayLength = glm::length(lightDelta);
+		Ray3f lightSampleRay = {};
+		lightSampleRay.origin = ray.origin;
+		lightSampleRay.direction = lightDelta / lightRayLength;
+		lightSampleRay.direction = pLight->SampleRay(ray.origin);
+
+		glm::dvec3 lightTestPosition;
+		glm::dvec3 lightTestNormal;
+		bool bHitObstacle = RayTrace(*rdrData.sceneData, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex);
+		if (!bHitObstacle)
+		{
+			//radiance *= 1.0f + pLight->Eval(rayHitPosition, rayHitNormal);
+			sampleResults[i].emission += sampleResults[i].radiance * pLight->Eval(rayHitPosition, rayHitNormal);
+		}
+
+	}
+
+    radiance = glm::vec3(1.0f);
+	for(int i = sampleResults.size() ; i >= 0; --i)
+	{
+		radiance = sampleResults[i].radiance * radiance + sampleResults[i].emission;
+	}
+
+	
+	return radiance;
 
 }

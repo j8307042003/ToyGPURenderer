@@ -24,8 +24,9 @@ private:
 
 
 
-inline bool IntersectTriangle(const glm::vec3 & v0, const glm::vec3 & v1, const glm::vec3 & v2, const glm::vec3 & normal, const Ray3f& ray, glm::vec3& hit, glm::vec3& direction)
+inline bool IntersectTriangle(const glm::dvec3 & v0, const glm::dvec3 & v1, const glm::dvec3 & v2, const glm::dvec3 & normal, const Ray3f& ray, glm::dvec3& hit, glm::dvec3& direction)
 {
+  
   // compute triangle edges
   auto edge1 = v1 - v0;
   auto edge2 = v2 - v0;
@@ -56,5 +57,8 @@ inline bool IntersectTriangle(const glm::vec3 & v0, const glm::vec3 & v1, const 
   hit = ray.origin + t * ray.direction;
   direction = glm::reflect(ray.direction, normal);
   return true;
+
+
+
 
 }
