@@ -55,10 +55,12 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 
 	std::array<SampleResult, bounce_depth> sampleResults = {};
 
+	int depth = 0;
 	for (int i = 0; i < bounce_depth; ++i)
 	{
 		bool bHitAny = RayTrace(*rdrData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
-        if (i == bounce_depth - 1) {radiance *= bAnyLightSample ? 1.0f : 0.0f; break;};
+		depth = i;
+        if (i == bounce_depth - 1) {break;};
 		if (bHitAny)
 		{
 			auto mat = GetShapeMaterial(*rdrData.sceneData, shapeIndex);
@@ -88,33 +90,34 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
             glm::dvec3 unit_direction = ray.direction;
             auto t = 0.5f *(unit_direction.y + 1.0f);
             glm::vec3 r = (1.0f-t)*glm::dvec3(1.0, 1.0, 1.0) + t*glm::dvec3(0.5, 0.7, 1.0);
-            //radiance *= r;
         	sampleResults[i] = {r};
         	break;
 		}
 
 
 		auto pLight = SampleLight(*rdrData.sceneData);
-		auto lightDelta = pLight->Position() - ray.origin;
-		auto lightRayLength = glm::length(lightDelta);
-		Ray3f lightSampleRay = {};
-		lightSampleRay.origin = ray.origin;
-		lightSampleRay.direction = lightDelta / lightRayLength;
-		lightSampleRay.direction = pLight->SampleRay(ray.origin);
-
-		glm::dvec3 lightTestPosition;
-		glm::dvec3 lightTestNormal;
-		bool bHitObstacle = RayTrace(*rdrData.sceneData, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex);
-		if (!bHitObstacle)
+		if (pLight)
 		{
-			//radiance *= 1.0f + pLight->Eval(rayHitPosition, rayHitNormal);
-			sampleResults[i].emission += sampleResults[i].radiance * pLight->Eval(rayHitPosition, rayHitNormal);
+			auto lightDelta = pLight->Position() - ray.origin;
+			auto lightRayLength = glm::length(lightDelta);
+			Ray3f lightSampleRay = {};
+			lightSampleRay.origin = ray.origin;
+			lightSampleRay.direction = lightDelta / lightRayLength;
+			lightSampleRay.direction = pLight->SampleRay(ray.origin);
+	
+			glm::dvec3 lightTestPosition;
+			glm::dvec3 lightTestNormal;
+			bool bHitObstacle = RayTrace(*rdrData.sceneData, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex);
+			if (!bHitObstacle)
+			{
+				sampleResults[i].emission += sampleResults[i].radiance * pLight->Eval(rayHitPosition, rayHitNormal) * ((float)rdrData.sceneData->lights.size());
+			}
 		}
 
 	}
 
     radiance = glm::vec3(1.0f);
-	for(int i = sampleResults.size() ; i >= 0; --i)
+	for(int i = depth ; i >= 0; --i)
 	{
 		radiance = sampleResults[i].radiance * radiance + sampleResults[i].emission;
 	}

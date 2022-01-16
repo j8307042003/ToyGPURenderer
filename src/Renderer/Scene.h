@@ -72,7 +72,7 @@ inline Material* GetShapeMaterial(const SceneData & sceneData, int shapeIdx)
 inline ILight* SampleLight(const SceneData & sceneData)
 {
     int lightIdx = std::min((int)sceneData.lights.size() - 1, (int)(SysRandom::Random() * sceneData.lights.size()));
-	return sceneData.lights[lightIdx];
+	return lightIdx < 0 ? nullptr : sceneData.lights[lightIdx];
 }
 
 inline void MakeSceneData(const Scene & scene, SceneData & sceneData)

@@ -69,10 +69,10 @@ Scene* make_test_scene1() {
 
 	//Floor
 	scene->AddShape(new Plane(
-		{-wallOffsetX,  /*-2.0f - 1e-1*/ -wallHeight, -wallWidth}, 
-		{-wallOffsetX,  /*-2.0f - 1e-1*/ -wallHeight,  wallWidth}, 
-		{ wallOffsetX,  /*-2.0f - 1e-1*/ -wallHeight, -wallWidth}, 
-		{ wallOffsetX,  /*-2.0f - 1e-1*/ -wallHeight,  wallWidth}
+		{-wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/, -wallWidth}, 
+		{-wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/,  wallWidth}, 
+		{ wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/, -wallWidth}, 
+		{ wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/,  wallWidth}
 	), "FWall");		
 
 	//*
@@ -89,22 +89,24 @@ Scene* make_test_scene1() {
 	// scene.AddShape(new Sphere({0, 0, wallWidth / 2}, 1));	
 
 	//spheres
-	scene->AddMaterial("s1", new material({1, 0, 1}, {0, 0, 0}, 0.7));	
+	scene->AddMaterial("s1", new material({.8, 0, .8}, {0, 0, 0}, 0.7));	
 	scene->AddMaterial("s2", new material({.9, .9, .9}, {0, 0, 0}, 0.3));	
-	scene->AddMaterial("s3", new material({1, 1, 1}, {0, 0, 0}, 0.3));	
-	scene->AddMaterial("s4", new material({1, 0.4, 0.4}, {0, 0, 0}, 1));	
-	scene->AddMaterial("s5", new material({1, 1, 1}, {0, 0, 0}, 0.3));	
-	scene->AddMaterial("s6", new material({1, 1, 1}, {0, 0, 0}, 0.8));	
+	scene->AddMaterial("s3", new material({.8, .8, .8}, {0, 0, 0}, 0.3));	
+	scene->AddMaterial("s4", new material({.8, 0.4, 0.4}, {0, 0, 0}, 1));	
+	scene->AddMaterial("s5", new material({.8, .8, .8}, {0, 0, 0}, 0.3));	
+	scene->AddMaterial("s6", new material({.8, .8, .8}, {0, 0, 0}, 0.8));	
 
-	//scene->AddShape(new Sphere({-2.5, 0, -wallWidth / 1.2f}, 2), "s1");	
-	//scene->AddShape(new Sphere({ 1, 0, -wallWidth / 1.2f}, 2), "s2");	
+	scene->AddShape(new Sphere({-2.5, 0, -wallWidth / 1.2f}, 2), "s1");	
+	scene->AddShape(new Sphere({ 1, 0, -wallWidth / 1.2f}, 2), "s2");	
 
 	//scene->AddShape(new Sphere({ 0, 5, -wallWidth / 1.5f}, 2), "s3");	
 	scene->AddShape(new Sphere({ 3, 3, -wallWidth / 1.5f}, 2), "s4");	
 	scene->AddShape(new Sphere({ -4, 3, -wallWidth / 1.5f}, 2), "s5");	
 	scene->AddShape(new Sphere({ 0,  0, -wallWidth / 1.5f}, 2), "s6");	
 
-	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9), 1.0f);
+	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9), 2.0f);
+	scene->AddPointLight(glm::dvec3(4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.0, 0.0, .9), 1.0f);
+	scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.9, 0.0, 0.0), 1.0f);
 
 	return scene;
 }

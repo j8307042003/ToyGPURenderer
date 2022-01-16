@@ -12,7 +12,7 @@
 #include "AppWindowGLFW.h"
 InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 {
-	const int kWidth = 700;
+	const int kWidth = 1024;
 	const int kHeight = 1024;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
