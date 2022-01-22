@@ -2,6 +2,8 @@
 #include <limits>
 #include "../RayTrace/RayTrace.h"
 #include <array>
+#include "../Accelerate/BVHStruct.h"
+#include <glm/glm.hpp>
 
 
 glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, glm::vec2 filmRes)
@@ -58,7 +60,9 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 	int depth = 0;
 	for (int i = 0; i < bounce_depth; ++i)
 	{
-		bool bHitAny = RayTrace(*rdrData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
+		//bool bHitAny = RayTrace(*rdrData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
+		bool bHitAny = BHV_Raycast(rdrData.sceneData, *bvh_tree, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex, bvh_depth, bvh_stack);
+
 		depth = i;
         if (i == bounce_depth - 1) {break;};
 		if (bHitAny)
@@ -107,10 +111,11 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 	
 			glm::dvec3 lightTestPosition;
 			glm::dvec3 lightTestNormal;
-			bool bHitObstacle = RayTrace(*rdrData.sceneData, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex);
+			//bool bHitObstacle = RayTrace(*rdrData.sceneData, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex);
+			bool bHitObstacle = BHV_Raycast(rdrData.sceneData, *bvh_tree, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex, bvh_depth, bvh_stack);
 			if (!bHitObstacle)
 			{
-				sampleResults[i].emission += sampleResults[i].radiance * pLight->Eval(rayHitPosition, rayHitNormal) * ((float)rdrData.sceneData->lights.size());
+				sampleResults[i].emission += sampleResults[i].radiance * pLight->Eval(rayHitPosition, hitInfo.wi, hitInfo.nextEvent) * ((float)rdrData.sceneData->lights.size());
 			}
 		}
 

@@ -4,6 +4,8 @@
 #include "../Random/SysRandom.h"
 #include <glm/trigonometric.hpp>
 #include <glm/geometric.hpp>
+#include "../Common/common.h"
+#include <glm/gtx/compatibility.hpp>
 
 inline glm::dvec2 random_polar(float roughness) {
 	float r1 = SysRandom::Random();
@@ -51,15 +53,29 @@ inline glm::dvec4 make_GGXRandom(glm::dvec3 dir, glm::dvec2 polarSet) {
 
 bool PBMaterial::scatter(const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered) const
 {
-	attenuation.value = color;
+
+	float cosTheta = glm::dot(surface.normal, -ray.direction);
+	float reflective = Fresnel(1.0f, 1.4f, cosTheta);
+
+	const bool bIsSpecular = SysRandom::Random() < (metallic + reflective);
 
 	glm::dvec3 reflected = glm::reflect(ray.direction, surface.normal);
 
-	glm::dvec2 polarSet = random_polar(1.0f);
-	glm::dvec4 result = make_GGXRandom(surface.normal, polarSet);
-    glm::dvec3 outDirection = result;
+	const float rayRoughness = bIsSpecular ? roughness : 1.0f;
+	const glm::vec3 reflectDirection = bIsSpecular ? reflected : surface.normal;
+	const glm::vec3 atten = bIsSpecular ? glm::lerp(glm::vec3(1.0), color, metallic) : color;
+
+	glm::dvec2 polarSet = random_polar(rayRoughness);
+	glm::dvec4 result = make_GGXRandom(reflectDirection, polarSet);
+    glm::dvec3 outDirection = glm::dvec3(result) + (surface.normal * glm::dvec3(0.01));
+
     scattered = {surface.position, outDirection};
     hitInfo.emission = emission;
+	hitInfo.wi = bIsSpecular ? outDirection : surface.normal;
+	hitInfo.nextEvent = bIsSpecular ? HITEVENT::Specular : HITEVENT::Diffuse;
+
+	attenuation.value = atten;
+
 	return true;
 }
  

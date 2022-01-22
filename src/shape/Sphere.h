@@ -18,7 +18,7 @@ public:
 	virtual ShapeType Type() override {return ShapeType::Sphere;}
 };
 
-inline bool IntersectSphere(const glm::dvec3& position, float radius, const Ray3f& ray, float t_min, float t_max, glm::dvec3& hit, glm::dvec3& direction)
+inline bool IntersectSphere(const glm::dvec3& position, float radius, const Ray3f& ray, float t_min, float t_max, glm::dvec3& hit)
 {
 
 /*	

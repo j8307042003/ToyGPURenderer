@@ -14,4 +14,5 @@ struct Material
 {
 public:
 	virtual bool scatter(const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered) const = 0;
+	virtual glm::vec3 Albedo() const = 0;
 };

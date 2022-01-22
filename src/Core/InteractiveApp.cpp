@@ -12,7 +12,7 @@
 #include "AppWindowGLFW.h"
 InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 {
-	const int kWidth = 1024;
+	const int kWidth = 1924;
 	const int kHeight = 1024;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
@@ -41,6 +41,7 @@ InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 
 	m_testGUI = {};
 	m_testGUI.renderer = m_renderer;
+	m_testGUI.app = this;
 	AddUI(&m_testGUI);
 }
 
@@ -61,6 +62,26 @@ void InteractiveApp::OnEvent(WindowEvent & event)
 		KeyPressedEvent keyEvent = dynamic_cast<KeyPressedEvent&>(event);
 		if (keyEvent.keyCode == GLFW_KEY_ESCAPE)
 			SignalCloseApp();
+		else if (keyEvent.keyCode == GLFW_KEY_W)
+		{
+
+			m_renderer->ClearImage();
+		}
+		else if (keyEvent.keyCode == GLFW_KEY_S)
+		{
+
+			m_renderer->ClearImage();
+		}
+		else if (keyEvent.keyCode == GLFW_KEY_A)
+		{
+
+			m_renderer->ClearImage();
+		}
+		else if (keyEvent.keyCode == GLFW_KEY_D)
+		{
+
+			m_renderer->ClearImage();
+		}
 	}
 }
 
@@ -88,9 +109,21 @@ void InteractiveApp::SignalCloseApp()
 void TestGUI::OnGUI()
 {
 	ImGui::Begin("Test imgui window");
-	ImGui::ColorEdit4("Color", myColor);
 
-	ImGui::Text("Iteration : %d", ((PathTraceRenderer*)renderer)->Iteration());
+	PathTraceRenderer* pathTraceRenderer = (PathTraceRenderer*)renderer;
+
+	int renderItProgress = pathTraceRenderer->Iteration();
+	ImGui::Text("Iteration : %d", renderItProgress);
+
+	float timeStart = app->TimeStart();
+	float timePass = app->TimePass();
+	ImGui::Text("TimePass : %f", timePass);
+	ImGui::Text("iterate per second: %f", renderItProgress / timePass);
+
+	bool showDenoise = pathTraceRenderer->GetShowDenoise();
+	ImGui::Checkbox("Denoise", &showDenoise);
+	pathTraceRenderer->SetShowDenoise(showDenoise);
+
 	ImGui::End();
 }
 
@@ -100,6 +133,7 @@ void TestGUI::OnGUI()
 void InteractiveApp::Run()
 {
 	float time = (float)glfwGetTime();
+	m_timeStart = time;	
 	m_running = true;
 	m_renderer->StartRender();
     float myColor[4];
@@ -108,6 +142,7 @@ void InteractiveApp::Run()
 		float currentTime = (float)glfwGetTime();
 		float deltaTime = currentTime - time;
 		time = currentTime;
+		m_timePass = currentTime - m_timeStart;
         
         // bool bShow = true;
         // ImGui::ShowDemoWindow(&bShow);

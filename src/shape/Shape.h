@@ -36,7 +36,7 @@ struct ShapeData
 
 struct ShapesData
 {
-	std::vector<glm::ivec3> triangles;
+	std::vector<glm::ivec3> triangles; // Map To Vertex Data
 	std::vector<glm::ivec2> spheres; // x for position index, y for radius
 
 

@@ -10,7 +10,7 @@ public:
 	glm::dvec3 position;
 	float radius;
 
-	virtual glm::vec3 Eval(glm::dvec3 surfacePosition, glm::dvec3 surfaceNormal) const override
+	virtual glm::vec3 Eval(glm::dvec3 surfacePosition, glm::dvec3 surfaceNormal, HITEVENT event) const override
 	{
 		auto delta = position - surfacePosition;
 		auto direction = glm::normalize(delta);
@@ -18,7 +18,7 @@ public:
 		const float LightSize = 30.0f;
 		float att = (LightSize - distance) / LightSize; 
 
-        return (std::max(0.0f, (float)glm::dot(direction, surfaceNormal)) * att) * radiance;
+        return (std::max(0.0f, (float)glm::dot(direction, event == HITEVENT::Specular ? surfaceNormal : direction)) * att) * radiance;
 	}
 	virtual glm::dvec3 SampleRay(glm::dvec3 surfacePosition) const override
 	{

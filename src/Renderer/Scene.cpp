@@ -98,6 +98,8 @@ void Scene::AddMaterial(std::string name, material * m) {
     PBMaterial * mat = new PBMaterial();
     mat->color = glm::vec3(m->color.x, m->color.y, m->color.z);
     mat->emission = glm::vec3(m->emission.x, m->emission.y, m->emission.z);
+    mat->metallic = m->metalic;
+    //mat->roughness = 0.0f;
 	Materials.push_back(mat);
 	materialMap[name] = materials.size()-1;
 }
@@ -223,3 +225,56 @@ bool Scene::RayCastTest(const Ray & ray, Vec3 & hitPos, Vec3 & direction, int & 
 //
 //	return bEverHit;
 //}
+
+
+void MakeSceneData(const Scene & scene, SceneData & sceneData)
+{
+	sceneData.materials = scene.Materials;
+	for (int i = 0; i < scene.shapes.size(); ++i)
+	{
+		auto pShape = scene.shapes[i];
+		auto type = pShape->Type();
+
+		switch(type)
+		{
+			case ShapeType::Triangle:
+			{
+				const auto triangleShape = (Triangle*)pShape;
+				const auto v0 = triangleShape->Vertices[0];
+				const auto v1 = triangleShape->Vertices[1];
+				const auto v2 = triangleShape->Vertices[2];
+
+				const auto n = triangleShape->normal;
+
+
+				int triangleIndex = AddShapesDataTriangle(sceneData.shapesData, 
+					glm::dvec3(v0.x, v0.y, v0.z), glm::dvec3(v1.x, v1.y, v1.z), glm::dvec3(v2.x, v2.y, v2.z),
+					glm::dvec3(n.x, n.y, n.z)
+					);
+				auto materialId = scene.GetShapeMaterialIdx(pShape); 		
+				ShapeData shapeData = { ShapeType::Triangle , triangleIndex, materialId };
+				sceneData.shapes.push_back(shapeData);
+			}
+				break;
+			case ShapeType::Sphere:
+			{
+				const auto sphereShape = (Sphere*)pShape;
+				const auto p = sphereShape->position;
+
+				int sphereIndex = AddShapesDataSphere(sceneData.shapesData, glm::dvec3(p.x, p.y, p.z), sphereShape->radius);
+				auto materialId = scene.GetShapeMaterialIdx(pShape); 		
+				ShapeData shapeData = { ShapeType::Sphere , sphereIndex, materialId };
+				sceneData.shapes.push_back(shapeData);
+			}
+				break;
+			case ShapeType::Plane:
+				break;
+			default:
+				break;
+		}
+	}
+
+
+	// Light
+	sceneData.lights = scene.lights;
+}

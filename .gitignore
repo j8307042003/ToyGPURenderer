@@ -16,5 +16,7 @@ src/GLFW/src/glfw.dir
 src/GLFW/src/Debug
 src/GLFW/src/Release
 src/GLFW/src/*.pc
+third-party/oidnlib
+third-party/tbb
 
 

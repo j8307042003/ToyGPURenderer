@@ -22,7 +22,8 @@ public:
 	Job(){};
 
 	void execute() { 
-		taskFunction();
+		if (taskFunction)
+			taskFunction();
 	}
 
 	int value;
@@ -34,7 +35,7 @@ public:
 	void addDependency(const Job & job) {m_dependency.push_back(job);}
 	std::vector<Job> getDependencies() {return m_dependency; }
 
-	void setTask(std::function<void()> & func) {taskFunction = func;}
+	void setTask(std::function<void()> func) {taskFunction = func;}
 private:
 	std::function<void()> taskFunction = [] {};
 	JobIdentifier m_id;

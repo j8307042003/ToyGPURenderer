@@ -37,10 +37,10 @@ public:
     	double cr = cos(roll * 0.5);
     	double sr = sin(roll * 0.5);
 
-    	w = cy * cp * cr + sy * sp * sr;
-    	x = cy * cp * sr - sy * sp * cr;
-    	y = sy * cp * sr + cy * sp * cr;
-    	z = sy * cp * cr - cy * sp * sr;
+    	w = (float)(cy * cp * cr + sy * sp * sr);
+    	x = (float)(cy * cp * sr - sy * sp * cr);
+    	y = (float)(sy * cp * sr + cy * sp * cr);
+    	z = (float)(sy * cp * cr - cy * sp * sr);
 	}
 
 	glm::mat4 GetMatrix();
@@ -66,7 +66,7 @@ public:
 	Quaternion Normalized()
 	{
 		Quaternion q1 = {0.0, 0.0, 0.0, 0.0};
-		float len_inv = 1.0 / sqrt(w * w + x * x + y * y + z * z);
+		float len_inv = 1.0f / sqrt(w * w + x * x + y * y + z * z);
 		q1.w = w * len_inv;
 		q1.x = x * len_inv;
 		q1.y = y * len_inv;

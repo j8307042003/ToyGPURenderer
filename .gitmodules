@@ -7,3 +7,9 @@
 [submodule "third-party/imgui"]
 	path = third-party/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "third-party/oneTBB"]
+	path = third-party/oneTBB
+	url = https://github.com/oneapi-src/oneTBB
+[submodule "third-party/oidn"]
+	path = third-party/oidn
+	url = https://github.com/OpenImageDenoise/oidn

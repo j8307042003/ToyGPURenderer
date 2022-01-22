@@ -39,6 +39,16 @@ add_subdirectory(src/assimp src/assimp/build)
 LINK_DIRECTORIES (${Assimp_BINARY_DIR} ${AssetImporter_BINARY_DIR}/lib)
 include_directories(src/assimp/include)
 
+#OpenImageDenoise
+set(OPENIMAGEDENOISE ${ThirdPartyFolder}/oidnlib)
+set(OPENIMAGEDENOISE_LIBPATH ${ThirdPartyFolder}/oidnlib/lib)
+set(OPENIMAGEDENOISE_INCLUDE_DIRS ${OPENIMAGEDENOISE}/include)
+set(OPENIMAGEDENOISE_LIBRARIES
+    optimized ${OPENIMAGEDENOISE}/lib/OpenImageDenoise
+    debug ${OPENIMAGEDENOISE}/lib/OpenImageDenoise
+    )
+
+list(APPEND CMAKE_PREFIX_PATH ${OPENIMAGEDENOISE_LIBPATH})
 
 project(PineRdr)
 
@@ -53,6 +63,8 @@ source_group("Source Files" FILES ${project_cpps})
 add_executable(PineRdr src/main.cpp ${all_files})
 set_target_properties( PineRdr PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/working")
 target_include_directories(PineRdr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Core)
+target_include_directories(PineRdr PRIVATE third-party/oidnlib/include)
+target_include_directories(PineRdr PRIVATE third-party/tbb/include)
 target_link_libraries(PineRdr PRIVATE IMGUI)
 target_link_libraries(PineRdr PRIVATE glad)
 target_link_libraries(PineRdr PRIVATE Renderer)
@@ -60,9 +72,9 @@ target_link_libraries(PineRdr PRIVATE math)
 target_link_libraries(PineRdr PRIVATE shape)
 target_link_libraries(PineRdr PRIVATE BVH)
 target_link_libraries(PineRdr PRIVATE VulkanLib)
+target_link_libraries(PineRdr PRIVATE OpenImageDenoise)
 target_link_libraries(PineRdr PRIVATE ${glm_LIBRARIES} glm::glm)
 target_link_libraries(PineRdr PRIVATE glfw ${GLFW_LIBRARIES})
-
 
 
 if (APPLE)
@@ -74,3 +86,4 @@ if(WIN32)
   find_package(OpenGL REQUIRED)
   target_link_libraries(PineRdr PRIVATE ${OPENGL_LIBRARIES})
 endif()
+
