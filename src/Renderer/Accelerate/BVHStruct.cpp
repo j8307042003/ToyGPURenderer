@@ -8,12 +8,13 @@
 
 
 
-bool BHV_Raycast(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, glm::dvec3 & hitPos, glm::dvec3 & direction, int & primitiveIdx, int MaxDepth, int* bvh_visit_stack) {	
+bool BHV_Raycast(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, glm::dvec3 & hitPos, glm::dvec3 & direction, glm::vec2 & uv, int & primitiveIdx, int MaxDepth, int* bvh_visit_stack) {	
 	int stackCount = 1;
 	bvh_visit_stack[0] = 0;
 
 	glm::dvec3 pos;
 	glm::dvec3 normal;
+	glm::vec2 sampleuv;
 	bool bEverHit = false;
 
 	float depth = 99999999;
@@ -29,7 +30,7 @@ bool BHV_Raycast(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ra
 		auto & node = bvhtree.nodes[treeIdx];
 		if (node.isLeaf > 0) {
 			int id = node.primitiveId;
-			bool bHit = Ray_PrimitiveIntersect(sceneData, ray, t_min, t_max, id, pos, normal);
+			bool bHit = Ray_PrimitiveIntersect(sceneData, ray, t_min, t_max, id, pos, normal, sampleuv);
 
 
 			glm::dvec3 origin_to_pos = pos - ray.origin;
@@ -39,6 +40,7 @@ bool BHV_Raycast(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ra
 				hitPos = pos;
 				primitiveIdx = id;
 				direction = normal;
+				uv = sampleuv;
 				bEverHit = true;
 			}
 		}

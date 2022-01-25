@@ -18,7 +18,7 @@ public:
 		const float LightSize = 30.0f;
 		float att = (LightSize - distance) / LightSize; 
 
-        return (std::max(0.0f, (float)glm::dot(direction, event == HITEVENT::Specular ? surfaceNormal : direction)) * att) * radiance;
+        return (std::max(0.0f, (float)glm::dot(direction, surfaceNormal)) * att) * radiance;
 	}
 	virtual glm::dvec3 SampleRay(glm::dvec3 surfacePosition) const override
 	{

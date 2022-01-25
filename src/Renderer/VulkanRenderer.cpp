@@ -107,19 +107,19 @@ void VulkanRenderer::SetData() {
 		if( type == typeid(Sphere)) {
 			shapeType = VkRenderer_SHAPE_TYPE_SPHERE;
 			Sphere & sphere = *dynamic_cast<Sphere*>(&shape);
-			shapeNum = sphereDatas.size();
+			shapeNum = (int) sphereDatas.size();
 			sphereDatas.push_back({sphere.position, 0, sphere.radius});
 		}
 		else if( type == typeid(Triangle)) {
 			shapeType = VkRenderer_SHAPE_TYPE_TRIANGLE;
 		  	Triangle & triangle = *dynamic_cast<Triangle*>(&shape);
-			shapeNum = traingleDatas.size();
+			shapeNum = (int) traingleDatas.size();
 		  	traingleDatas.push_back({triangle.Vertices[0], triangle.Vertices[1], triangle.Vertices[2]});
 		}
 		else if( type == typeid(Plane)) {
 			shapeType = VkRenderer_SHAPE_TYPE_PLANE;
 			Plane & plane = *dynamic_cast<Plane*>(&shape);
-			shapeNum = planeDatas.size();
+			shapeNum = (int) planeDatas.size();
 			planeDatas.push_back({plane.Vertices[0], plane.Vertices[1], plane.Vertices[2], plane.Vertices[3]});
 		}
 

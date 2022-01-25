@@ -1,15 +1,17 @@
 #include <functional>
 #include "InteractiveApp.h"
-#include "Renderer/VulkanRenderer.h"
-#include "Renderer/ParallelRenderer.h"
-#include "Renderer/PathTraceRenderer.h"
-#include "Renderer/TestScene1.h"
 #include <glad.h>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include "AppWindowGLFW.h"
+#include "Renderer/VulkanRenderer.h"
+#include "Renderer/ParallelRenderer.h"
+#include "Renderer/TestScene1.h"
+#include "Renderer/PathTraceRenderer.h"
+
+
 InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 {
 	const int kWidth = 1924;

@@ -113,23 +113,41 @@ Scene* make_test_scene1() {
 
 
 	scene->AddShape(new Sphere({ -4,  -1 + 1.1, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 1.5, -10.0f}, .2f), "s6");	
 	scene->AddShape(new Sphere({ -4,  -1 + 1.7, -10.0f}, .2f), "s6");	
 	scene->AddShape(new Sphere({ -4,  -1 + 1.9, -10.0f}, .2f), "s6");	
 	scene->AddShape(new Sphere({ -4,  -1 + 2.1, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 1.3, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 1.5, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 1.7, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 1.9, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 2.1, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 1.3, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 1.5, -10.0f}, .2f), "s6");	
-	scene->AddShape(new Sphere({ -4,  -1 + 1.7, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 2.3, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 2.5, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 2.7, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 2.9, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 3.1, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 3.3, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 3.5, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 3.9, -10.0f}, .2f), "s6");	
+	scene->AddShape(new Sphere({ -4,  -1 + 4.1, -10.0f}, .2f), "s6");	
+
+	Vec3 center = { 0,  -1 + -1, -8.0f};
+	int subSphereCount = 4;
+	scene->AddShape(new Sphere(center + Vec3{ 0, 0.5f,0 }, .2f), "s6");
+
+	for (int i = 0 ; i <= 4 ; ++i)
+	{
+		float angle = i * 2.0f * 3.1415926 / subSphereCount ;
+		float len = 0.4;
+		scene->AddShape(new Sphere(center + Vec3{len * cos(angle), 0.2f, len * sin(angle)}, .25f), "s6");
+	}
+
+	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9) * 1.8f, 3.0f);
+	//scene->AddPointLight(glm::dvec3(4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0, 0) * 3.0f, 1.0f);
+	//scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0, 0, 0.5) * 3.0f, 1.0f);
+
+	scene->AddPointLight(glm::dvec3(4.0f, 0.0, -wallWidth / 1.5f), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 0.5f);
+	scene->AddPointLight(glm::dvec3(center.x, center.y, center.z), glm::vec3(0.5, 0.5, 0.5) * 4.5f, 0.5f);
+	scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 2.0f);
 
 
-	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9 * 0.5, .9 * 0.5, .9 * 0.5), 3.0f);
-	scene->AddPointLight(glm::dvec3(4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0, 0), 1.0f);
-	scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0, 0, 0.5), 1.0f);
+	scene->AddTexture("Tex", "wall.jpg");
+	scene->AddTexture("Tex", "butterfly.jpg");
 
 	return scene;
 }

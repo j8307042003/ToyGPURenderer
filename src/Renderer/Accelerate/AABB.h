@@ -75,8 +75,8 @@ inline bool intersect_bbox(
 inline bool aabb_rayIntersect(const dAABB & aabb, const Ray3f & ray) {
 	glm::dvec3 invDir = 1.0 / ray.direction;
 
-	float tmin;
-	float tmax;
+	double tmin;
+	double tmax;
 
 	if ( invDir.x > 0 ){
 		tmin = (aabb.min.x - ray.origin.x) * invDir.x;
@@ -87,8 +87,8 @@ inline bool aabb_rayIntersect(const dAABB & aabb, const Ray3f & ray) {
 		tmax = (aabb.min.x - ray.origin.x) * invDir.x;
 	}
 
-	float t0y;
-	float t1y;
+	double t0y;
+	double t1y;
 
 	if (invDir.y > 0 ){
 		t0y = (aabb.min.y - ray.origin.y) * invDir.y;
@@ -105,8 +105,8 @@ inline bool aabb_rayIntersect(const dAABB & aabb, const Ray3f & ray) {
 	tmin = tmin > t0y ? tmin : t0y;
 	tmax = tmax < t1y ? tmax : t1y;
 
-	float t0z;
-	float t1z;
+	double t0z;
+	double t1z;
 
 
 	if (invDir.z > 0 ){

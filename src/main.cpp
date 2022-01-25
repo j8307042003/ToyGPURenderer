@@ -17,7 +17,6 @@ int main(){
     // scene = make_test_scene1();
     // scene = make_test_scene2();
     // scene.BuildTree();
-
     const char * text = "Sample Text Input.";
     Application * app = AppBuilder::MakeApp(text);
     app->Run();

@@ -10,6 +10,8 @@
 #include "glm/gtx/transform.hpp"
 #include "Material/PBMaterial.h"
 
+
+
 void Scene::AddShape(Shape * s) {
 	shapes.push_back(s);
 }
@@ -50,7 +52,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, float scale) {
 	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_MaxQuality, NULL, props);
 	if (scene) {
 		//std::cout << "num of mNumMeshes : " << scene->mNumMeshes << std::endl;
-		for( int i = 0; i < scene->mNumMeshes; ++i) {
+		for( unsigned int i = 0; i < scene->mNumMeshes; ++i) {
 			aiMesh* mesh = scene->mMeshes[i];
 
 			/*
@@ -58,14 +60,14 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, float scale) {
 				std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
 			*/
 
-			for (int j = 0; j < mesh->mNumFaces; j++)
+			for (unsigned int j = 0; j < mesh->mNumFaces; j++)
 			{
 				aiFace face = mesh->mFaces[j];
 				// std::cout << "Num of indices : " << face.mNumIndices << std::endl; 
 				Vec3 vectors[3];
 				glm::mat4 model = glm::mat4();
 				model = glm::scale(model, glm::vec3(scale, scale, scale));				
-				for (int k = 0; k < face.mNumIndices; k++) {
+				for (unsigned int k = 0; k < face.mNumIndices; k++) {
 					aiVector3D & v = mesh->mVertices[face.mIndices[k]];
 					auto m = (model * glm::vec4(v.x, v.y, v.z, 1.0));
 					// vectors[k] = {m.x, m.y, m.z};
@@ -101,14 +103,14 @@ void Scene::AddMaterial(std::string name, material * m) {
     mat->metallic = m->metalic;
     //mat->roughness = 0.0f;
 	Materials.push_back(mat);
-	materialMap[name] = materials.size()-1;
+	materialMap[name] = (int)materials.size()-1;
 }
 
 void Scene::AddMaterial(std::string name, Material * m)
 {
 	Materials.push_back(m);
 	materials.push_back( new material({}, {}, 0) ); // TODO Fix
-	materialMap[name] = Materials.size()-1;
+	materialMap[name] = (int)Materials.size()-1;
 }
 
 
@@ -129,6 +131,14 @@ void Scene::AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius)
 	pointLight->radiance = radiance;
 	pointLight->radius = radius;
 	lights.push_back(pointLight);
+}
+
+void Scene::AddTexture(std::string texId, std::string path)
+{
+	Texture * tex = new Texture();
+	bool bLoaded = LoadTexture(path, *tex);
+	textures.push_back(tex);
+	textureMap[texId] = textures.size()-1;
 }
 
 
@@ -277,4 +287,6 @@ void MakeSceneData(const Scene & scene, SceneData & sceneData)
 
 	// Light
 	sceneData.lights = scene.lights;
+
+	sceneData.textures = scene.textures;
 }

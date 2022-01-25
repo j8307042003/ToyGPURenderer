@@ -17,8 +17,8 @@ public:
 	float pad1;
 
 	AABB() {
-        float minNum = std::numeric_limits<float>::lowest();
-        float maxNum = std::numeric_limits<float>::max();
+        constexpr float minNum = std::numeric_limits<float>::lowest();
+		constexpr float maxNum = std::numeric_limits<float>::max();
         min = Vec3(maxNum, maxNum, maxNum);
         max = Vec3(minNum, minNum, minNum);		
 	}

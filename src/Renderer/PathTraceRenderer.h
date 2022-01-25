@@ -23,7 +23,7 @@ private:
 	float* m_integrater;
 	int* sampleCount;
 	void RenderLoop();
-	void TestRender(int x, int y, int width, int height);
+	void Trace(int x, int y, int width, int height);
 	void SampleDenoiserBaseImage(int x, int y, int width, int height);
 	void ApplyDenoiser(int x, int y, int width, int height);
 
@@ -35,19 +35,12 @@ public:
 
 private:
 	int iteration;
-	// task lists
-	// threads
-	std::vector<std::thread> m_threads;
 
 	std::thread m_renderThread;
 
-	BVHTree m_bvh;
-
 	//
 	SceneData m_sceneData;
-
-	// Scheduler
-	JobScheduler m_JobScheduler;
+	BVHTree m_bvh;
 
 	//
 	bool m_showDenoiser = true;

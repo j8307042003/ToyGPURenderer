@@ -72,7 +72,7 @@ inline bool IntersectSphere(const glm::dvec3& position, float radius, const Ray3
     glm::dvec3 oc = ray.origin - position;
     auto a = glm::length2(ray.direction);
     auto half_b = glm::dot(oc, ray.direction);
-    auto c = glm::length2(oc) - radius*radius;
+    auto c = glm::length2(oc) - (double)radius*radius;
 
     auto discriminant = half_b*half_b - a*c;
     if (discriminant < 0) return false;
@@ -100,6 +100,21 @@ inline bool IntersectSphere(const glm::dvec3& position, float radius, const Ray3
     auto normal = glm::normalize(hit - position);
 
     return true;
+}
+
+static void Sphere_uv(const glm::vec3& p, double& u, double& v) {
+    // p: a given point on the sphere of radius one, centered at the origin.
+    // u: returned value [0,1] of angle around the Y axis from X=-1.
+    // v: returned value [0,1] of angle from Y=-1 to Y=+1.
+    //     <1 0 0> yields <0.50 0.50>       <-1  0  0> yields <0.00 0.50>
+    //     <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
+    //     <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
+
+    auto theta = acos(-p.y);
+    auto phi = atan2(-p.z, p.x) + 3.1415926;
+
+    u = phi / (2 * 3.1415926);
+    v = theta / 3.1415926;
 }
 
 #endif

@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 
 class SceneData;
-inline bool Ray_PrimitiveIntersect(SceneData * sceneData, const Ray3f & ray, float t_min, float t_max, int primitiveIdx, glm::dvec3 & hit, glm::dvec3 & normal)
+inline bool Ray_PrimitiveIntersect(SceneData * sceneData, const Ray3f & ray, float t_min, float t_max, int primitiveIdx, glm::dvec3 & hit, glm::dvec3 & normal, glm::vec2 & uv)
 {
 	const ShapesData& shapesData = sceneData->shapesData;
 	auto& shape = sceneData->shapes[primitiveIdx];
@@ -21,7 +21,7 @@ inline bool Ray_PrimitiveIntersect(SceneData * sceneData, const Ray3f & ray, flo
 			normal = glm::dot(ray.direction, normalData) < 0 ? normalData : -normalData;
 
 			bool bHit = IntersectTriangle(shapesData.positions[triangleData.x], shapesData.positions[triangleData.y], shapesData.positions[triangleData.z], normalData, ray, hit);
-
+			uv = {};
 			if (bHit) {
 				float d2 = glm::length2(hit - ray.origin);
 				if ((d2 < t_min * t_min) | (d2 > t_max * t_max)) bHit = false;
@@ -38,6 +38,9 @@ inline bool Ray_PrimitiveIntersect(SceneData * sceneData, const Ray3f & ray, flo
 
 			bool bHit = IntersectSphere(pos, radius, ray, t_min, t_max, hit);
 			normal = glm::normalize(hit - pos);
+			double u; double v;
+			Sphere_uv(normal, u, v);
+			uv = { u, v };
 			return bHit;
 		}
 		break;

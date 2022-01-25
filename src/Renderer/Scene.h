@@ -7,6 +7,7 @@
 #include "shape/Shape.h"
 #include "Renderer/Material.h"
 #include "Renderer/Material/Material.h"
+#include "Texture/Texture.h"
 #include "BVH/BVH.h"
 #include "Light/PointLight.h"
 #include "Light/ILight.h"
@@ -23,9 +24,11 @@ public:
 
 	std::map<std::string, int> materialMap;
 	std::map<Shape*, int> shapeMaterialMap;
+	std::map<std::string, int> textureMap;
 
 	std::vector<Material*> Materials = {};
 	std::vector<ILight*> lights = {};
+	std::vector<Texture*> textures = {};
 
 
 	void AddShape(Shape * s);
@@ -37,6 +40,7 @@ public:
 	void AddMaterial(std::string name, Material * m);
 
 	void AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius = 0);
+	void AddTexture(std::string texId, std::string path);
 
 	int GetShapeMaterialIdx(Shape * s) const;
 
@@ -55,6 +59,8 @@ struct SceneData
 
 	//Material
 	std::vector<Material*> materials;
+
+	std::vector<Texture *> textures;
 };
 
 inline Material* GetMaterial(const SceneData & sceneData, int matIdx)

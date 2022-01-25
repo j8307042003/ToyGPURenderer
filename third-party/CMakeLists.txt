@@ -32,6 +32,20 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(glfw)
 
+# Assimp
+SET(ASSIMP_BUILD_TESTS CACHE BOOL OFF)
+#add_subdirectory(assimp)
+#target_include_directories( assimp
+#                            PUBLIC assimp/include
+#                            PUBLIC assimp/contrib
+#                            )
+
+add_subdirectory(assimp)
+LINK_DIRECTORIES (${Assimp_BINARY_DIR} ${AssetImporter_BINARY_DIR}/lib)
+include_directories(assimp/include)
+include_directories(assimp/contrib)
+
+
 
 #dear imgui
 set(IMGUI_DIR imgui)
@@ -63,8 +77,9 @@ target_link_libraries(IMGUI glfw ${GLFW_LIBRARIES})
 # file(GLOB sources *.cpp)
 
 #oneTBB
-set(TBB_DIR tbb/lib/cmake/TBB)
-find_package(TBB REQUIRED)
+#set(TBB_DIR tbb/lib/cmake/TBB)
+#find_package(TBB REQUIRED)
+
 #project(TBB)
 #add_library(TBB SHARED IMPORTED)
 #set(TBB_LIBRARIES "TBB")
@@ -81,14 +96,14 @@ find_package(TBB REQUIRED)
 
 
 #Open Image Denoise
-set(OpenImageDenoise_DIR oidnlib/lib/cmake/OpenImageDenoise-1.4.2)
-set(OIDN_LIBDIR ${CMAKE_CURRENT_LIST_DIR}/oidnlib)
-set(OIDN_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/oidnlib/include)
-set(OPENIMAGEDENOISE_LIBRARIES
-    optimized ${OIDN_LIBDIR}/lib/OpenImageDenoise.lib
-    debug ${OIDN_LIBDIR}/lib/OpenImageDenoise_d.lib
-    )
-find_package(OpenImageDenoise REQUIRED)
+#set(OpenImageDenoise_DIR oidnlib/lib/cmake/OpenImageDenoise-1.4.2)
+#set(OIDN_LIBDIR ${CMAKE_CURRENT_LIST_DIR}/oidnlib)
+#set(OIDN_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/oidnlib/include)
+#set(OPENIMAGEDENOISE_LIBRARIES
+#    optimized ${OIDN_LIBDIR}/lib/OpenImageDenoise.lib
+#    debug ${OIDN_LIBDIR}/lib/OpenImageDenoise_d.lib
+#    )
+#find_package(OpenImageDenoise REQUIRED)
 
 
 #project(OpenImageDenoise)

@@ -66,7 +66,7 @@ inline int AddShapesDataTriangle(ShapesData & shapesData,
 	shapesData.texcoords.push_back(glm::dvec3()); // TODO
 
 
-	int vertexOffset = shapesData.positions.size() - 1;
+	int vertexOffset = (int)shapesData.positions.size() - 1;
 	shapesData.triangles.push_back(glm::ivec3(vertexOffset - 2, vertexOffset - 1, vertexOffset));
 	return shapesData.triangles.size() - 1;
 }

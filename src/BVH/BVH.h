@@ -296,7 +296,7 @@ inline void RecursiveBuild(std::vector<bvh_node> & nodes, bvhBuildingNode * buil
 	bool bIsLeaf = buildingNode->isLeaf;
 
 	bvh_node node = {};
-	node.idx = nodes.size();
+	node.idx = (int)nodes.size();
 	node.primitiveId = buildingNode->primitiveIdx;
 	node.boundingBox = buildingNode->bound;
 	node.isLeaf = bIsLeaf;
@@ -314,12 +314,12 @@ inline void RecursiveBuild(std::vector<bvh_node> & nodes, bvhBuildingNode * buil
 	int d2 = depth;
 	if (!bIsLeaf) {
 		if (buildingNode->left != nullptr) {
-			nodes[node.idx].left = nodes.size();
+			nodes[node.idx].left = (int) nodes.size();
 			RecursiveBuild(nodes, buildingNode->left, d);
 			if (d > depth) depth = d;
 		}
 		if (buildingNode->right != nullptr) {
-			nodes[node.idx].right = nodes.size();
+			nodes[node.idx].right = (int) nodes.size();
 			RecursiveBuild(nodes, buildingNode->right, d2);
 			if (d2 > depth) depth = d2;
 		} 

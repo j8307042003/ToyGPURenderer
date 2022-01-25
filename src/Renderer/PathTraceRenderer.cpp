@@ -8,6 +8,7 @@
 #include "Random/SysRandom.h"
 #include <Renderer/RayTrace/RayTrace.h>
 #include <oneapi/tbb/parallel_for.h>
+#include "Texture/Texture.h"
 
 
 void PathTraceRenderer::StartRender()
@@ -16,18 +17,20 @@ void PathTraceRenderer::StartRender()
 	const int kHeight = 512;
     int width = cam->GetWidth();
     int height = cam->GetHeight();
-	m_imageBuffer = new char[width * height * 3]();
-	m_integrater = new float[width * height * 3]();
-	sampleCount = new int[width * height]();	
+	int whSize = width * height;
+	long long rgbBufferSize = (long long)width * height * 3;
+	m_imageBuffer = new char[rgbBufferSize]();
+	m_integrater = new float[rgbBufferSize]();
+	sampleCount = new int[whSize]();
 
 
 	// setup denoiser buffers
 	m_oidnDevice = oidn::newDevice();
 	m_oidnDevice.commit();
-	m_colorBuffer = new float[width * height * 3];
-	m_albedoBuffer = new float[width * height * 3];
-	m_normalBuffer = new float[width * height * 3];
-	m_denoiseOutputBuffer = new float[width * height * 3];
+	m_colorBuffer = new float[rgbBufferSize];
+	m_albedoBuffer = new float[rgbBufferSize];
+	m_normalBuffer = new float[rgbBufferSize];
+	m_denoiseOutputBuffer = new float[rgbBufferSize];
 
 	m_filterRef = m_oidnDevice.newFilter("RT"); // generic ray tracing filter
 	m_filterRef.setImage("color",  m_colorBuffer,  oidn::Format::Float3, width, height); // beauty
@@ -49,18 +52,6 @@ void* PathTraceRenderer::GetImage()
 
 void PathTraceRenderer::RenderLoop()
 {
-	//const int kWidth = 512;
-	//const int kHeight = 512;
-    
-    int width = cam->GetWidth();
-    int height = cam->GetHeight();
-
-	//m_JobScheduler.setWorkerCount(JobScheduler::getMaxWorkerCount());
-
-	const int kTilePixels = 64;
-	const int widthCellNum = ceil(width / (float)kTilePixels);
-	const int heightCellNum = ceil(height / (float)kTilePixels);
-
 	class TileRenderJob
 	{
 	private:
@@ -72,7 +63,7 @@ void PathTraceRenderer::RenderLoop()
 		void operator()(int index) const
 		{
 			auto data = (*tileDatas)[index];
-			instance->TestRender(data.x, data.y, data.z, data.w);
+			instance->Trace(data.x, data.y, data.z, data.w);
 		}
 	};
 
@@ -106,8 +97,16 @@ void PathTraceRenderer::RenderLoop()
 		}
 	};
 
+	int width = cam->GetWidth();
+	int height = cam->GetHeight();
+
+	const int kTilePixels = 64;
+	const int widthCellNum = ceil(width / (float)kTilePixels);
+	const int heightCellNum = ceil(height / (float)kTilePixels);
+	const int tileNum = widthCellNum * heightCellNum;
+
 	// Set Tile Data
-	std::vector<glm::ivec4> tileRenderDatas = std::vector<glm::ivec4>(widthCellNum * heightCellNum);
+	std::vector<glm::ivec4> tileRenderDatas = std::vector<glm::ivec4>(tileNum);
 	for (int i = 0; i < widthCellNum; ++i)
 	{
 		for (int j = 0; j < heightCellNum; ++j)
@@ -127,8 +126,8 @@ void PathTraceRenderer::RenderLoop()
 	TileApplyDenoiseJob applyDenoiseWork = TileApplyDenoiseJob(&tileRenderDatas, this);
 	TileSampleChannelJob sampleChannelWork = TileSampleChannelJob(&tileRenderDatas, this);
 
+	// Sample Albedo, Normal Buffer for denoiser
 	tbb::parallel_for(size_t(0), tileRenderDatas.size(), sampleChannelWork);
-
 
 	iteration = 0;
 	while (true)
@@ -182,8 +181,12 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 	renderData.scene = s;
 	renderData.sceneData = &m_sceneData;
 
+	const int BVH_Stack_Num = 64;
+	int bvh_stack[BVH_Stack_Num];
+
     int filmWidth = cam->GetWidth();
     int filmHeight = cam->GetHeight();
+    glm::vec2 uv;
 	for (int i = 0; i < width; ++i)
 		for (int j = 0; j < height; ++j)
 		{
@@ -200,27 +203,28 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			glm::dvec3 rayHitPosition = {};
 			glm::dvec3 rayHitNormal = {};
 			int shapeIndex = -1;
-			bool bHitAny = RayTrace(*renderData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
+			//bool bHitAny = RayTrace(*renderData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
+			bool bHitAny = BHV_Raycast(renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num, bvh_stack);
 			
 			glm::vec3 albedo = {};
 			if (bHitAny)
 			{
 				auto mat = GetShapeMaterial(*renderData.sceneData, shapeIndex);
-				albedo = mat->Albedo();
+				albedo = mat->Albedo() * glm::vec3(SampleTex(*renderData.sceneData->textures[0], uv));
 			}
 
 			m_albedoBuffer[currentPixPos] = albedo.x;
 			m_albedoBuffer[currentPixPos + 1] = albedo.y;
 			m_albedoBuffer[currentPixPos + 2] = albedo.z;		
 			
-			m_normalBuffer[currentPixPos] = rayHitNormal.x;
-			m_normalBuffer[currentPixPos + 1] = rayHitNormal.y;
-			m_normalBuffer[currentPixPos + 2] = rayHitNormal.z;					
+			m_normalBuffer[currentPixPos] = (float) rayHitNormal.x;
+			m_normalBuffer[currentPixPos + 1] = (float) rayHitNormal.y;
+			m_normalBuffer[currentPixPos + 2] = (float) rayHitNormal.z;
 		}
 }
 
 
-void PathTraceRenderer::TestRender(int x, int y, int width, int height)
+void PathTraceRenderer::Trace(int x, int y, int width, int height)
 {
 	//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	auto camData = DefaultCameraData();
@@ -248,8 +252,6 @@ void PathTraceRenderer::TestRender(int x, int y, int width, int height)
 			int currentPixPos = (nowX + nowY * filmWidth) * 3;
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
-			//auto ray = SampleCamRay(camData, camPos, glm::vec3(.0f, .0f, 1.0f), glm::vec2(filmWidth, filmHeight), glm::vec2(nowX, nowY));
-
 			auto result = renderMethod.Sample(renderData, nowX, nowY, glm::vec2(filmWidth + (SysRandom::Random() - 0.5f) * 2.0f, filmHeight + (SysRandom::Random() - 0.5f) * 2.0f));
 
 			m_integrater[currentPixPos] += result.x;
@@ -257,15 +259,8 @@ void PathTraceRenderer::TestRender(int x, int y, int width, int height)
 			m_integrater[currentPixPos + 2] += result.z;
 			sampleCount[sampleCountIndex]++;
 
-			//glm::vec3 color = (ray.direction * 0.5f + 0.5f) * 255.0f;
 			glm::vec3 color_float = glm::vec3(m_integrater[currentPixPos], m_integrater[currentPixPos + 1], m_integrater[currentPixPos + 2]) / (float)sampleCount[sampleCountIndex];
 			glm::vec3 color = glm::clamp(color_float * 255.0f, glm::vec3(0.0f), glm::vec3(255.0f));
-
-			//color = glm::vec3(m_integrater[currentPixPos], m_integrater[currentPixPos + 1], m_integrater[currentPixPos + 2]) * (255.0f / (float)sampleCount[sampleCountIndex]);
-			//color = glm::vec3(result.x, result.y, result.z) * (255.0f / (float)sampleCount[sampleCountIndex]);
-			//m_imageBuffer[currentPixPos] = 128;
-			//m_imageBuffer[currentPixPos+1] = ((i == 0) | (i == (width-1)) | (j == 0) | (j == (height - 1))) ? 0 : 128;
-			//m_imageBuffer[currentPixPos+2] = 0;
 
 			m_colorBuffer[currentPixPos] = color_float.x;
 			m_colorBuffer[currentPixPos + 1] = color_float.y;
@@ -291,8 +286,10 @@ void PathTraceRenderer::ClearImage()
 {
 	int width = cam->GetWidth();
 	int height = cam->GetHeight();
-	memset(m_imageBuffer, 0, width * height * 3);
-	memset(m_integrater, 0, width * height * 3);
-	memset(sampleCount, 0, width * height);
+	int whRes = width * height;
+	int rgbBufferSize = whRes * 3;
+	memset(m_imageBuffer, 0, rgbBufferSize);
+	memset(m_integrater, 0, rgbBufferSize);
+	memset(sampleCount, 0, whRes);
 	iteration = 0;
 }

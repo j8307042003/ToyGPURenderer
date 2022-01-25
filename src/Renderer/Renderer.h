@@ -16,10 +16,10 @@ public:
 	virtual void Stall() {running = false;}
 	virtual void Resume() {running = true;}
 	virtual void* GetImage() { return nullptr; }
-	
 protected:
 	Scene * s;
 	Camera * cam;
+
 
 	bool running = true;
 };
