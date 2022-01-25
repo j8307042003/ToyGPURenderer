@@ -13,3 +13,6 @@
 [submodule "third-party/oidn"]
 	path = third-party/oidn
 	url = https://github.com/OpenImageDenoise/oidn
+[submodule "third-party/assimp"]
+	path = third-party/assimp
+	url = https://github.com/assimp/assimp
