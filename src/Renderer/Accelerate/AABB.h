@@ -10,6 +10,8 @@
 
 struct dAABB
 {
+    dAABB() : max(glm::dvec3(std::numeric_limits<float>::lowest())), min(glm::dvec3(std::numeric_limits<float>::max())){}
+    dAABB(glm::dvec3 min, glm::dvec3 max) : min(min), max(max){}
 	glm::dvec3 min;
 	glm::dvec3 max;
 };

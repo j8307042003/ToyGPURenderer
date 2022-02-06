@@ -181,7 +181,7 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 	renderData.scene = s;
 	renderData.sceneData = &m_sceneData;
 
-	const int BVH_Stack_Num = 64;
+	const int BVH_Stack_Num = 128;
 	int bvh_stack[BVH_Stack_Num];
 
     int filmWidth = cam->GetWidth();
@@ -204,13 +204,17 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			glm::dvec3 rayHitNormal = {};
 			int shapeIndex = -1;
 			//bool bHitAny = RayTrace(*renderData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
-			bool bHitAny = BHV_Raycast(renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num, bvh_stack);
+			bool bHitAny = BHV_Raycast(renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num / 2, &bvh_stack[0]);
 			
 			glm::vec3 albedo = {};
 			if (bHitAny)
 			{
 				auto mat = GetShapeMaterial(*renderData.sceneData, shapeIndex);
-				albedo = mat->Albedo() * glm::vec3(SampleTex(*renderData.sceneData->textures[0], uv));
+                SurfaceData surface = {};
+                surface.position = rayHitPosition;
+                surface.normal = rayHitNormal;
+                surface.uv = uv;
+				albedo = mat->Albedo(surface);
 			}
 
 			m_albedoBuffer[currentPixPos] = albedo.x;
@@ -261,7 +265,7 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
 
 			glm::vec3 color_float = glm::vec3(m_integrater[currentPixPos], m_integrater[currentPixPos + 1], m_integrater[currentPixPos + 2]) / (float)sampleCount[sampleCountIndex];
 			glm::vec3 color = glm::clamp(color_float * 255.0f, glm::vec3(0.0f), glm::vec3(255.0f));
-
+			
 			m_colorBuffer[currentPixPos] = color_float.x;
 			m_colorBuffer[currentPixPos + 1] = color_float.y;
 			m_colorBuffer[currentPixPos + 2] = color_float.z;

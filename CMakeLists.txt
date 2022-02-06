@@ -11,11 +11,8 @@ Set(ThirdPartyFolder third-party)
 set(TBB_DIR ${ThirdPartyFolder}/tbb/lib/cmake/TBB)
 find_package(TBB REQUIRED)
 set(TBB_LIBFOLDER ${CMAKE_CURRENT_SOURCE_DIR}/${ThirdPartyFolder}/tbb/lib)
-list(APPEND TBB_LIBFILE 
-	${TBB_LIBFOLDER}/tbb.lib
-	${TBB_LIBFOLDER}/tbb12.lib
-	${TBB_LIBFOLDER}/tbbmalloc.lib
-	${TBB_LIBFOLDER}/tbbmalloc_proxy.lib)
+file(GLOB TBB_LIBFILE_NAME ${TBB_LIBFOLDER}/*.lib ${TBB_LIBFOLDER}/*.dylib)
+list(APPEND TBB_LIBFILE ${TBB_LIBFILE_NAME})
 
 
 
@@ -23,8 +20,8 @@ list(APPEND TBB_LIBFILE
 set(OpenImageDenoise_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${ThirdPartyFolder}/oidnlib/lib/cmake/OpenImageDenoise-1.4.2)
 set(OIDN_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/${ThirdPartyFolder}/oidnlib)
 set(OIDN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${ThirdPartyFolder}/oidnlib/include)
-list(APPEND OPENIMAGEDENOISE_LIBRARIES
-		${OIDN_LIBDIR}/lib/OpenImageDenoise.lib)
+file(GLOB OPENIMAGEDENOISE_LIBRARIES_NAME ${OIDN_LIBDIR}/lib/*.lib ${OIDN_LIBDIR}/lib/*.dylib)
+list(APPEND OPENIMAGEDENOISE_LIBRARIES ${OPENIMAGEDENOISE_LIBRARIES_NAME})
 find_package(OpenImageDenoise REQUIRED)
 
 
@@ -85,6 +82,7 @@ source_group("Source Files" FILES ${project_cpps})
 
 add_executable(PineRdr src/main.cpp ${all_files})
 set_target_properties( PineRdr PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/working")
+set_target_properties( PineRdr PROPERTIES XCODE_SCHEME_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/working")
 target_include_directories(PineRdr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Core)
 target_include_directories(PineRdr PRIVATE third-party/oidnlib/include)
 target_include_directories(PineRdr PRIVATE third-party/tbb/include)

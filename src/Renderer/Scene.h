@@ -16,6 +16,11 @@
 #include <string>
 #include "Random/SysRandom.h"
 
+struct Mesh
+{
+	std::vector<Triangle> triangles;
+};
+
 class Scene {
 public:
 	std::vector<Shape*> shapes = {};
@@ -30,17 +35,20 @@ public:
 	std::vector<ILight*> lights = {};
 	std::vector<Texture*> textures = {};
 
+	std::vector<Mesh> meshes = {};
+
 
 	void AddShape(Shape * s);
 	void AddShape(Shape * s, std::string mat_name);
-	void AddModel(std::string modelFile, std::string mat_name, float scale = 1);
+	void AddModel(std::string modelFile, std::string mat_name, Vec3 position = Vec3(), float scale = 1);
 	void AddMaterial(material * m);
 	void AddMaterial(std::string name, material * m);
 
 	void AddMaterial(std::string name, Material * m);
 
 	void AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius = 0);
-	void AddTexture(std::string texId, std::string path);
+	Texture* AddTexture(std::string texId, std::string path);
+	Texture* AddTexture(std::string texId, const Texture & texture);
 
 	int GetShapeMaterialIdx(Shape * s) const;
 
@@ -85,4 +93,20 @@ inline ILight* SampleLight(const SceneData & sceneData)
 }
 
 void MakeSceneData(const Scene & scene, SceneData & sceneData);
+
+
+struct SceneIntersectData
+{
+	glm::dvec3 point;
+	glm::dvec3 normal;
+	glm::vec2 uv;
+	int shapeIdx;
+	int materialIdx;
+};
+
+class BVHTree;
+bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, SceneIntersectData & intersect);
+
+bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered);
+
 #endif

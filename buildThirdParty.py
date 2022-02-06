@@ -1,9 +1,11 @@
 import os
 import subprocess
 import shutil
+import platform
 
 thirdBuildFolder = "tmpBuild"
 thirdPartyPath = "third-party"
+platform = platform.system()
 
 if os.path.exists(thirdBuildFolder) == False:
 	os.mkdir(thirdBuildFolder)
@@ -27,12 +29,16 @@ oidnBuildPath = os.path.join(thirdBuildFolder, "oidn")
 if os.path.exists(oidnBuildPath) == False:
 	os.mkdir(oidnBuildPath)
 
-subprocess.run(["cmake", "-DCMAKE_INSTALL_PREFIX=" + oidnInstallPath, "-DTBB_TEST=OFF", "-DCMAKE_BUILD_TYPE=Release", "-D TBB_ROOT="+tbbInstallPath, "-S", oidnSourcePath, "-B", oidnBuildPath])
+if platform == 'Windows':
+	subprocess.run(["cmake", "-DCMAKE_INSTALL_PREFIX=" + oidnInstallPath, "-DTBB_TEST=OFF", "-DCMAKE_BUILD_TYPE=Release", "-D TBB_ROOT="+tbbInstallPath, "-S", oidnSourcePath, "-B", oidnBuildPath])
+elif platform == 'Darwin':
+	subprocess.run(["cmake", "-DCMAKE_INSTALL_PREFIX=" + oidnInstallPath, "-DCMAKE_CXX_COMPILER=clang++", "-DCMAKE_C_COMPILER=clang", "-DTBB_TEST=OFF", "-DCMAKE_BUILD_TYPE=Release", "-D TBB_ROOT="+tbbInstallPath, "-S", oidnSourcePath, "-B", oidnBuildPath])
+
 subprocess.run(["cmake", "--build", oidnBuildPath, "--config", "Release"])
-subprocess.run(["cmake", "--install", oidnBuildPath])
+subprocess.run(["cmake", "--install", ".", "--prefix", oidnBuildPath])
 
 
-shutil.rmtree(thirdBuildFolder, ignore_errors=True)
+#shutil.rmtree(thirdBuildFolder, ignore_errors=True)
 
 
 print("Build Third Party Process Done!!")

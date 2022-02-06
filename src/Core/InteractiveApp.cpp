@@ -14,8 +14,8 @@
 
 InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 {
-	const int kWidth = 1924;
-	const int kHeight = 1024;
+	const int kWidth = 1920 / 2;//720;
+	const int kHeight = 1080 / 2;//512;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
 	m_appWindow->SetEventCallback(f);
@@ -23,7 +23,7 @@ InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 	// m_renderer = new ParallelRenderer();
 	m_renderer = new PathTraceRenderer();
 	m_scene = make_test_scene1();
-	m_scene->BuildTree();
+	//m_scene->BuildTree();
 	m_cam = new Camera(kWidth, kHeight, Vec3(200.0f, 0.0f, -200.0f));
 
 	m_renderer->SetRenderData(m_scene, m_cam);
@@ -151,7 +151,7 @@ void InteractiveApp::Run()
         
 		m_renderer->UpdateFrame();
 		void* pBuffer = m_renderer->GetImage();
-		m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)pBuffer, ColorFormat::RGBByte);
+		if (pBuffer != nullptr) m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)pBuffer, ColorFormat::RGBByte);
 		m_appWindow->Update();
         
         

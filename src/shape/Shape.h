@@ -43,27 +43,29 @@ struct ShapesData
 	// Vertex Data
 	std::vector<glm::dvec3> positions;
 	std::vector<glm::dvec3> normals;
-	std::vector<glm::dvec3> texcoords;
+	std::vector<glm::dvec2> texcoords;
 
 	// Radius data. for Sphere
 	std::vector<float> radius;
 };
 
 inline int AddShapesDataTriangle(ShapesData & shapesData, 
-	const glm::dvec3 & v0, const glm::dvec3 & v1, const glm::dvec3 & v2, const glm::dvec3 & normal
+	const glm::dvec3 & v0, const glm::dvec3 & v1, const glm::dvec3 & v2, 
+	const glm::dvec3 & normal0, const glm::dvec3 & normal1, const glm::dvec3 & normal2,
+	const glm::dvec2 & uv0 = {}, const glm::dvec2 & uv1 = {}, const glm::dvec2 & uv2 = {}
 )
 {
 	shapesData.positions.push_back(v0);
 	shapesData.positions.push_back(v1);
 	shapesData.positions.push_back(v2);
 
-	shapesData.normals.push_back(normal); // TODO
-	shapesData.normals.push_back(normal); // TODO
-	shapesData.normals.push_back(normal); // TODO
+	shapesData.normals.push_back(normal0); // TODO
+	shapesData.normals.push_back(normal1); // TODO
+	shapesData.normals.push_back(normal2); // TODO
 
-	shapesData.texcoords.push_back(glm::dvec3()); // TODO
-	shapesData.texcoords.push_back(glm::dvec3()); // TODO
-	shapesData.texcoords.push_back(glm::dvec3()); // TODO
+	shapesData.texcoords.push_back(uv0); // TODO
+	shapesData.texcoords.push_back(uv1); // TODO
+	shapesData.texcoords.push_back(uv2); // TODO
 
 
 	int vertexOffset = (int)shapesData.positions.size() - 1;

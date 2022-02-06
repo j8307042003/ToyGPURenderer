@@ -5,6 +5,7 @@
 #include <glm/vec3.hpp>
 #include <limits>
 #include <glm/glm.hpp>
+#include <glm/gtx/compatibility.hpp>
 
 class SceneData;
 inline bool Ray_PrimitiveIntersect(SceneData * sceneData, const Ray3f & ray, float t_min, float t_max, int primitiveIdx, glm::dvec3 & hit, glm::dvec3 & normal, glm::vec2 & uv)
@@ -17,14 +18,17 @@ inline bool Ray_PrimitiveIntersect(SceneData * sceneData, const Ray3f & ray, flo
 		case ShapeType::Triangle:
 		{
 			const auto triangleData = shapesData.triangles[shape.primitiveId];
-			glm::dvec3 normalData = shapesData.normals[triangleData.z];
+			glm::dvec3 normalData = shapesData.normals[triangleData.x];
 			normal = glm::dot(ray.direction, normalData) < 0 ? normalData : -normalData;
-
-			bool bHit = IntersectTriangle(shapesData.positions[triangleData.x], shapesData.positions[triangleData.y], shapesData.positions[triangleData.z], normalData, ray, hit);
-			uv = {};
+			glm::dvec2 tri_uv;
+			bool bHit = IntersectTriangle(shapesData.positions[triangleData.x], shapesData.positions[triangleData.y], shapesData.positions[triangleData.z], normalData, ray, hit, tri_uv);
 			if (bHit) {
 				float d2 = glm::length2(hit - ray.origin);
 				if ((d2 < t_min * t_min) | (d2 > t_max * t_max)) bHit = false;
+				uv = tri_uv.x * shapesData.texcoords[triangleData.y] + tri_uv.y * shapesData.texcoords[triangleData.z] + (1 - tri_uv.x - tri_uv.y) * shapesData.texcoords[triangleData.x];
+				normal = glm::normalize(glm::lerp(glm::lerp(shapesData.normals[triangleData.z], shapesData.normals[triangleData.x], tri_uv.x), shapesData.normals[triangleData.y], tri_uv.y));
+				normal = glm::normalize(tri_uv.x * shapesData.normals[triangleData.y] + tri_uv.y * shapesData.normals[triangleData.z] + (1 - tri_uv.x - tri_uv.y) * shapesData.normals[triangleData.x]);
+				//uv = tri_uv;
 			}
 
 			return bHit;
@@ -44,6 +48,7 @@ inline bool Ray_PrimitiveIntersect(SceneData * sceneData, const Ray3f & ray, flo
 			return bHit;
 		}
 		break;
+        case ShapeType::Plane: break;
 	}
 
 	return false;
@@ -75,8 +80,8 @@ inline bool RayTrace(const SceneData & sceneData, const Ray3f & ray, float t_min
 				const auto triangleData = shapesData.triangles[shape.primitiveId];
 				shapeNormal = shapesData.normals[triangleData.z];
   				shapeNormal = glm::dot(ray.direction, shapeNormal) < 0 ? shapeNormal : -shapeNormal;
-
-				bHit = IntersectTriangle(shapesData.positions[triangleData.x], shapesData.positions[triangleData.y], shapesData.positions[triangleData.z], shapeNormal, ray, hit);
+  				glm::dvec2 uv;
+				bHit = IntersectTriangle(shapesData.positions[triangleData.x], shapesData.positions[triangleData.y], shapesData.positions[triangleData.z], shapeNormal, ray, hit, uv);
 
 				if (bHit) {
 					float d2 = glm::length2(hit - ray.origin);

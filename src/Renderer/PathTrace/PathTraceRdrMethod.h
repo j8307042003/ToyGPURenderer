@@ -10,6 +10,6 @@ public:
 public:
 	BVHTree* bvh_tree;
 private:
-	static const int bvh_depth = 32;
+	static const int bvh_depth = 128;
 	int bvh_stack[bvh_depth];
 };

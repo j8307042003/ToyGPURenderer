@@ -2,11 +2,23 @@
 #include "math/Vec3.h"
 #include <iostream>
 
-Triangle::Triangle(Vec3 v1, Vec3 v2, Vec3 v3 ) : 
-	Vertices{v1, v2, v3}, _normal( make_normal(v1, v2, v3) ), normal(_normal)
+Triangle::Triangle()
 {
-	
 
+}
+
+Triangle::Triangle(Vec3 v1, Vec3 v2, Vec3 v3 ) : 
+	Vertices{v1, v2, v3}, uv{}
+{
+	auto n = make_normal(v1, v2, v3);
+
+	_normal[0] = n;
+	_normal[1] = n;
+	_normal[2] = n;
+
+	normal[0] = n;
+	normal[1] = n;
+	normal[2] = n;
 }
 
 
@@ -68,7 +80,7 @@ bool Triangle::RayCastTest(const Ray * ray, Vec3 & hitPos, Vec3 & direction) {
 
   // intersection occurred: set params and exit
   hitPos = ray->origin + t * ray->dir;
-  direction = Vec3::Reflect(ray->dir, normal);
+  direction = Vec3::Reflect(ray->dir, normal[0]);
   return true;
 
 }

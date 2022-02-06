@@ -5,6 +5,7 @@
 #include "math/Transform.h"
 #include "shape/Plane.h"
 #include "Material.h"
+#include "Material/PBMaterial.h"
 
 Scene* make_test_scene1() {
 	auto scene = new Scene();
@@ -31,6 +32,18 @@ Scene* make_test_scene1() {
 	scene->AddMaterial("FWall", new material({.9, .9, .9}, {0, 0, 0}, 0));	 //Floor
 	//scene->AddMaterial("CWall", new material({0.8, 0.8, 0.8}, {.5, .5, .5}, 0));	 //Ceil	
 	scene->AddMaterial("CWall", new material({0.8, 0.8, 0.8}, {0, 0, 0}, 0));	 //Ceil	
+
+	//scene->AddMaterial("Orig", new material({252.0f / 255.0f, 156.0f / 255.0f, 0.0f}, {0, 0, 0}, 0));	 //Orig	
+	//scene->AddMaterial("CWall", new material({252.0f / 255.0f, 156.0f / 255.0f, 0.0f}, {0, 0, 0}, 0));	 //Orig	
+
+	{
+		auto tex = scene->AddTexture("hexTex", "hex.jpeg");
+		PBMaterial * pMat = new PBMaterial();
+		//pMat->color = {252.0f / 255.0f, 156.0f / 255.0f, 0.0f};
+		//pMat->albedo_texture = tex;
+		scene->AddMaterial("HexMat", pMat);
+	}
+
 
 	//Right Wall
 	
@@ -64,7 +77,7 @@ Scene* make_test_scene1() {
 		{-wallOffsetX,  -wallHeight, -wallWidth}, 
 		{ wallOffsetX,   wallHeight, -wallWidth},	
 		{ wallOffsetX,  -wallHeight, -wallWidth}
-	), "EWall"); 
+	), "EWall");
 	
 
 	//Floor
@@ -77,12 +90,14 @@ Scene* make_test_scene1() {
 
 	
 	//Ceil
+	
 	scene->AddShape(new Plane(
 		{-wallOffsetX,  wallHeight,  wallWidth}, 
 		{-wallOffsetX,  wallHeight, -wallWidth}, 
 		{ wallOffsetX,  wallHeight,  wallWidth},
 		{ wallOffsetX,  wallHeight, -wallWidth}
 	), "CWall");
+	
 	
 	
 
@@ -96,7 +111,7 @@ Scene* make_test_scene1() {
 	scene->AddMaterial("s5", new material({.8, .8, .8}, {0, 0, 0}, 0.3));	
 	scene->AddMaterial("s6", new material({.8, .8, .8}, {0, 0, 0}, 0.8, .0f));	
 	scene->AddMaterial("orange", new material({224.0 / 255.0, 105 / 255.0, 13 / 255.0}, {0, 0, 0}, 0.8, .0f));	
-
+	
 	scene->AddShape(new Sphere({-2.5, 0, -wallWidth / 1.2f}, 2), "s1");	
 	scene->AddShape(new Sphere({ 1, 0, -wallWidth / 1.2f}, 2), "s2");	
 
@@ -137,17 +152,48 @@ Scene* make_test_scene1() {
 		scene->AddShape(new Sphere(center + Vec3{len * cos(angle), 0.2f, len * sin(angle)}, .25f), "s6");
 	}
 
-	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9) * 1.8f, 3.0f);
+	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9) * 1.0f, 3.0f);
+	
 	//scene->AddPointLight(glm::dvec3(4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0, 0) * 3.0f, 1.0f);
 	//scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0, 0, 0.5) * 3.0f, 1.0f);
 
-	scene->AddPointLight(glm::dvec3(4.0f, 0.0, -wallWidth / 1.5f), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 0.5f);
-	scene->AddPointLight(glm::dvec3(center.x, center.y, center.z), glm::vec3(0.5, 0.5, 0.5) * 4.5f, 0.5f);
-	scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 2.0f);
+	//scene->AddPointLight(glm::dvec3(4.0f, 0.0, -wallWidth / 1.5f), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 0.5f);
+	//scene->AddPointLight(glm::dvec3(center.x, center.y, center.z), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 0.5f);
+	//scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 2.0f);
+
+	//scene->AddPointLight(glm::dvec3(2.5f, 3.0f,  2.5f), glm::vec3(.9, .9, .9) * 0.8f, 1.0f);
+	scene->AddPointLight(glm::dvec3(2.5f, 100.0f,  2.5f), glm::vec3(.9, .9, .9) * 0.8f, 1.0f);
 
 
-	scene->AddTexture("Tex", "wall.jpg");
-	scene->AddTexture("Tex", "butterfly.jpg");
+
+
+
+	//scene->AddModel("bunny.obj", "s1", {0.0f, 0.0f, -10.0f}, 1.0f);
+	//scene->AddModel("bunny.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 1.5f);
+	//scene->AddModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb", "HexMat", {0.0f, 0.0f, 2.0f}, 1.5f);
+	//scene->AddModel("teapot/teapot.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 0.01f);
+	//scene->AddModel("mitsuba/mitsuba.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 1.0f);
+	//scene->AddModel("Suzanne/glTF/Suzanne.gltf", "HexMat", {0.0f, 0.0f, 2.0f}, 1.0f);
+	//scene->AddModel("Sponza/glTF/Sponza.gltf", "HexMat", {0.0f, -10.0f, 50.0f}, 0.1f);
+	//scene->AddModel("hairball.obj", "s1", {0.0f, 0.0f, 2.0f}, 1.0f);
+
+
+	Texture tex = Texture();
+	tex.width = 2;
+	tex.height = 2;
+	tex.pixels_data.reserve(2*2);
+	for (int i = 0; i < 2 * 2 ; ++i)
+	{
+		tex.pixels_data.push_back({1.0f, 1.0f, 1.0f, 1.0f});
+	}
+    scene->AddTexture("VirtualWhite", tex);
+
+
+	scene->AddTexture("White", "whiteHex.jpeg");
+	scene->AddTexture("White", "whiteTex.jpeg");
+	scene->AddTexture("Tex", "hex.jpeg");
+	//scene->AddTexture("Tex", "wall.jpg");
+	//scene->AddTexture("Tex", "butterfly.jpg");
 
 	return scene;
 }

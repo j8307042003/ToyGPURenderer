@@ -17,12 +17,6 @@ struct BVH_node
 };
 
 
-struct BVHTree
-{
-	std::vector<BVH_node> nodes;
-};
-
-
 
 struct dbvhPrimitiveInfo {
 	dbvhPrimitiveInfo(){}
@@ -37,6 +31,13 @@ struct dbvhPrimitiveInfo {
 	dAABB bound;
 	glm::dvec3 center;
 };
+
+struct BVHTree
+{
+    std::vector<BVH_node> nodes;
+    std::vector<dbvhPrimitiveInfo> primitives;
+};
+
 
 struct dbvhBuildingNode {
 	dAABB bound;
@@ -86,8 +87,8 @@ inline void BuildBVH_SAH(int start, int end, std::vector<dbvhPrimitiveInfo> & pr
 			node->right        = nullptr;
 		}
 	} else {
-		dAABB centroid = {};
-		dAABB totalBound = {};
+		dAABB centroid = aabb_default();
+		dAABB totalBound = aabb_default();
 
 
 		for(int i = start; i <= end; ++i) {
@@ -119,7 +120,7 @@ inline void BuildBVH_SAH(int start, int end, std::vector<dbvhPrimitiveInfo> & pr
 
 		float costs[nBuckets-1] = {};
 		for (int i = 0; i < nBuckets-1; ++i){
-			dAABB b0 = {}, b1 = {};
+			dAABB b0 = aabb_default(), b1 = aabb_default();
 			int c0 = 0, c1 = 0;
 			for(int j = 0; j <= i; ++j) {
 				b0 = merge_aabb(b0, buckets[j].bound);
@@ -240,6 +241,9 @@ inline void build_bvh_SAH_d(BVHTree & tree, std::vector<dAABB> & boundingBoxs) {
 
 }
 
+glm::ivec2 cal_sah(int start, int end, std::vector<dbvhPrimitiveInfo> & primitives);
+
+void build_bvh_tree(BVHTree & tree, std::vector<dAABB> boundingBoxs);
 
 inline void bvh_buildTree1(SceneData * sceneData, BVHTree & tree) {
 	std::vector<dAABB> boundingBoxList;
@@ -270,7 +274,8 @@ inline void bvh_buildTree1(SceneData * sceneData, BVHTree & tree) {
 		boundingBoxList.push_back(aabb);
 	}
 
-	build_bvh_SAH_d(tree, boundingBoxList);
+	//build_bvh_SAH_d(tree, boundingBoxList);
+	build_bvh_tree(tree, boundingBoxList);
 }
 
 template <typename T> int sgn(T val) {

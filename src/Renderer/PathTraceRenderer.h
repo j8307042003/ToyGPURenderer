@@ -19,7 +19,7 @@ public:
 
 
 private:
-	char* m_imageBuffer;
+	char* m_imageBuffer = nullptr;
 	float* m_integrater;
 	int* sampleCount;
 	void RenderLoop();

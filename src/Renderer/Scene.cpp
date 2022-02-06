@@ -9,6 +9,7 @@
 #include "assimp/postprocess.h"
 #include "glm/gtx/transform.hpp"
 #include "Material/PBMaterial.h"
+#include "Accelerate/BVHStruct.h"
 
 
 
@@ -30,6 +31,12 @@ void Scene::AddShape(Shape * s, std::string mat_name) {
 	{
 		Triangle * pT1 = &pPlane->t1;
 		Triangle * pT2 = &pPlane->t2;
+        pT1->uv[0] = Vec3(0.0f, 0.0f, 0.0f);
+        pT1->uv[1] = Vec3(0.0f, 1.0f, 0.0f);
+        pT1->uv[2] = Vec3(1.0f, 1.0f, 0.0f);
+        pT2->uv[0] = Vec3(0.0f, 1.0f, 0.0f);
+        pT2->uv[1] = Vec3(1.0f, 0.0f, 0.0f);
+        pT2->uv[2] = Vec3(1.0f, 1.0f, 0.0f);
 		AddShape(pT1, mat_name);
 		AddShape(pT2, mat_name);
 	}
@@ -38,7 +45,7 @@ void Scene::AddShape(Shape * s, std::string mat_name) {
 }
 
 
-void Scene::AddModel(std::string modelFile, std::string mat_name, float scale) {
+void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position, float scale) {
 	std::map<std::string,int>::iterator it = materialMap.find(mat_name);
 	if (it == materialMap.end()) {
 		std::cout << "Add Shape Failed. Due to add Shape with not existed material : " + mat_name << std::endl;
@@ -46,45 +53,76 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, float scale) {
 	}
 
     aiPropertyStore* props = aiCreatePropertyStore();
+    std::cout << "Loading Model : " << modelFile << std::endl;
 
 	//auto scene = aiImportFile("dragon.obj",aiProcessPreset_TargetRealtime_MaxQuality);	
-	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
-	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_MaxQuality, NULL, props);
+	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
+	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_Fast, NULL, props);
 	if (scene) {
 		//std::cout << "num of mNumMeshes : " << scene->mNumMeshes << std::endl;
 		for( unsigned int i = 0; i < scene->mNumMeshes; ++i) {
 			aiMesh* mesh = scene->mMeshes[i];
 
-			/*
-			if (mesh->mNumVertices != 3)
-				std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
-			*/
+			meshes.emplace_back();
+			auto & meshData = meshes[meshes.size() - 1];
+			meshData.triangles.reserve(mesh->mNumFaces);
+
+			glm::mat4 model = glm::mat4(1.0);
+			model = glm::translate(model, glm::vec3(position.x, position.y, position.z));
+			model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			model = glm::scale(model, glm::vec3(scale));			
 
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++)
 			{
 				aiFace face = mesh->mFaces[j];
-				// std::cout << "Num of indices : " << face.mNumIndices << std::endl; 
-				Vec3 vectors[3];
-				glm::mat4 model = glm::mat4();
-				model = glm::scale(model, glm::vec3(scale, scale, scale));				
+				Vec3 vertex[3];
+				Vec3 Normal[3];
+				Vec3 uv[3];
+                
+                shapes.reserve(shapes.size() + face.mNumIndices);
 				for (unsigned int k = 0; k < face.mNumIndices; k++) {
-					aiVector3D & v = mesh->mVertices[face.mIndices[k]];
-					auto m = (model * glm::vec4(v.x, v.y, v.z, 1.0));
-					// vectors[k] = {m.x, m.y, m.z};
-					vectors[k] = {v.x * scale, v.y * scale, v.z * scale - 30};
+                    auto vertexId = face.mIndices[k];
+					aiVector3D & v = mesh->mVertices[vertexId];
+                    auto n = mesh->mNormals[vertexId];
+                    auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
+					auto m = model * glm::vec4(v.x, v.y, v.z, 1.0);
+
+
+
+                    auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][vertexId]) : aiVector3D();
+					uv[k] = Vec3(uvData.x, uvData.y, 0.0f);
+					vertex[k] = {m.x, m.y, m.z};
+					Normal[k] = {normal.x, normal.y, normal.z};
 				}
 
-				Triangle * triangle = new Triangle(vectors[0], vectors[1], vectors[2]);
-				shapes.push_back(triangle);
-				shapeMaterialMap[triangle] = it->second;
-				// if (shapes.size() > 10000) return;
-			}		
+				meshData.triangles.emplace_back();
+
+				Triangle & triangle = meshData.triangles[meshData.triangles.size() - 1];
+				triangle.Vertices[0] = vertex[0];
+				triangle.Vertices[1] = vertex[1];
+				triangle.Vertices[2] = vertex[2];
+				triangle.normal[0] = Normal[0];
+				triangle.normal[1] = Normal[1];
+				triangle.normal[2] = Normal[2];
+				triangle.uv[0] = uv[0]; triangle.uv[1] = uv[1]; triangle.uv[2] = uv[2];
+				//triangle.uv[0] = {0.0f, 1.0f, 0.0f}; triangle.uv[1] = {1.0f, 0.0f, 0.0f}; triangle.uv[2] = {0.5f, 0.5f, 0.0f};
+			}
+
+			for (int i = 0; i < meshData.triangles.size(); ++i)
+			{
+				auto pTriangle = &meshData.triangles[i];
+				shapes.push_back(pTriangle);
+				shapeMaterialMap[pTriangle] = it->second;
+			}
 
 
 			//std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
 
 		}
 	}
+
+    std::cout << "Model : " << modelFile  << " Loaded ? : " << (scene != nullptr) << std::endl;
 
 }
 
@@ -133,12 +171,24 @@ void Scene::AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius)
 	lights.push_back(pointLight);
 }
 
-void Scene::AddTexture(std::string texId, std::string path)
+Texture* Scene::AddTexture(std::string texId, std::string path)
 {
+	std::cout << "Loading Texture : " << path << std::endl;
+
 	Texture * tex = new Texture();
 	bool bLoaded = LoadTexture(path, *tex);
 	textures.push_back(tex);
 	textureMap[texId] = textures.size()-1;
+	return tex;
+}
+
+Texture* Scene::AddTexture(std::string texId, const Texture & texture)
+{
+	Texture * tex = new Texture();
+	*tex = texture;
+	textures.push_back(tex);
+	textureMap[texId] = textures.size()-1;	
+	return tex;
 }
 
 
@@ -250,16 +300,23 @@ void MakeSceneData(const Scene & scene, SceneData & sceneData)
 			case ShapeType::Triangle:
 			{
 				const auto triangleShape = (Triangle*)pShape;
-				const auto v0 = triangleShape->Vertices[0];
-				const auto v1 = triangleShape->Vertices[1];
-				const auto v2 = triangleShape->Vertices[2];
+				const auto & v0 = triangleShape->Vertices[0];
+				const auto & v1 = triangleShape->Vertices[1];
+				const auto & v2 = triangleShape->Vertices[2];
+				const auto & uv0 = triangleShape->uv[0];
+				const auto & uv1 = triangleShape->uv[1];
+				const auto & uv2 = triangleShape->uv[2];
 
-				const auto n = triangleShape->normal;
+
+				const auto & n0 = triangleShape->normal[0];
+				const auto & n1 = triangleShape->normal[1];
+				const auto & n2 = triangleShape->normal[2];
 
 
 				int triangleIndex = AddShapesDataTriangle(sceneData.shapesData, 
 					glm::dvec3(v0.x, v0.y, v0.z), glm::dvec3(v1.x, v1.y, v1.z), glm::dvec3(v2.x, v2.y, v2.z),
-					glm::dvec3(n.x, n.y, n.z)
+					glm::dvec3(n0.x, n0.y, n0.z), glm::dvec3(n1.x, n1.y, n1.z), glm::dvec3(n2.x, n2.y, n2.z),
+					glm::dvec2(uv0.x, uv0.y), glm::dvec2(uv1.x, uv1.y), glm::dvec2(uv2.x, uv2.y)
 					);
 				auto materialId = scene.GetShapeMaterialIdx(pShape); 		
 				ShapeData shapeData = { ShapeType::Triangle , triangleIndex, materialId };
@@ -290,3 +347,24 @@ void MakeSceneData(const Scene & scene, SceneData & sceneData)
 
 	sceneData.textures = scene.textures;
 }
+
+
+bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, SceneIntersectData & intersect)
+{
+	const int kTraceStackDepth = 128;
+	int TraceStackData[kTraceStackDepth];
+	bool bHitAny = BHV_Raycast(sceneData, bvhtree, ray, 0.1f, 10000.0f, intersect.point, intersect.normal, intersect.uv, intersect.shapeIdx, kTraceStackDepth, &TraceStackData[0]);
+
+	return bHitAny;
+}
+
+
+bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered)
+{
+	SurfaceData surface;
+	surface.position = intersect.point;
+	surface.normal = intersect.normal;
+	surface.uv = intersect.uv;
+	return mat.scatter(ray, surface, hitInfo, attenuation, scattered);
+}
+

@@ -7,24 +7,25 @@ class Triangle : public Shape {
 public:
 	// Vec3 position;
 	Vec3 Vertices[3];
-
+	Vec3 uv[3];
+	Triangle();
 	Triangle(Vec3 v1, Vec3 v2, Vec3 v3 );
 
-	const Vec3 & normal;
+	Vec3 normal[3];
 
 	bool RayCastTest(const Ray * ray, Vec3 & hitPos, Vec3 & direction) override;
 	virtual ShapeType Type() override {return ShapeType::Triangle;}
 
 
 private:
-	Vec3 _normal;
+	Vec3 _normal[3];
 
 	Vec3 make_normal(const Vec3 & v1, const Vec3 & v2, const Vec3 & v3);
 };
 
 
 
-inline bool IntersectTriangle(const glm::dvec3 & v0, const glm::dvec3 & v1, const glm::dvec3 & v2, const glm::dvec3 & normal, const Ray3f& ray, glm::dvec3& hit)
+inline bool IntersectTriangle(const glm::dvec3 & v0, const glm::dvec3 & v1, const glm::dvec3 & v2, const glm::dvec3 & normal, const Ray3f& ray, glm::dvec3& hit, glm::dvec2 & uv)
 {
   
   // compute triangle edges
@@ -55,9 +56,7 @@ inline bool IntersectTriangle(const glm::dvec3 & v0, const glm::dvec3 & v1, cons
 
   // intersection occurred: set params and exit
   hit = ray.origin + t * ray.direction;
+  uv = {u, v};
   return true;
-
-
-
 
 }

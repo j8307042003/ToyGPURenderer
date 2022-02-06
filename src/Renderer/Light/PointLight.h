@@ -15,7 +15,7 @@ public:
 		auto delta = position - surfacePosition;
 		auto direction = glm::normalize(delta);
 		auto distance = glm::length(delta);
-		const float LightSize = 30.0f;
+		const float LightSize = 1000.0f;
 		float att = (LightSize - distance) / LightSize; 
 
         return (std::max(0.0f, (float)glm::dot(direction, surfaceNormal)) * att) * radiance;

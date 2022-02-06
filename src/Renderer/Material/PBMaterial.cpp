@@ -6,6 +6,7 @@
 #include <glm/geometric.hpp>
 #include "../Common/common.h"
 #include <glm/gtx/compatibility.hpp>
+#include "Shader/Shader.h"
 
 inline glm::dvec2 random_polar(float roughness) {
 	float r1 = SysRandom::Random();
@@ -51,26 +52,26 @@ inline glm::dvec4 make_GGXRandom(glm::dvec3 dir, glm::dvec2 polarSet) {
         theta1); 	
 }
 
-bool PBMaterial::scatter(const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered) const
+inline bool DisneyBRDF(const DisneyBRDFParam & param, const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered)
 {
-
 	float cosTheta = glm::dot(surface.normal, -ray.direction);
 	float reflective = Fresnel(1.0f, 1.4f, cosTheta);
 
-	const bool bIsSpecular = SysRandom::Random() < (metallic + reflective);
+	bool bIsSpecular = SysRandom::Random() < (param.metallic + reflective);
+	//bIsSpecular = false;
 
 	glm::dvec3 reflected = glm::reflect(ray.direction, surface.normal);
 
-	const float rayRoughness = bIsSpecular ? roughness : 1.0f;
+	const float rayRoughness = bIsSpecular ? param.roughness : 1.0f;
 	const glm::vec3 reflectDirection = bIsSpecular ? reflected : surface.normal;
-	const glm::vec3 atten = bIsSpecular ? glm::lerp(glm::vec3(1.0), color, metallic) : color;
+	const glm::vec3 atten = bIsSpecular ? glm::lerp(glm::vec3(1.0), param.color, param.metallic) : param.color;
 
 	glm::dvec2 polarSet = random_polar(rayRoughness);
 	glm::dvec4 result = make_GGXRandom(reflectDirection, polarSet);
     glm::dvec3 outDirection = glm::dvec3(result) + (surface.normal * glm::dvec3(0.01));
 
     scattered = {surface.position, outDirection};
-    hitInfo.emission = emission;
+    hitInfo.emission = param.emission;
 	hitInfo.wi = bIsSpecular ? outDirection : surface.normal;
 	hitInfo.nextEvent = bIsSpecular ? HITEVENT::Specular : HITEVENT::Diffuse;
 
@@ -78,4 +79,45 @@ bool PBMaterial::scatter(const Ray3f & ray, const SurfaceData & surface, HitInfo
 
 	return true;
 }
+
+PBMaterial::PBMaterial() : shader(DefaultBRDFShader)
+{
+
+}
+
+glm::vec3 PBMaterial::Albedo(const SurfaceData & surface) const 
+{
+    DisneyBRDFParam param;
+    {
+        param.ior = ior;
+        param.metallic = metallic;
+        param.roughness = roughness;
+        param.color = color;
+        param.emission = emission;
+        param.normal = surface.normal;
+    };
+    if (shader) param = shader(surface, *this);
+
+	return param.color;
+}
+
+
+bool PBMaterial::scatter(const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered) const
+{
+    DisneyBRDFParam param;
+    {
+        param.ior = ior;
+        param.metallic = metallic;
+        param.roughness = roughness;
+        param.color = color;
+        param.emission = emission;
+        param.normal = surface.normal;
+    };
+    if (shader) param = shader(surface, *this);
+    Color c;
+    //attenuation.value = color;
+	return DisneyBRDF(param, ray, surface, hitInfo, attenuation, scattered);
+}
+
+
  
