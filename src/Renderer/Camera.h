@@ -13,6 +13,8 @@ public:
 	Camera( int width, int height, Vec3 position);
 
 	Transform transform;
+	glm::vec3 pos;
+	glm::quat rotation;
 
 	void FullRender();
 	unsigned int * GetBuffer();

@@ -34,6 +34,7 @@ public:
 private:
 	void OnEvent(WindowEvent & event);
 	void SignalCloseApp();
+	void CameraUpdate(float deltaTime);
 
 private:
 	AppWindow * m_appWindow;
@@ -41,6 +42,7 @@ private:
 	Scene * m_scene;
 	Camera * m_cam;
 	std::vector<ImguiUI *> m_imguiUIs;
+	bool m_key_table[512];
 	TestGUI m_testGUI;
 	float m_timeStart;
 	float m_timePass;

@@ -313,6 +313,15 @@ void AppWindowGLFW::key_callback(GLFWwindow* window, int key, int scancode, int 
 			m_eventCallback(event);
 		}
 	}
+	else if (action == GLFW_RELEASE)
+	{
+		KeyReleaseEvent event = {};
+		event.keyCode = key;
+		if (m_eventCallback != nullptr) 
+		{
+			m_eventCallback(event);
+		}
+	}
 
 }
 

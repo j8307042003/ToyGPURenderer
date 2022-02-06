@@ -25,6 +25,8 @@ InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 	m_scene = make_test_scene1();
 	//m_scene->BuildTree();
 	m_cam = new Camera(kWidth, kHeight, Vec3(200.0f, 0.0f, -200.0f));
+	m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	m_cam->pos = glm::dvec3(0, 0, 10);
 
 	m_renderer->SetRenderData(m_scene, m_cam);
     
@@ -58,32 +60,43 @@ InteractiveApp::~InteractiveApp()
 
 void InteractiveApp::OnEvent(WindowEvent & event)
 {
+	auto event_type = event.GetEventType();
+
+	if (event_type == EWindowEvent::KeyPressed)
+	{
+		KeyPressedEvent keyEvent = dynamic_cast<KeyPressedEvent&>(event);
+		m_key_table[keyEvent.keyCode] = true;
+	}
+	else if (event_type == EWindowEvent::KeyReleased)
+	{
+		KeyReleaseEvent keyEvent = dynamic_cast<KeyReleaseEvent&>(event);
+		m_key_table[keyEvent.keyCode] = false;
+	}
+
 	if (event.GetEventType() == EWindowEvent::KeyPressed)
 	{
 		std::cout << "Key pressed!!" << std::endl;
 		KeyPressedEvent keyEvent = dynamic_cast<KeyPressedEvent&>(event);
 		if (keyEvent.keyCode == GLFW_KEY_ESCAPE)
 			SignalCloseApp();
-		else if (keyEvent.keyCode == GLFW_KEY_W)
-		{
+		// else if (keyEvent.keyCode == GLFW_KEY_W)
+		// {
+		// 	m_renderer->ClearImage();
+		// }
+		// else if (keyEvent.keyCode == GLFW_KEY_S)
+		// {
+		// 	m_renderer->ClearImage();
+		// }
+		// else if (keyEvent.keyCode == GLFW_KEY_A)
+		// {
+		// 	m_renderer->ClearImage();
+		// }
+		// else if (keyEvent.keyCode == GLFW_KEY_D)
+		// {
+		// 	m_renderer->ClearImage();
+		// }
 
-			m_renderer->ClearImage();
-		}
-		else if (keyEvent.keyCode == GLFW_KEY_S)
-		{
-
-			m_renderer->ClearImage();
-		}
-		else if (keyEvent.keyCode == GLFW_KEY_A)
-		{
-
-			m_renderer->ClearImage();
-		}
-		else if (keyEvent.keyCode == GLFW_KEY_D)
-		{
-
-			m_renderer->ClearImage();
-		}
+	
 	}
 }
 
@@ -122,14 +135,76 @@ void TestGUI::OnGUI()
 	ImGui::Text("TimePass : %f", timePass);
 	ImGui::Text("iterate per second: %f", renderItProgress / timePass);
 
-	bool showDenoise = pathTraceRenderer->GetShowDenoise();
-	ImGui::Checkbox("Denoise", &showDenoise);
-	pathTraceRenderer->SetShowDenoise(showDenoise);
+	auto displayKind = pathTraceRenderer->GetShowDisplayChannel();
+
+	const char* DisplayLabelText[] = {
+		"RawImage",
+		"Denoised",
+		"Albedo",
+		"Normal"
+	};
+
+	int idx =  PathTraceRenderer::DisplayChannelToInt(displayKind);
+	static const char* current_item = DisplayLabelText[idx];
+	if (ImGui::BeginCombo("Display Channel", current_item))
+	{
+		for (int n = 0; n < IM_ARRAYSIZE(DisplayLabelText); n++)
+		{
+			bool is_selected = (current_item == DisplayLabelText[n]); // You can store your selection however you want, outside or inside your objects
+			if (ImGui::Selectable(DisplayLabelText[n], is_selected))
+			{
+				current_item = DisplayLabelText[n];
+				idx = n;
+				pathTraceRenderer->SetShowDisplayChannel(PathTraceRenderer::IntToDisplayChannel(idx));
+			}
+			if (is_selected)
+			{
+				ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+			}
+		}
+	}
+	void EndCombo();
 
 	ImGui::End();
 }
 
+void InteractiveApp::CameraUpdate(float deltaTime)
+{
 
+	if (m_key_table[GLFW_KEY_ESCAPE] == true) return;
+
+	float posX = 0.0f;
+	float posZ = 0.0f;
+	const float MoveSpeed = 2.0f;
+
+	if (m_key_table[GLFW_KEY_W] == true)
+	{
+		posZ += MoveSpeed * deltaTime;
+		m_renderer->ClearImage();
+	}
+	else if (m_key_table[GLFW_KEY_S] == true)
+	{
+		posZ -= MoveSpeed * deltaTime;
+		m_renderer->ClearImage();
+	}
+	else if (m_key_table[GLFW_KEY_A] == true)
+	{
+		posX -= MoveSpeed * deltaTime;
+		m_renderer->ClearImage();
+	}
+	else if (m_key_table[GLFW_KEY_D] == true)
+	{
+		posX += MoveSpeed * deltaTime;
+		m_renderer->ClearImage();
+	}
+
+	if (posX != 0.0f || posZ != 0.0f)
+	{
+		glm::vec3 movement = glm::vec3(posX, 0.0f, posZ);
+		m_cam->pos += m_cam->rotation * movement;
+	}
+
+}
 
 
 void InteractiveApp::Run()
@@ -148,7 +223,9 @@ void InteractiveApp::Run()
         
         // bool bShow = true;
         // ImGui::ShowDemoWindow(&bShow);
-        
+
+        CameraUpdate(deltaTime);
+
 		m_renderer->UpdateFrame();
 		void* pBuffer = m_renderer->GetImage();
 		if (pBuffer != nullptr) m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)pBuffer, ColorFormat::RGBByte);

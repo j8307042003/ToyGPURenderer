@@ -4,6 +4,7 @@
 enum class EWindowEvent
 {
 	KeyPressed,
+	KeyReleased,
 	KeyDown,
 };
 
@@ -30,5 +31,15 @@ private:
 
 public:
 	virtual EWindowEvent GetEventType() { return EWindowEvent::KeyDown;}
+};
+
+
+class KeyReleaseEvent : public WindowEvent
+{
+public:
+	int keyCode;
+
+public:
+	virtual EWindowEvent GetEventType() { return EWindowEvent::KeyReleased;}
 };
 

@@ -67,21 +67,6 @@ void PathTraceRenderer::RenderLoop()
 		}
 	};
 
-	class TileApplyDenoiseJob
-	{
-	private:
-		std::vector<glm::ivec4>* tileDatas;
-		PathTraceRenderer* instance;
-	public:
-		TileApplyDenoiseJob(std::vector<glm::ivec4>* tileJobs, PathTraceRenderer* instance) : tileDatas(tileJobs), instance(instance) {}
-
-		void operator()(int index) const
-		{
-			auto data = (*tileDatas)[index];
-			instance->ApplyDenoiser(data.x, data.y, data.z, data.w);
-		}
-	};
-
 	class TileSampleChannelJob
 	{
 	private:
@@ -96,6 +81,38 @@ void PathTraceRenderer::RenderLoop()
 			instance->SampleDenoiserBaseImage(data.x, data.y, data.z, data.w);
 		}
 	};
+
+	class ApplySampleChannelJob
+	{
+	private:
+		std::vector<glm::ivec4>* tileDatas;
+		PathTraceRenderer* instance;
+	public:
+		bool bAlbedo = false;
+		bool bDonoised = false;
+
+	public:
+		ApplySampleChannelJob(std::vector<glm::ivec4>* tileJobs, PathTraceRenderer* instance) : tileDatas(tileJobs), instance(instance) {}
+
+		void operator()(int index) const
+		{
+			auto data = (*tileDatas)[index];
+			instance->ApplyChannelImage(data.x, data.y, data.z, data.w);
+
+			if (bAlbedo)
+			{
+				instance->ApplyChannelImage(data.x, data.y, data.z, data.w);
+			}
+			else if (bDonoised)
+			{
+				instance->ApplyDenoiser(data.x, data.y, data.z, data.w);
+			}
+			else
+			{
+				instance->ApplyRawImage(data.x, data.y, data.z, data.w);
+			}
+		}
+	};	
 
 	int width = cam->GetWidth();
 	int height = cam->GetHeight();
@@ -123,8 +140,8 @@ void PathTraceRenderer::RenderLoop()
 
 	// Make Job
 	TileRenderJob renderWork = TileRenderJob(&tileRenderDatas, this);
-	TileApplyDenoiseJob applyDenoiseWork = TileApplyDenoiseJob(&tileRenderDatas, this);
 	TileSampleChannelJob sampleChannelWork = TileSampleChannelJob(&tileRenderDatas, this);
+	ApplySampleChannelJob applyChannelWork = ApplySampleChannelJob(&tileRenderDatas, this);
 
 	// Sample Albedo, Normal Buffer for denoiser
 	tbb::parallel_for(size_t(0), tileRenderDatas.size(), sampleChannelWork);
@@ -132,10 +149,31 @@ void PathTraceRenderer::RenderLoop()
 	iteration = 0;
 	while (true)
 	{
-		tbb::parallel_for(size_t(0), tileRenderDatas.size(), renderWork);
-		iteration++;
 
-		if (m_showDenoiser)
+		if (m_resetFlag)
+		{
+			m_resetFlag = false;
+			tbb::parallel_for(size_t(0), tileRenderDatas.size(), sampleChannelWork);
+		}
+
+		bool bIterate = false;
+		bool bDenoised = false;
+		bool bAlbedo = false;
+		switch(m_displayChannel)
+		{
+			case DisplayChannel::RawImage: bIterate = true; break;
+			case DisplayChannel::Denoised: bIterate = true; bDenoised = true; break;
+			case DisplayChannel::Albedo: bAlbedo = true; break;
+			default: break;
+		}
+
+		if (bIterate)
+		{
+			tbb::parallel_for(size_t(0), tileRenderDatas.size(), renderWork);
+			iteration++;
+		}
+
+		if (bDenoised)
 		{
 			m_filterRef.execute();
 
@@ -143,9 +181,11 @@ void PathTraceRenderer::RenderLoop()
 			const char* errorMessage;
 			if (m_oidnDevice.getError(errorMessage) != oidn::Error::None)
 				std::cout << "Error: " << errorMessage << std::endl;
-
-			tbb::parallel_for(size_t(0), tileRenderDatas.size(), applyDenoiseWork);
 		}
+
+		applyChannelWork.bAlbedo = bAlbedo;
+		applyChannelWork.bDonoised = bDenoised;
+		tbb::parallel_for(size_t(0), tileRenderDatas.size(), applyChannelWork);
 	}
 }
 
@@ -168,6 +208,44 @@ void PathTraceRenderer::ApplyDenoiser(int x, int y, int width, int height)
 		}
 }
 
+void PathTraceRenderer::ApplyChannelImage(int x, int y, int width, int height)
+{
+	int filmWidth = cam->GetWidth();
+	int filmHeight = cam->GetHeight();
+	for (int i = 0; i < width; ++i)
+		for (int j = 0; j < height; ++j)
+		{
+			int nowX = x + i;
+			int nowY = y + j;
+
+			int currentPixPos = (nowX + nowY * filmWidth) * 3;
+			int sampleCountIndex = nowX + nowY * filmWidth;
+
+			m_imageBuffer[currentPixPos] = (int)(m_albedoBuffer[currentPixPos] * 255.0f);
+			m_imageBuffer[currentPixPos + 1] = (int)(m_albedoBuffer[currentPixPos + 1] * 255.0f);
+			m_imageBuffer[currentPixPos + 2] = (int)(m_albedoBuffer[currentPixPos + 2] * 255.0f);
+		}	
+}
+
+void PathTraceRenderer::ApplyRawImage(int x, int y, int width, int height)
+{
+	int filmWidth = cam->GetWidth();
+	int filmHeight = cam->GetHeight();
+	for (int i = 0; i < width; ++i)
+		for (int j = 0; j < height; ++j)
+		{
+			int nowX = x + i;
+			int nowY = y + j;
+
+			int currentPixPos = (nowX + nowY * filmWidth) * 3;
+			int sampleCountIndex = nowX + nowY * filmWidth;
+
+			m_imageBuffer[currentPixPos] = (int)(std::min(255.0f, m_colorBuffer[currentPixPos] * 255.0f));
+			m_imageBuffer[currentPixPos + 1] = (int)(std::min(255.0f, m_colorBuffer[currentPixPos + 1] * 255.0f));
+			m_imageBuffer[currentPixPos + 2] = (int)(std::min(255.0f, m_colorBuffer[currentPixPos + 2] * 255.0f));
+		}
+}
+
 
 void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int height)
 {
@@ -176,8 +254,10 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 
 	RenderData renderData = {};
 	renderData.camData = camData;
-	renderData.camDirection = glm::dvec3(0, 0, -1);
-	renderData.camPosition = glm::dvec3(0, 0, 10);
+	//renderData.camDirection = glm::dvec3(0, 0, -1);
+	//renderData.camPosition = glm::dvec3(0, 0, 10);
+	renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+	renderData.camPosition = cam->pos;	
 	renderData.scene = s;
 	renderData.sceneData = &m_sceneData;
 
@@ -236,8 +316,10 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
 
 	RenderData renderData = {};
 	renderData.camData = camData;
-	renderData.camDirection = glm::dvec3(0, 0, -1);
-	renderData.camPosition = glm::dvec3(0, 0, 10);
+	//renderData.camDirection = glm::dvec3(0, 0, -1);
+	//renderData.camPosition = glm::dvec3(0, 0, 10);
+	renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+	renderData.camPosition = cam->pos;
 	renderData.scene = s;
 	renderData.sceneData = &m_sceneData;
 
@@ -269,13 +351,6 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
 			m_colorBuffer[currentPixPos] = color_float.x;
 			m_colorBuffer[currentPixPos + 1] = color_float.y;
 			m_colorBuffer[currentPixPos + 2] = color_float.z;
-
-			if (!m_showDenoiser)
-			{
-				m_imageBuffer[currentPixPos] = (int)color.x;
-				m_imageBuffer[currentPixPos + 1] = (int)color.y;
-				m_imageBuffer[currentPixPos + 2] = (int)color.z;
-			}
 		}
 }
 
@@ -293,7 +368,8 @@ void PathTraceRenderer::ClearImage()
 	int whRes = width * height;
 	int rgbBufferSize = whRes * 3;
 	memset(m_imageBuffer, 0, rgbBufferSize);
-	memset(m_integrater, 0, rgbBufferSize);
-	memset(sampleCount, 0, whRes);
+	memset(m_integrater, 0, rgbBufferSize * sizeof(float));
+	memset(sampleCount, 0, whRes * sizeof(int));
 	iteration = 0;
+	m_resetFlag = true;
 }
