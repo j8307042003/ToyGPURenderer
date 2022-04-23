@@ -45,23 +45,32 @@ void Scene::AddShape(Shape * s, std::string mat_name) {
 }
 
 
-void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position, float scale) {
+void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position, glm::quat rotation, float scale) {
 	std::map<std::string,int>::iterator it = materialMap.find(mat_name);
 	if (it == materialMap.end()) {
 		std::cout << "Add Shape Failed. Due to add Shape with not existed material : " + mat_name << std::endl;
 		return;
 	}
 
+	int materialIndex = it->second;
+
     aiPropertyStore* props = aiCreatePropertyStore();
     std::cout << "Loading Model : " << modelFile << std::endl;
 
 	//auto scene = aiImportFile("dragon.obj",aiProcessPreset_TargetRealtime_MaxQuality);	
 	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
-	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_Fast, NULL, props);
+	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_Fast /* | aiProcess_FlipWindingOrder | aiProcess_FlipUVs*/, NULL, props);
 	if (scene) {
+		std::string directory = modelFile.substr(0, modelFile.find_last_of('/'));
 		//std::cout << "num of mNumMeshes : " << scene->mNumMeshes << std::endl;
 		for( unsigned int i = 0; i < scene->mNumMeshes; ++i) {
 			aiMesh* mesh = scene->mMeshes[i];
+			auto materialIdx = mesh->mMaterialIndex;
+			if (materialIdx >= 0) 
+			{
+				auto* p_material = scene->mMaterials[materialIdx];
+				materialIndex = CreateMaterial(p_material, directory);
+			}
 
 			meshes.emplace_back();
 			auto & meshData = meshes[meshes.size() - 1];
@@ -69,9 +78,10 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
 			glm::mat4 model = glm::mat4(1.0);
 			model = glm::translate(model, glm::vec3(position.x, position.y, position.z));
-			model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			//model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			//model = glm::rotate(model, glm::radians(45.0f), glm::vec3(.0f, 1.0f, 0.0f));
 			//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-			model = glm::scale(model, glm::vec3(scale));			
+			model = glm::scale(model * toMat4(rotation), glm::vec3(scale));
 
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++)
 			{
@@ -91,7 +101,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
 
                     auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][vertexId]) : aiVector3D();
-					uv[k] = Vec3(uvData.x, uvData.y, 0.0f);
+					uv[k] = Vec3(abs(uvData.x), abs(uvData.y), 0.0f);
 					vertex[k] = {m.x, m.y, m.z};
 					Normal[k] = {normal.x, normal.y, normal.z};
 				}
@@ -113,7 +123,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 			{
 				auto pTriangle = &meshData.triangles[i];
 				shapes.push_back(pTriangle);
-				shapeMaterialMap[pTriangle] = it->second;
+				shapeMaterialMap[pTriangle] = materialIndex;
 			}
 
 
@@ -151,6 +161,68 @@ void Scene::AddMaterial(std::string name, Material * m)
 	materialMap[name] = (int)Materials.size()-1;
 }
 
+int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
+{
+
+	PBMaterial* pbr_mat = new PBMaterial();
+	pbr_mat->metallic = 1.0f;
+	pbr_mat->roughness = 0.0f;
+	for (int i = 0; i < p_material->mNumProperties; ++i)
+	{
+		auto property = p_material->mProperties[i];
+		auto data = property->mData;
+		auto type = property->mType;
+
+		aiString* pStr = nullptr;
+		switch (type)
+		{
+		case aiPTI_Float: break;
+		case aiPTI_String: pStr = reinterpret_cast<aiString*>(property->mData); break;
+		}
+	}
+
+	if (p_material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+	{
+		aiString path;
+		p_material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
+		printf("Diffuse Texture: %s\n", path.C_Str());
+		auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()));
+		pbr_mat->albedo_texture = tex;
+	}
+
+	if (p_material->GetTextureCount(aiTextureType_SPECULAR) > 0)
+	{
+		aiString path;
+		p_material->GetTexture(aiTextureType_SPECULAR, 0, &path);
+		printf("SPECULAR Texture: %s\n", path.C_Str());
+	}
+
+	if (p_material->GetTextureCount(aiTextureType_REFLECTION) > 0)
+	{
+		aiString path;
+		p_material->GetTexture(aiTextureType_REFLECTION, 0, &path);
+		printf("REFLECTION Texture: %s\n", path.C_Str());
+	}
+
+	if (p_material->GetTextureCount(aiTextureType_METALNESS) > 0)
+	{
+		aiString path;
+		p_material->GetTexture(aiTextureType_METALNESS, 0, &path);
+		printf("METALNESS Texture: %s\n", path.C_Str());
+	}
+
+	if (p_material->GetTextureCount(aiTextureType_BASE_COLOR) > 0)
+	{
+		aiString path;
+		p_material->GetTexture(aiTextureType_BASE_COLOR, 0, &path);
+		printf("Base Color Texture: %s\n", path.C_Str());
+	}
+
+	AddMaterial(std::string(p_material->GetName().C_Str()), pbr_mat);
+	return Materials.size() - 1;
+}
+
+
 
 int Scene::GetShapeMaterialIdx(Shape * s) const {
 	auto it = shapeMaterialMap.find(s);
@@ -176,7 +248,7 @@ Texture* Scene::AddTexture(std::string texId, std::string path)
 	std::cout << "Loading Texture : " << path << std::endl;
 
 	Texture * tex = new Texture();
-	bool bLoaded = LoadTexture(path, *tex);
+	if(!LoadTexture(path, *tex)) return nullptr;
 	textures.push_back(tex);
 	textureMap[texId] = textures.size()-1;
 	return tex;
@@ -353,7 +425,7 @@ bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f &
 {
 	const int kTraceStackDepth = 128;
 	int TraceStackData[kTraceStackDepth];
-	bool bHitAny = BHV_Raycast(sceneData, bvhtree, ray, 0.1f, 10000.0f, intersect.point, intersect.normal, intersect.uv, intersect.shapeIdx, kTraceStackDepth, &TraceStackData[0]);
+	bool bHitAny = BHV_Raycast(sceneData, bvhtree, ray, t_min, t_max, intersect.point, intersect.normal, intersect.uv, intersect.shapeIdx, kTraceStackDepth, &TraceStackData[0]);
 
 	return bHitAny;
 }

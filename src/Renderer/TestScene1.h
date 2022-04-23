@@ -37,7 +37,7 @@ Scene* make_test_scene1() {
 	//scene->AddMaterial("CWall", new material({252.0f / 255.0f, 156.0f / 255.0f, 0.0f}, {0, 0, 0}, 0));	 //Orig	
 
 	{
-		auto tex = scene->AddTexture("hexTex", "hex.jpeg");
+		//auto tex = scene->AddTexture("hexTex", "hex.jpeg");
 		PBMaterial * pMat = new PBMaterial();
 		//pMat->color = {252.0f / 255.0f, 156.0f / 255.0f, 0.0f};
 		//pMat->albedo_texture = tex;
@@ -46,7 +46,7 @@ Scene* make_test_scene1() {
 
 
 	//Right Wall
-	
+	/*
 	scene->AddShape(new Plane(
 		{wallOffsetX,  wallHeight, wallWidth},	
 		{wallOffsetX,  wallHeight, -wallWidth},
@@ -78,26 +78,26 @@ Scene* make_test_scene1() {
 		{ wallOffsetX,   wallHeight, -wallWidth},	
 		{ wallOffsetX,  -wallHeight, -wallWidth}
 	), "EWall");
-	
+	*/
 
 	//Floor
-	scene->AddShape(new Plane(
-		{-wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/, -wallWidth}, 
-		{-wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/,  wallWidth}, 
-		{ wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/, -wallWidth}, 
-		{ wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/,  wallWidth}
-	), "FWall");		
+	//scene->AddShape(new Plane(
+	//	{-wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/, -wallWidth}, 
+	//	{-wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/,  wallWidth}, 
+	//	{ wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/, -wallWidth}, 
+	//	{ wallOffsetX,  -2.0f - 1e-1 /*-wallHeight*/,  wallWidth}
+	//), "FWall");		
 
 	
 	//Ceil
-	
+	/*
 	scene->AddShape(new Plane(
 		{-wallOffsetX,  wallHeight,  wallWidth}, 
 		{-wallOffsetX,  wallHeight, -wallWidth}, 
 		{ wallOffsetX,  wallHeight,  wallWidth},
 		{ wallOffsetX,  wallHeight, -wallWidth}
 	), "CWall");
-	
+	*/
 	
 	
 
@@ -111,7 +111,7 @@ Scene* make_test_scene1() {
 	scene->AddMaterial("s5", new material({.8, .8, .8}, {0, 0, 0}, 0.3));	
 	scene->AddMaterial("s6", new material({.8, .8, .8}, {0, 0, 0}, 0.8, .0f));	
 	scene->AddMaterial("orange", new material({224.0 / 255.0, 105 / 255.0, 13 / 255.0}, {0, 0, 0}, 0.8, .0f));	
-	
+/*	
 	scene->AddShape(new Sphere({-2.5, 0, -wallWidth / 1.2f}, 2), "s1");	
 	scene->AddShape(new Sphere({ 1, 0, -wallWidth / 1.2f}, 2), "s2");	
 
@@ -140,7 +140,7 @@ Scene* make_test_scene1() {
 	scene->AddShape(new Sphere({ -4,  -1 + 3.5, -10.0f}, .2f), "s6");	
 	scene->AddShape(new Sphere({ -4,  -1 + 3.9, -10.0f}, .2f), "s6");	
 	scene->AddShape(new Sphere({ -4,  -1 + 4.1, -10.0f}, .2f), "s6");	
-
+*/
 	Vec3 center = { 0,  -1 + -1, -8.0f};
 	int subSphereCount = 4;
 	scene->AddShape(new Sphere(center + Vec3{ 0, 0.5f,0 }, .2f), "s6");
@@ -161,7 +161,7 @@ Scene* make_test_scene1() {
 	//scene->AddPointLight(glm::dvec3(center.x, center.y, center.z), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 0.5f);
 	//scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 2.0f);
 
-	//scene->AddPointLight(glm::dvec3(2.5f, 3.0f,  2.5f), glm::vec3(.9, .9, .9) * 0.8f, 1.0f);
+	//scene->AddPointLight(glm::dvec3(2.5f, 3.0f,  -2.5f), glm::vec3(.9, .9, .9) * 0.4f, 1.0f);
 	scene->AddPointLight(glm::dvec3(2.5f, 100.0f,  2.5f), glm::vec3(.9, .9, .9) * 0.8f, 1.0f);
 
 
@@ -170,13 +170,15 @@ Scene* make_test_scene1() {
 
 	//scene->AddModel("bunny.obj", "s1", {0.0f, 0.0f, -10.0f}, 1.0f);
 	//scene->AddModel("bunny.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 1.5f);
-	//scene->AddModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb", "HexMat", {0.0f, 0.0f, 2.0f}, 1.5f);
+	//scene->AddModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb", "HexMat", { 0.0f, 0.0f, 2.0f }, 1.5f);
+	scene->AddModel("DamagedHelmet/glTF/DamagedHelmet.gltf", "HexMat", { 0.0f, 0.0f, 2.0f }, glm::quat({ glm::radians(90.0f), glm::radians(45.0f), glm::radians(0.0f) }), 1.5f);
 	//scene->AddModel("teapot/teapot.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 0.01f);
 	//scene->AddModel("mitsuba/mitsuba.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 1.0f);
 	//scene->AddModel("Suzanne/glTF/Suzanne.gltf", "HexMat", {0.0f, 0.0f, 2.0f}, 1.0f);
-	//scene->AddModel("Sponza/glTF/Sponza.gltf", "HexMat", {0.0f, -10.0f, 50.0f}, 0.1f);
+	//scene->AddModel("Sponza/glTF/Sponza.gltf", "HexMat", { 0.0f, -10.0f, 50.0f }, glm::quat({glm::radians(0.0f), glm::radians(90.0f), glm::radians(0.0f) }), 0.1f);
 	//scene->AddModel("hairball.obj", "s1", {0.0f, 0.0f, 2.0f}, 1.0f);
-
+	//scene->AddModel("DragonAttenuation/glTF/DragonAttenuation.gltf", "HexMat", { 0.0f, -1.0f, 2.0f }, glm::quat({90.0f, 45.0f, 0.0f}), 0.1f);
+	
 
 	Texture tex = Texture();
 	tex.width = 2;
@@ -189,9 +191,9 @@ Scene* make_test_scene1() {
     scene->AddTexture("VirtualWhite", tex);
 
 
-	scene->AddTexture("White", "whiteHex.jpeg");
-	scene->AddTexture("White", "whiteTex.jpeg");
-	scene->AddTexture("Tex", "hex.jpeg");
+	//scene->AddTexture("White", "whiteHex.jpeg");
+	//scene->AddTexture("White", "whiteTex.jpeg");
+	//scene->AddTexture("Tex", "hex.jpeg");
 	//scene->AddTexture("Tex", "wall.jpg");
 	//scene->AddTexture("Tex", "butterfly.jpg");
 

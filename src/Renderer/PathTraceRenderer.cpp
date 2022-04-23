@@ -97,7 +97,6 @@ void PathTraceRenderer::RenderLoop()
 		void operator()(int index) const
 		{
 			auto data = (*tileDatas)[index];
-			instance->ApplyChannelImage(data.x, data.y, data.z, data.w);
 
 			if (bAlbedo)
 			{
@@ -339,6 +338,7 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
 			auto result = renderMethod.Sample(renderData, nowX, nowY, glm::vec2(filmWidth + (SysRandom::Random() - 0.5f) * 2.0f, filmHeight + (SysRandom::Random() - 0.5f) * 2.0f));
+			result = glm::clamp(result, glm::vec3(0.0f), glm::vec3(1.0f));
 
 			m_integrater[currentPixPos] += result.x;
 			m_integrater[currentPixPos + 1] += result.y;

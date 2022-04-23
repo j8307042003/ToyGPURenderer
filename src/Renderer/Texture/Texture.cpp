@@ -27,6 +27,9 @@ bool LoadTexture(std::string path, Texture & tex)
 {
 	int width, height, channels;	
 	unsigned char * imageFileData = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+
+	if (imageFileData == nullptr) return false;
+
 	tex.width = width;
 	tex.height = height;
 	tex.pixels_data = std::vector<glm::vec4>(width * height);

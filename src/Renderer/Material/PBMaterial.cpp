@@ -52,6 +52,9 @@ inline glm::dvec4 make_GGXRandom(glm::dvec3 dir, glm::dvec2 polarSet) {
         theta1); 	
 }
 
+
+
+
 inline bool DisneyBRDF(const DisneyBRDFParam & param, const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered)
 {
 	float cosTheta = glm::dot(surface.normal, -ray.direction);
@@ -66,9 +69,17 @@ inline bool DisneyBRDF(const DisneyBRDFParam & param, const Ray3f & ray, const S
 	const glm::vec3 reflectDirection = bIsSpecular ? reflected : surface.normal;
 	const glm::vec3 atten = bIsSpecular ? glm::lerp(glm::vec3(1.0), param.color, param.metallic) : param.color;
 
+
+	/* BRDF
+
+	*/ 
+
+
+
 	glm::dvec2 polarSet = random_polar(rayRoughness);
 	glm::dvec4 result = make_GGXRandom(reflectDirection, polarSet);
-    glm::dvec3 outDirection = glm::dvec3(result) + (surface.normal * glm::dvec3(0.01));
+    glm::dvec3 outDirection = glm::normalize(glm::dvec3(result) + surface.normal);
+
 
     scattered = {surface.position, outDirection};
     hitInfo.emission = param.emission;

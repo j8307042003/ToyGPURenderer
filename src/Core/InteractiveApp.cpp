@@ -175,7 +175,7 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 
 	float posX = 0.0f;
 	float posZ = 0.0f;
-	const float MoveSpeed = 2.0f;
+	const float MoveSpeed = 20.0f;
 
 	if (m_key_table[GLFW_KEY_W] == true)
 	{

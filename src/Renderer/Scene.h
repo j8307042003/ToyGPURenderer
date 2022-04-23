@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "assimp/scene.h"
 #include "math/Vec3.h"
 #include "shape/Shape.h"
 #include "Renderer/Material.h"
@@ -40,7 +41,7 @@ public:
 
 	void AddShape(Shape * s);
 	void AddShape(Shape * s, std::string mat_name);
-	void AddModel(std::string modelFile, std::string mat_name, Vec3 position = Vec3(), float scale = 1);
+	void AddModel(std::string modelFile, std::string mat_name, Vec3 position = Vec3(), glm::quat rotation = glm::quat(), float scale = 1);
 	void AddMaterial(material * m);
 	void AddMaterial(std::string name, material * m);
 
@@ -54,6 +55,9 @@ public:
 
 	void BuildTree();
 	bool RayCastTest(const Ray & ray, Vec3 & hitPos, Vec3 & direction, int & idx)const;
+
+private:
+	int CreateMaterial(aiMaterial * p_material, const std::string & filePath);
 };
 
 

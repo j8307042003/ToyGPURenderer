@@ -21,6 +21,8 @@ struct DisneyBRDFParam
 	glm::dvec3 normal;
 };
 
+
+
 inline bool DisneyBRDF(const DisneyBRDFParam & param, const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered);
 
 
@@ -40,6 +42,7 @@ public:
 	glm::vec3 color = glm::vec3(1.0);
 	glm::vec3 emission = glm::vec3(0.0);
 	Texture * albedo_texture = nullptr;
+	Texture * metallic_texture = nullptr;
 
 
 	std::function<DisneyBRDFParam(const SurfaceData & surface, const PBMaterial &)> shader;
