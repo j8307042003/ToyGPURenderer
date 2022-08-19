@@ -19,7 +19,7 @@ void PathTraceRenderer::StartRender()
     int height = cam->GetHeight();
 	int whSize = width * height;
 	long long rgbBufferSize = (long long)width * height * 3;
-	m_imageBuffer = new char[rgbBufferSize]();
+	m_imageBuffer = new unsigned char[rgbBufferSize]();
 	m_integrater = new float[rgbBufferSize]();
 	sampleCount = new int[whSize]();
 
@@ -42,6 +42,7 @@ void PathTraceRenderer::StartRender()
 
 	MakeSceneData(*s, m_sceneData);
 	bvh_buildTree1(&m_sceneData, m_bvh);
+	m_rendering = true;
 	m_renderThread = std::thread(&PathTraceRenderer::RenderLoop, this);
 }
 
@@ -90,6 +91,7 @@ void PathTraceRenderer::RenderLoop()
 	public:
 		bool bAlbedo = false;
 		bool bDonoised = false;
+		bool bNormal = false;
 
 	public:
 		ApplySampleChannelJob(std::vector<glm::ivec4>* tileJobs, PathTraceRenderer* instance) : tileDatas(tileJobs), instance(instance) {}
@@ -100,7 +102,11 @@ void PathTraceRenderer::RenderLoop()
 
 			if (bAlbedo)
 			{
-				instance->ApplyChannelImage(data.x, data.y, data.z, data.w);
+				instance->ApplyAlbedoChannelImage(data.x, data.y, data.z, data.w);
+			}
+			else if (bNormal)
+			{
+				instance->ApplyNormalChannelImage(data.x, data.y, data.z, data.w);
 			}
 			else if (bDonoised)
 			{
@@ -146,7 +152,7 @@ void PathTraceRenderer::RenderLoop()
 	tbb::parallel_for(size_t(0), tileRenderDatas.size(), sampleChannelWork);
 
 	iteration = 0;
-	while (true)
+	while (!bLimitIteration || (bLimitIteration && maxIteration > iteration))
 	{
 
 		if (m_resetFlag)
@@ -158,11 +164,14 @@ void PathTraceRenderer::RenderLoop()
 		bool bIterate = false;
 		bool bDenoised = false;
 		bool bAlbedo = false;
+		bool bNormal = false;
+
 		switch(m_displayChannel)
 		{
 			case DisplayChannel::RawImage: bIterate = true; break;
 			case DisplayChannel::Denoised: bIterate = true; bDenoised = true; break;
 			case DisplayChannel::Albedo: bAlbedo = true; break;
+			case DisplayChannel::Normal: bNormal = true; break;
 			default: break;
 		}
 
@@ -184,8 +193,12 @@ void PathTraceRenderer::RenderLoop()
 
 		applyChannelWork.bAlbedo = bAlbedo;
 		applyChannelWork.bDonoised = bDenoised;
+		applyChannelWork.bNormal = bNormal;
 		tbb::parallel_for(size_t(0), tileRenderDatas.size(), applyChannelWork);
+		std::cout << "Complete Iteration : " << iteration << std::endl;
 	}
+
+	m_rendering = false;
 }
 
 void PathTraceRenderer::ApplyDenoiser(int x, int y, int width, int height)
@@ -207,7 +220,7 @@ void PathTraceRenderer::ApplyDenoiser(int x, int y, int width, int height)
 		}
 }
 
-void PathTraceRenderer::ApplyChannelImage(int x, int y, int width, int height)
+void PathTraceRenderer::ApplyAlbedoChannelImage(int x, int y, int width, int height)
 {
 	int filmWidth = cam->GetWidth();
 	int filmHeight = cam->GetHeight();
@@ -226,6 +239,25 @@ void PathTraceRenderer::ApplyChannelImage(int x, int y, int width, int height)
 		}	
 }
 
+void PathTraceRenderer::ApplyNormalChannelImage(int x, int y, int width, int height)
+{
+	int filmWidth = cam->GetWidth();
+	int filmHeight = cam->GetHeight();
+	for (int i = 0; i < width; ++i)
+		for (int j = 0; j < height; ++j)
+		{
+			int nowX = x + i;
+			int nowY = y + j;
+
+			int currentPixPos = (nowX + nowY * filmWidth) * 3;
+			int sampleCountIndex = nowX + nowY * filmWidth;
+
+			m_imageBuffer[currentPixPos] = (int)(m_normalBuffer[currentPixPos] * 255.0f);
+			m_imageBuffer[currentPixPos + 1] = (int)(m_normalBuffer[currentPixPos + 1] * 255.0f);
+			m_imageBuffer[currentPixPos + 2] = (int)(m_normalBuffer[currentPixPos + 2] * 255.0f);
+		}	
+}
+
 void PathTraceRenderer::ApplyRawImage(int x, int y, int width, int height)
 {
 	int filmWidth = cam->GetWidth();
@@ -239,9 +271,9 @@ void PathTraceRenderer::ApplyRawImage(int x, int y, int width, int height)
 			int currentPixPos = (nowX + nowY * filmWidth) * 3;
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
-			m_imageBuffer[currentPixPos] = (int)(std::min(255.0f, m_colorBuffer[currentPixPos] * 255.0f));
-			m_imageBuffer[currentPixPos + 1] = (int)(std::min(255.0f, m_colorBuffer[currentPixPos + 1] * 255.0f));
-			m_imageBuffer[currentPixPos + 2] = (int)(std::min(255.0f, m_colorBuffer[currentPixPos + 2] * 255.0f));
+			m_imageBuffer[currentPixPos] = (uint8_t)(std::max(0.0f, std::min(255.0f, m_colorBuffer[currentPixPos] * 255.0f)));
+			m_imageBuffer[currentPixPos + 1] = (uint8_t)(std::max(0.0f, std::min(255.0f, m_colorBuffer[currentPixPos + 1] * 255.0f)));
+			m_imageBuffer[currentPixPos + 2] = (uint8_t)(std::max(0.0f, std::min(255.0f, m_colorBuffer[currentPixPos + 2] * 255.0f)));
 		}
 }
 
@@ -249,8 +281,6 @@ void PathTraceRenderer::ApplyRawImage(int x, int y, int width, int height)
 void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int height)
 {
 	auto camData = DefaultCameraData();
-	glm::dvec3 camPos = glm::dvec3(0.0f, 0.0f, 0.0f);
-
 	RenderData renderData = {};
 	renderData.camData = camData;
 	//renderData.camDirection = glm::dvec3(0, 0, -1);
@@ -281,28 +311,43 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			HitInfo hitInfo;
 			glm::dvec3 rayHitPosition = {};
 			glm::dvec3 rayHitNormal = {};
+			uv = {};
 			int shapeIndex = -1;
 			//bool bHitAny = RayTrace(*renderData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
 			bool bHitAny = BHV_Raycast(renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num / 2, &bvh_stack[0]);
-			
+
 			glm::vec3 albedo = {};
 			if (bHitAny)
 			{
 				auto mat = GetShapeMaterial(*renderData.sceneData, shapeIndex);
-                SurfaceData surface = {};
-                surface.position = rayHitPosition;
-                surface.normal = rayHitNormal;
-                surface.uv = uv;
+				SurfaceData surface = {};
+				surface.position = rayHitPosition;
+				surface.normal = rayHitNormal;
+				surface.uv = uv;
 				albedo = mat->Albedo(surface);
+
+				/*
+				auto shapePtr = GetShapeData(*renderData.sceneData, shapeIndex);
+				if (shapePtr != nullptr && shapePtr.type == ShapeType::Triangle)
+				{
+					auto primitiveIdx = shapePtr->primitiveId;	
+					auto triangleData = sceneData.shapesData.triangles[primitiveIdx];
+					renderData.sceneData.shapesData.positions[triangleData.x]
+				}
+				*/
 			}
 
 			m_albedoBuffer[currentPixPos] = albedo.x;
 			m_albedoBuffer[currentPixPos + 1] = albedo.y;
-			m_albedoBuffer[currentPixPos + 2] = albedo.z;		
-			
-			m_normalBuffer[currentPixPos] = (float) rayHitNormal.x;
-			m_normalBuffer[currentPixPos + 1] = (float) rayHitNormal.y;
-			m_normalBuffer[currentPixPos + 2] = (float) rayHitNormal.z;
+			m_albedoBuffer[currentPixPos + 2] = albedo.z;
+
+			m_normalBuffer[currentPixPos] = (float) rayHitNormal.x * 0.5f + 0.5f;
+			m_normalBuffer[currentPixPos + 1] = (float) rayHitNormal.y * 0.5f + 0.5f;
+			m_normalBuffer[currentPixPos + 2] = (float) rayHitNormal.z * 0.5f + 0.5f;			
+
+			//m_normalBuffer[currentPixPos] = uv.x;//(float) rayHitNormal.x;
+			//m_normalBuffer[currentPixPos + 1] = uv.y;//(float) rayHitNormal.y;
+			//m_normalBuffer[currentPixPos + 2] = uv.x < 0.0f || uv.y < 0.0f ? 1.0f : 0.0f;//(float) rayHitNormal.z;
 		}
 }
 
@@ -338,7 +383,7 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
 			auto result = renderMethod.Sample(renderData, nowX, nowY, glm::vec2(filmWidth + (SysRandom::Random() - 0.5f) * 2.0f, filmHeight + (SysRandom::Random() - 0.5f) * 2.0f));
-			result = glm::clamp(result, glm::vec3(0.0f), glm::vec3(1.0f));
+			result = glm::clamp(result, glm::vec3(0.0f), glm::vec3(0.99f));
 
 			m_integrater[currentPixPos] += result.x;
 			m_integrater[currentPixPos + 1] += result.y;

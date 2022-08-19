@@ -22,6 +22,8 @@ DisneyBRDFParam DefaultBRDFShader
 {
 
     glm::vec3 color = material.color * (material.albedo_texture != nullptr ? glm::vec3(SampleTex(*material.albedo_texture, surface.uv)) : glm::vec3(1.0f));
+	
+	float metallic = material.metallic_texture != nullptr ? glm::vec3(SampleTex(*material.metallic_texture, surface.uv)).x : material.metallic;
 	//color = glm::vec3(surface.uv.x, surface.uv.y, 0.0f);
 	//color = glm::vec3(surface.uv.x, surface.uv.y, 1 - surface.uv.x - surface.uv.y);
 	//color = material.color;
@@ -32,7 +34,7 @@ DisneyBRDFParam DefaultBRDFShader
 
     DisneyBRDFParam param;
 	{
-        param.metallic = material.metallic;
+        param.metallic = metallic;
         param.roughness = material.roughness;
         param.color = color;
         param.emission = material.emission;

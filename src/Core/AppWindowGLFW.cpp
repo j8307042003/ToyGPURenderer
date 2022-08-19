@@ -269,6 +269,16 @@ void AppWindowGLFW::Update()
 }
 
 
+void AppWindowGLFW::GetMousePos(float & x, float & y)
+{
+    double xpos, ypos;
+    glfwGetCursorPos(m_window, &xpos, &ypos);
+
+    x = xpos;
+    y = ypos;
+}
+
+
 void AppWindowGLFW::mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
     //if(action == GLFW_PRESS) {
     //    double xpos, ypos;
@@ -279,14 +289,23 @@ void AppWindowGLFW::mouse_button_callback(GLFWwindow* window, int button, int ac
     //    std::cout << "-----------------" << std::endl;
     //}
 
-	/*
     if (action == GLFW_PRESS){
-        glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
-        mouse_keys[button] = true;
+		MousePressedEvent event = {};
+		event.mouseCode = button;
+		if (m_eventCallback != nullptr) 
+		{
+			m_eventCallback(event);
+		}
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		MouseReleaseEvent event = {};
+		event.mouseCode = button;
+		if (m_eventCallback != nullptr) 
+		{
+			m_eventCallback(event);
+		}
     }
-    else if (action == GLFW_RELEASE)
-        mouse_keys[button] = false;
-	*/
 
 
 }

@@ -7,6 +7,7 @@
 #include "../Common/common.h"
 #include <glm/gtx/compatibility.hpp>
 #include "Shader/Shader.h"
+#include "../Shading/Model/Disney.h"
 
 inline glm::dvec2 random_polar(float roughness) {
 	float r1 = SysRandom::Random();
@@ -55,38 +56,56 @@ inline glm::dvec4 make_GGXRandom(glm::dvec3 dir, glm::dvec2 polarSet) {
 
 
 
-inline bool DisneyBRDF(const DisneyBRDFParam & param, const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered)
+inline bool DisneyBRDF(const DisneyBRDFParam & param, const Ray3f & ray, const glm::dvec3 & wi, const SurfaceData & surface, /*HitInfo & hitInfo,*/ Color & attenuation /*, Ray3f & scattered*/)
 {
 	float cosTheta = glm::dot(surface.normal, -ray.direction);
 	float reflective = Fresnel(1.0f, 1.4f, cosTheta);
 
-	bool bIsSpecular = SysRandom::Random() < (param.metallic + reflective);
-	//bIsSpecular = false;
+	//bool bIsSpecular = SysRandom::Random() < (param.metallic /*+ reflective*/);
+	// glm::dvec3 reflected = glm::reflect(ray.direction, surface.normal);
 
-	glm::dvec3 reflected = glm::reflect(ray.direction, surface.normal);
-
-	const float rayRoughness = bIsSpecular ? param.roughness : 1.0f;
-	const glm::vec3 reflectDirection = bIsSpecular ? reflected : surface.normal;
-	const glm::vec3 atten = bIsSpecular ? glm::lerp(glm::vec3(1.0), param.color, param.metallic) : param.color;
+	// const float rayRoughness = bIsSpecular ? param.roughness : 1.0f;
+	// const glm::vec3 reflectDirection = bIsSpecular ? reflected : surface.normal;
+	// const glm::vec3 atten = bIsSpecular ? glm::lerp(glm::vec3(1.0), param.color, param.metallic) * param.specularScale : param.color;
 
 
 	/* BRDF
 
 	*/ 
 
+	glm::vec3 reflectance = glm::vec3(0);
+
+	auto wm = glm::normalize(-ray.direction + wi);
+
+	float dotNL = glm::dot(surface.normal, -ray.direction);
+	float dotNV = glm::dot(surface.normal, wi);
+    float diffuseWeight = (1.0f - param.metallic);
+ 	float diffuse = EvalDisneyDiffuse(param, dotNL, dotNV);
+
+	auto specularFactor = reflective/*EvalDisneySpecular(param, wm, wi, -ray.direction)*/;
+	auto specular = glm::lerp(param.specularTint, param.color, param.metallic) * specularFactor;
 
 
+	reflectance += diffuse * param.color * diffuseWeight;
+	reflectance += specular;
+
+
+	/*
 	glm::dvec2 polarSet = random_polar(rayRoughness);
-	glm::dvec4 result = make_GGXRandom(reflectDirection, polarSet);
-    glm::dvec3 outDirection = glm::normalize(glm::dvec3(result) + surface.normal);
+	glm::dvec3 result = glm::dvec3(make_GGXRandom(reflectDirection, polarSet));
+	const float EPSILON = 0.0000001f;
+	if(glm::dot(result, result) < EPSILON * EPSILON) result = reflectDirection;
+    glm::dvec3 outDirection = glm::normalize(result);
+    outDirection = outDirection.x != outDirection.x ? reflectDirection : outDirection;
 
 
     scattered = {surface.position, outDirection};
     hitInfo.emission = param.emission;
 	hitInfo.wi = bIsSpecular ? outDirection : surface.normal;
 	hitInfo.nextEvent = bIsSpecular ? HITEVENT::Specular : HITEVENT::Diffuse;
+	*/
 
-	attenuation.value = atten;
+	attenuation.value = reflectance;
 
 	return true;
 }
@@ -106,6 +125,7 @@ glm::vec3 PBMaterial::Albedo(const SurfaceData & surface) const
         param.color = color;
         param.emission = emission;
         param.normal = surface.normal;
+        param.specularScale = specularScale;
     };
     if (shader) param = shader(surface, *this);
 
@@ -113,7 +133,7 @@ glm::vec3 PBMaterial::Albedo(const SurfaceData & surface) const
 }
 
 
-bool PBMaterial::scatter(const Ray3f & ray, const SurfaceData & surface, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered) const
+bool PBMaterial::scatter(const Ray3f & ray, const glm::dvec3 & wi, const SurfaceData & surface, /*HitInfo & hitInfo,*/ Color & attenuation/*, Ray3f & scattered*/) const
 {
     DisneyBRDFParam param;
     {
@@ -123,12 +143,71 @@ bool PBMaterial::scatter(const Ray3f & ray, const SurfaceData & surface, HitInfo
         param.color = color;
         param.emission = emission;
         param.normal = surface.normal;
+        param.specularScale = specularScale;
     };
     if (shader) param = shader(surface, *this);
     Color c;
     //attenuation.value = color;
-	return DisneyBRDF(param, ray, surface, hitInfo, attenuation, scattered);
+	return DisneyBRDF(param, ray, wi, surface, /*hitInfo,*/ attenuation/*, scattered*/);
 }
 
+DisneyBRDFParam PBMaterial::MakeParam(const SurfaceData& surface) const
+{
+    DisneyBRDFParam param;
+    {
+        param.ior = ior;
+        param.metallic = metallic;
+        param.roughness = roughness;
+        param.color = color;
+        param.emission = emission;
+        param.normal = surface.normal;
+        param.specularScale = specularScale;
+		param.specularTint = glm::lerp(glm::vec3(1.0f), param.color, metallic);
+    };
+
+    if (shader) param = shader(surface, *this);
+
+    return param;
+}
+
+bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, BsdfSample & bsdfSample) const
+{
+	DisneyBRDFParam param = MakeParam(surface);
+	float cosTheta = glm::dot(surface.normal, -ray.direction);
+	float reflective = Fresnel(1.0f, 1.4f, cosTheta);
+
+	bool bIsSpecular = SysRandom::Random() < (param.metallic /*+ reflective*/);
+	//bIsSpecular = false;
+
+	glm::dvec3 reflected = glm::reflect(ray.direction, surface.normal);
+
+	const float rayRoughness = bIsSpecular ? param.roughness : 1.0f;
+	const glm::vec3 reflectDirection = bIsSpecular ? reflected : surface.normal;
+	const glm::vec3 atten = bIsSpecular ? glm::lerp(glm::vec3(1.0), param.color, param.metallic) * param.specularScale : param.color;
+
+
+	/* BRDF
+
+	*/ 
+	glm::dvec2 polarSet = random_polar(rayRoughness);
+	glm::dvec3 result = glm::dvec3(make_GGXRandom(reflectDirection, polarSet));
+	const float EPSILON = 0.0000001f;
+	if(glm::dot(result, result) < EPSILON * EPSILON) result = reflectDirection;
+    glm::dvec3 outDirection = glm::normalize(result);
+    outDirection = outDirection.x != outDirection.x ? reflectDirection : outDirection;
+
+
+	SampleDisneyBsdf(surface, param, outDirection, -ray.direction, bsdfSample);
+	bsdfSample.reflectance = bIsSpecular ? bsdfSample.reflectance : atten;
+	bsdfSample.wi = outDirection; //bIsSpecular ? outDirection : surface.normal;
+
+    // scattered = {surface.position, outDirection};
+    // hitInfo.emission = param.emission;
+	// hitInfo.wi = bsdfSample.reflectance; //bIsSpecular ? outDirection : surface.normal;
+	// hitInfo.nextEvent = bIsSpecular ? HITEVENT::Specular : HITEVENT::Diffuse;
+	// attenuation.value = atten;	
+
+	return true;
+}
 
  

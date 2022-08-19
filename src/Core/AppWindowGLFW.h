@@ -15,6 +15,7 @@ public:
 	virtual ~AppWindowGLFW() {}
 	virtual int getWidth() override { return m_width;}
 	virtual int getHeight() override { return m_height;}
+	virtual void GetMousePos(float & x, float & y) override;
 	virtual void SetSourceImage(int width, int height, char* buffer, ColorFormat format) override;
 	virtual void SetEventCallback(const EventCallback & callback) override;
     virtual void* GetWindowHandle() override {return m_window;};

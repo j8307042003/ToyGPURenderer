@@ -11,11 +11,13 @@
 #include "Texture/Texture.h"
 #include "BVH/BVH.h"
 #include "Light/PointLight.h"
+#include "Light/DirectionalLight.h"
 #include "Light/ILight.h"
 #include <vector>
 #include <map>
 #include <string>
 #include "Random/SysRandom.h"
+#include "Shading/BsdfSample.h"
 
 struct Mesh
 {
@@ -48,7 +50,9 @@ public:
 	void AddMaterial(std::string name, Material * m);
 
 	void AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius = 0);
+	void AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance);
 	Texture* AddTexture(std::string texId, std::string path);
+	Texture* AddTexture(std::string texId, std::string path, TextureWrapping wrapping);
 	Texture* AddTexture(std::string texId, const Texture & texture);
 
 	int GetShapeMaterialIdx(Shape * s) const;
@@ -80,6 +84,11 @@ inline Material* GetMaterial(const SceneData & sceneData, int matIdx)
 	return sceneData.materials[matIdx];
 }
 
+//inline ShapeData* GetShapeData(const SceneData & sceneData, int shapeIdx)
+//{
+//	return (sceneData.shapes.size() <= shapeIdx) ? nullptr : &sceneData.shapes.data()[shapeIdx];
+//}
+
 inline int GetShapeMatIdx(const SceneData & sceneData, int shapeIdx)
 {
 	return sceneData.shapes[shapeIdx].matIdx;
@@ -110,7 +119,9 @@ struct SceneIntersectData
 
 class BVHTree;
 bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, SceneIntersectData & intersect);
+bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, int* stackBuffer, int stackSize, SceneIntersectData & intersect);
 
-bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered);
+bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const glm::vec3& wi, const SceneIntersectData & intersect, Color & attenuation);
+bool EvalMaterialBRDF(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, BsdfSample & bsdfSample);
 
 #endif

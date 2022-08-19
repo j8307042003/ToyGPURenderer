@@ -58,5 +58,49 @@ inline bool IntersectTriangle(const glm::dvec3 & v0, const glm::dvec3 & v1, cons
   hit = ray.origin + t * ray.direction;
   uv = {u, v};
   return true;
-
 }
+
+/*
+void IntersectSIMD(const glm::dvec3& v1, const glm::dvec3& v2, const glm::dvec3& v3)
+{
+	const float EPSILON = 1e-9f;
+	__m128 dx4 = _mm_set_ps1(0);
+	__m128 dy4 = _mm_set_ps1(0);
+	__m128 dz4 = _mm_set_ps1(0);
+	__m128 Py4 = _mm_set_ps1(0);
+	__m128 ox4 = _mm_set_ps1(0);
+	__m128 oy4 = _mm_set_ps1(0);
+	__m128 oz4 = _mm_set_ps1(0);
+	__m128 t4 = _mm_set_ps1(0);
+	__m128 EPS4 = _mm_set_ps1(EPSILON);
+	__m128 MINUSEPS4 = _mm_set_ps1(-EPSILON);
+	__m128 ONE4 = _mm_set_ps1(1.0f);
+	__m128 e1x4 = _mm_set_ps1(v2.x - v1.x);
+	__m128 e1y4 = _mm_set_ps1(v2.y - v1.y);
+	__m128 e1z4 = _mm_set_ps1(v2.z - v1.z);
+	__m128 e2x4 = _mm_set_ps1(v3.x - v1.x);
+	__m128 e2y4 = _mm_set_ps1(v3.y - v1.y);
+	__m128 e2z4 = _mm_set_ps1(v3.z - v1.z);
+	__m128 hx4 = _mm_sub_ps(_mm_mul_ps(dy4, e2z4), _mm_mul_ps(dz4, e2y4));
+	__m128 hy4 = _mm_sub_ps(_mm_mul_ps(dz4, e2x4), _mm_mul_ps(dx4, e2z4));
+	__m128 hz4 = _mm_sub_ps(_mm_mul_ps(dx4, e2y4), _mm_mul_ps(dy4, e2x4));
+	__m128 det4 = _mm_add_ps(_mm_add_ps(_mm_mul_ps(e1x4, hx4), _mm_mul_ps(e1y4, Py4)), _mm_mul_ps(e1z4, hz4));
+	__m128 mask1 = _mm_or_ps(_mm_cmple_ps(det4, MINUSEPS4), _mm_cmpge_ps(det4, EPS4));
+	__m128 inv_det4 = _mm_rcp_ps(det4);
+	__m128 sx4 = _mm_sub_ps(ox4, _mm_set_ps1(v1.x));
+	__m128 sy4 = _mm_sub_ps(oy4, _mm_set_ps1(v1.y));
+	__m128 sz4 = _mm_sub_ps(oz4, _mm_set_ps1(v1.z));
+	__m128 u4 = _mm_mul_ps(_mm_add_ps(_mm_add_ps(_mm_mul_ps(sx4, hx4), _mm_mul_ps(sy4, hy4)), _mm_mul_ps(sz4, hz4)), inv_det4);
+	__m128 mask2 = _mm_and_ps(_mm_cmpge_ps(u4, _mm_setzero_ps()), _mm_cmple_ps(u4, ONE4));
+	__m128 qx4 = _mm_sub_ps(_mm_mul_ps(sy4, e1z4), _mm_mul_ps(sz4, e1y4));
+	__m128 qy4 = _mm_sub_ps(_mm_mul_ps(sz4, e1x4), _mm_mul_ps(sx4, e1z4));
+	__m128 qz4 = _mm_sub_ps(_mm_mul_ps(sx4, e1y4), _mm_mul_ps(sy4, e1x4));
+	__m128 v4 = _mm_mul_ps(_mm_add_ps(_mm_add_ps(_mm_mul_ps(dx4, qx4), _mm_mul_ps(dy4, qy4)), _mm_mul_ps(dz4, qz4)), inv_det4);
+	__m128 mask3 = _mm_and_ps(_mm_cmpge_ps(v4, _mm_setzero_ps()), _mm_cmple_ps(_mm_add_ps(u4, v4), ONE4));
+	__m128 newt4 = _mm_mul_ps(_mm_add_ps(_mm_add_ps(_mm_mul_ps(e2x4, qx4), _mm_mul_ps(e2y4, qy4)), _mm_mul_ps(e2z4, qz4)), inv_det4);
+	__m128 mask4 = _mm_cmpgt_ps(newt4, _mm_setzero_ps());
+	__m128 mask5 = _mm_cmplt_ps(newt4, t4);
+	__m128 combined = _mm_and_ps(_mm_and_ps(_mm_and_ps(_mm_and_ps(mask1, mask2), mask3), mask4), mask5);
+	t4 = _mm_blendv_ps(t4, newt4, combined);
+}
+*/

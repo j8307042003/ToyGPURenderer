@@ -11,7 +11,7 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 {
 	const auto cam_ray = SampleCamRay(rdrData.camData, rdrData.camPosition, rdrData.camDirection, filmRes, glm::vec2(x, y));
 	Ray3f ray = cam_ray;
-	HitInfo hitInfo;
+	HitInfo hitInfo = {};
 	int shapeIndex = -1;
 	
 	glm::vec3 radiance = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -25,14 +25,16 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 		glm::vec3 emission;
 	};
 
+	const int kTraceDepth = 128;
+	int TraceBuffer[kTraceDepth];
+
 	std::array<SampleResult, bounce_depth> sampleResults = {};
 	int depth = 0;
 	for (int i = 0; i < bounce_depth; ++i)
 	{
-		//bool bHitAny = RayTrace(*rdrData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
-		//bool bHitAny = BHV_Raycast(rdrData.sceneData, *bvh_tree, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, bvh_depth, bvh_stack);
 		SceneIntersectData intersect;
-		bool bHitAny = IntersectScene(rdrData.sceneData, *bvh_tree, ray, 0.1f, 10000.0f, intersect);
+		bool bHitAny = IntersectScene(rdrData.sceneData, *bvh_tree, ray, 0.1f, 10000.0f, TraceBuffer, kTraceDepth, intersect);
+		//bool bHitAny = IntersectScene(rdrData.sceneData, *bvh_tree, ray, 0.1f, 10000.0f, intersect);
 		
 
 		depth = i;
@@ -40,12 +42,14 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 		if (bHitAny)
 		{
 			auto mat = GetShapeMaterial(*rdrData.sceneData, intersect.shapeIdx);
-			Ray3f outRay;
-			Color att;
-			EvalMaterialScatter(*mat, ray, intersect, hitInfo, att, outRay);
 
-			ray = outRay;
-			sampleResults[i] = {att.value, hitInfo.emission};
+			BsdfSample bsdfSample;
+			EvalMaterialBRDF(*mat, ray, intersect, bsdfSample);
+
+
+			ray.direction = bsdfSample.wi;
+			ray.origin = intersect.point;
+			sampleResults[i] = {bsdfSample.reflectance, hitInfo.emission};
 
 			if (glm::length2(hitInfo.emission) > 0.0f)
 			{
@@ -54,11 +58,11 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 		}
 		else {
 			//radiance *= 0.0f;
-			
 			glm::dvec3 unit_direction = ray.direction;
-			auto t = 0.5f *(unit_direction.y + 1.0f);
-			glm::vec3 r = (1.0f-t)*glm::dvec3(1.0, 1.0, 1.0) + t*glm::dvec3(0.5, 0.7, 1.0);
-			sampleResults[i] = {r * 0.5f};
+			float t = 0.5f *(unit_direction.y + 1.0f);
+			//glm::vec3 r = (1.0f-t)*glm::vec3(1.0, 1.0, 1.0) + t*glm::vec3(0.5, 0.7, 1.0);
+			glm::vec3 r = (1.0f-t)*glm::vec3(1.0, 1.0, 1.0) + t*glm::vec3(0.188, 0.513, 1.0);
+			sampleResults[i] = {r * 0.5f, glm::vec3(0.0f)};
 			break;
 		}
 
@@ -71,27 +75,31 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 			Ray3f lightSampleRay = {};
 			lightSampleRay.origin = ray.origin;
 			lightSampleRay.direction = lightDelta / lightRayLength;
-			lightSampleRay.direction = pLight->SampleRay(ray.origin);
-	
-			glm::dvec3 lightTestPosition;
-			glm::dvec3 lightTestNormal;
-			glm::vec2 uv;
-			//bool bHitObstacle = RayTrace(*rdrData.sceneData, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex);
-			bool bHitObstacle = BHV_Raycast(rdrData.sceneData, *bvh_tree, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, uv, shapeIndex, bvh_depth, bvh_stack);
-			if (!bHitObstacle)
-			{
-				sampleResults[i].emission += sampleResults[i].radiance * pLight->Eval(intersect.point, hitInfo.wi, hitInfo.nextEvent) * ((float)rdrData.sceneData->lights.size());
+			lightSampleRay.direction = pLight->SampleRay(ray.origin);			
 
-				/*
+			auto sample = pLight->Eval(intersect.point, intersect.normal, hitInfo.nextEvent) * ((float)rdrData.sceneData->lights.size());
+
+			if(glm::dot(sample, glm::vec3(1.0f)) > 0.0f)
+			{
+				glm::dvec3 lightTestPosition;
+				glm::dvec3 lightTestNormal;
+				glm::vec2 uv;
+				//bool bHitObstacle = RayTrace(*rdrData.sceneData, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex);
+				bool bHitObstacle = BHV_Raycast(rdrData.sceneData, *bvh_tree, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, uv, shapeIndex, bvh_depth, bvh_stack);
+				if (!bHitObstacle)
 				{
-					glm::dvec3 unit_direction = ray.direction;
-					auto t = 0.5f *(unit_direction.y + 1.0f);
-					glm::vec3 r = (1.0f-t)*glm::dvec3(1.0, 1.0, 1.0) + t*glm::dvec3(0.5, 0.7, 1.0);					
-                    sampleResults[i].emission += r * glm::vec3(std::max(0.0, glm::dot(lightSampleRay.direction, hitInfo.wi) * 0.5f) * ((float)rdrData.sceneData->lights.size() + 1));
+
+					auto mat = GetShapeMaterial(*rdrData.sceneData, intersect.shapeIdx);
+					Color lightScatter;			
+					EvalMaterialScatter(*mat, ray, lightSampleRay.direction, intersect, lightScatter);
+
+					sampleResults[i].emission += lightScatter.value * sample;
 				}
-				*/
 			}
 		}
+
+
+
 
 	}
 
@@ -101,7 +109,5 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 		radiance = sampleResults[i].radiance * radiance + sampleResults[i].emission;
 	}
 
-	
 	return radiance;
-
 }

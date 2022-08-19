@@ -10,12 +10,18 @@
 #include "Renderer/ParallelRenderer.h"
 #include "Renderer/TestScene1.h"
 #include "Renderer/PathTraceRenderer.h"
+#include <glm/ext/quaternion_common.hpp>
+#include <fstream>       //¸ü¤Jfstream¼ÐÀYÀÉ
+#include <ctime>
+#include <sstream>
+#ifndef STB_IMAGE_WRITE_IMPLEMENTATION
+#endif // !STB_IMAGE_WRITE_IMPLEMENTATION
+#include "Common/stb_image_write.h"
 
-
-InteractiveApp::InteractiveApp(const char * args) : m_running(false)
+InteractiveApp::InteractiveApp(char *argv[]) : m_running(false)
 {
-	const int kWidth = 1920 / 2;//720;
-	const int kHeight = 1080 / 2;//512;
+	const int kWidth = 1920 / 1;// 1920 / 1;//720;
+	const int kHeight = 1080 / 1;// 1080 / 1;//512;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
 	m_appWindow->SetEventCallback(f);
@@ -25,7 +31,10 @@ InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 	m_scene = make_test_scene1();
 	//m_scene->BuildTree();
 	m_cam = new Camera(kWidth, kHeight, Vec3(200.0f, 0.0f, -200.0f));
-	m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.4f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	auto angles = glm::eulerAngles(m_cam->rotation);
+	m_rotX = angles.y;
+	m_rotY = angles.x;
 	m_cam->pos = glm::dvec3(0, 0, 10);
 
 	m_renderer->SetRenderData(m_scene, m_cam);
@@ -46,6 +55,7 @@ InteractiveApp::InteractiveApp(const char * args) : m_running(false)
 	m_testGUI = {};
 	m_testGUI.renderer = m_renderer;
 	m_testGUI.app = this;
+	m_testGUI.cam = m_cam;
 	AddUI(&m_testGUI);
 }
 
@@ -98,6 +108,17 @@ void InteractiveApp::OnEvent(WindowEvent & event)
 
 	
 	}
+
+	if (event.GetEventType() == EWindowEvent::MousePressed)
+	{
+		MousePressedEvent keyEvent = dynamic_cast<MousePressedEvent&>(event);
+		m_mouse_table[keyEvent.mouseCode] = true;
+	}
+	else if (event.GetEventType() == EWindowEvent::MouseReleased)
+	{
+		MouseReleaseEvent keyEvent = dynamic_cast<MouseReleaseEvent&>(event);
+		m_mouse_table[keyEvent.mouseCode] = false;
+	}
 }
 
 
@@ -119,6 +140,27 @@ void InteractiveApp::RemoveUI(ImguiUI * ui)
 void InteractiveApp::SignalCloseApp()
 {
 	m_running = false;
+}
+
+void RenderUI_Camera(Camera* cam)
+{
+	const auto pos = cam->pos;
+	ImGui::Text("Camera Position %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
+
+	const auto rotation = glm::eulerAngles(cam->rotation);
+	ImGui::Text("Camera rotation %.2f, %.2f, %.2f", rotation.x, rotation.y, rotation.z);
+}
+
+using sysclock_t = std::chrono::system_clock;
+
+std::string CurrentDate()
+{
+	std::time_t now = sysclock_t::to_time_t(sysclock_t::now());
+
+	char buf[16] = { 0 };
+	std::strftime(buf, sizeof(buf), "%Y-%m-%d", std::localtime(&now));
+
+	return std::string(buf);
 }
 
 void TestGUI::OnGUI()
@@ -162,8 +204,45 @@ void TestGUI::OnGUI()
 				ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
 			}
 		}
+		ImGui::EndCombo();
+	}	
+
+	ImGui::InputText("Save Pic Name", saveFileBuffer, 128);
+
+	if (ImGui::Button("Save Image"))
+	{
+		unsigned char *  ptr_image = (unsigned char*)pathTraceRenderer->GetImage();
+		auto height = pathTraceRenderer->GetHeight();
+		auto width = pathTraceRenderer->GetWidth();
+		stbi_flip_vertically_on_write(1);
+
+		std::string fileName = std::string(saveFileBuffer) + ".png";
+		stbi_write_png(fileName.data(), width, height, 3, ptr_image, 0);
+
+		/*
+		std::fstream file;
+		file.open(CurrentDate() + ".ppm", std::ios::out | std::ios::trunc);
+
+		auto s = "P3\n" + std::to_string(width) + ' ' + std::to_string(height) + "\n255\n";
+		file.write(s.c_str(), s.length());
+
+		s = "";
+		for (int j = height - 1; j >= 0; --j) {
+			for (int i = 0; i < width; ++i) {
+				auto r = ptr_image[(width * j + i) * 3];
+				auto g = ptr_image[(width * j + i) * 3 + 1];
+				auto b = ptr_image[(width * j + i) * 3 + 2];
+
+				s += std::to_string(r) + ' ' + std::to_string(g) + ' ' + std::to_string(b) + '\n';
+			}
+		}
+		file.write(s.c_str(), s.length());
+
+		file.close();
+		*/
 	}
-	void EndCombo();
+
+	RenderUI_Camera(cam);
 
 	ImGui::End();
 }
@@ -174,6 +253,7 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 	if (m_key_table[GLFW_KEY_ESCAPE] == true) return;
 
 	float posX = 0.0f;
+	float posY = 0.0f;
 	float posZ = 0.0f;
 	const float MoveSpeed = 20.0f;
 
@@ -197,14 +277,79 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 		posX += MoveSpeed * deltaTime;
 		m_renderer->ClearImage();
 	}
-
-	if (posX != 0.0f || posZ != 0.0f)
+	else if (m_key_table[GLFW_KEY_Q] == true)
 	{
-		glm::vec3 movement = glm::vec3(posX, 0.0f, posZ);
+		posY += MoveSpeed * deltaTime;
+		m_renderer->ClearImage();
+	}
+	else if (m_key_table[GLFW_KEY_E] == true)
+	{
+		posY -= MoveSpeed * deltaTime;
+		m_renderer->ClearImage();
+	}
+
+	if (posX != 0.0f || posY != 0.0f || posZ != 0.0f)
+	{
+		glm::vec3 movement = glm::vec3(posX, posY, posZ);
 		m_cam->pos += m_cam->rotation * movement;
 	}
 
+
+	if (m_mouse_table[GLFW_MOUSE_BUTTON_1] == true)
+	{
+		if (m_prevMouseClicked /* && !ImGui::IsMouseDragging(0)*/)
+		{
+			float mouseX, mouseY;
+			m_appWindow->GetMousePos(mouseX, mouseY);
+
+			float deltaX = mouseX - m_mousePosX;
+			float deltaY = mouseY - m_mousePosY;
+
+        	if( abs(deltaX) > 5 || abs(deltaY) > 5 )
+        	{
+
+				const float scale = 0.1f;
+				m_rotX += glm::radians(deltaY * scale);
+				m_rotY += glm::radians(deltaX * scale);
+
+				auto q = glm::quat(glm::vec3{ m_rotX, -m_rotY, glm::radians(180.0f)});
+				auto adjuestRot = glm::quatLookAt(q * glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        		m_cam->rotation = glm::normalize(adjuestRot);
+
+				/*
+				auto rightAxis = m_cam->rotation * glm::vec3(1.0f, 0.0f, 0.0f);
+				auto quatY = glm::angleAxis(rotY, rightAxis);
+
+				auto upAxis = m_cam->rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+				auto quatX = glm::angleAxis(rotX, upAxis);
+
+
+				//m_cam->rotation *= glm::normalize(glm::quat(glm::vec3(-rotY, -rotX, 0.0f)));
+				//m_cam->rotation *= quatY;
+				//m_cam->rotation *= quatX;
+				//m_cam->rotation = glm::normalize(m_cam->rotation);
+
+				auto rotationMatrix = glm::toMat3(m_cam->rotation);
+				rotationMatrix = rotationMatrix * glm::toMat3(glm::quat(glm::vec3(-rotY, -rotX, 0.0f)));
+				m_cam->rotation = glm::toQuat(rotationMatrix);
+				*/
+				/*
+				auto eulerRot = glm::eulerAngles(m_cam->rotation);
+				eulerRot.x += rotX;
+				eulerRot.y += rotY;
+				*/
+
+				m_mousePosX = mouseX;
+				m_mousePosY = mouseY;
+				m_renderer->ClearImage();
+			}
+		}
+	}
+	m_prevMouseClicked = m_mouse_table[GLFW_MOUSE_BUTTON_1];
+
 }
+
 
 
 void InteractiveApp::Run()

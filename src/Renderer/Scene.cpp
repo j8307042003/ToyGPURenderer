@@ -59,7 +59,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
 	//auto scene = aiImportFile("dragon.obj",aiProcessPreset_TargetRealtime_MaxQuality);	
 	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
-	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_Fast /* | aiProcess_FlipWindingOrder | aiProcess_FlipUVs*/, NULL, props);
+	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_Fast | aiProcess_FlipWindingOrder | aiProcess_FlipUVs, NULL, props);
 	if (scene) {
 		std::string directory = modelFile.substr(0, modelFile.find_last_of('/'));
 		//std::cout << "num of mNumMeshes : " << scene->mNumMeshes << std::endl;
@@ -101,7 +101,10 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
 
                     auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][vertexId]) : aiVector3D();
+					//std::vector<aiVector3D> uvDatas = std::vector<aiVector3D>(mesh->mNumVertices);
+					//memcpy(uvDatas.data(), mesh->mTextureCoords[0], sizeof(mesh->mTextureCoords[0][0]) * mesh->mNumVertices);
 					uv[k] = Vec3(abs(uvData.x), abs(uvData.y), 0.0f);
+
 					vertex[k] = {m.x, m.y, m.z};
 					Normal[k] = {normal.x, normal.y, normal.z};
 				}
@@ -133,7 +136,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 	}
 
     std::cout << "Model : " << modelFile  << " Loaded ? : " << (scene != nullptr) << std::endl;
-
+    if (scene != nullptr) aiReleaseImport(scene);
 }
 
 
@@ -161,12 +164,24 @@ void Scene::AddMaterial(std::string name, Material * m)
 	materialMap[name] = (int)Materials.size()-1;
 }
 
+inline TextureWrapping AssimpTexModeToTransform(aiTextureMapMode mapmode)
+{
+	switch (mapmode)
+	{
+		case aiTextureMapMode_Wrap: return TextureWrapping::Repeat;
+		case aiTextureMapMode_Mirror: return TextureWrapping::Mirror;
+		case aiTextureMapMode_Clamp: return TextureWrapping::Clamp;
+	}
+	return TextureWrapping::Repeat;
+}
+
 int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 {
 
 	PBMaterial* pbr_mat = new PBMaterial();
-	pbr_mat->metallic = 1.0f;
+	pbr_mat->metallic = 0.0f;
 	pbr_mat->roughness = 0.0f;
+	std::cout << p_material->GetName().C_Str() << std::endl;
 	for (int i = 0; i < p_material->mNumProperties; ++i)
 	{
 		auto property = p_material->mProperties[i];
@@ -179,14 +194,43 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		case aiPTI_Float: break;
 		case aiPTI_String: pStr = reinterpret_cast<aiString*>(property->mData); break;
 		}
+		auto proKey = property->mKey.C_Str();
+		float* value = reinterpret_cast <float*>(property->mData);
+		std::cout << "Property " << proKey << " " << *value << std::endl;
+		if (strcmp(proKey, "$clr.diffuse") == 0)
+		{
+			float* diffuse = reinterpret_cast <float*>(property->mData);
+			pbr_mat->color = glm::vec3(diffuse[0], diffuse[1], diffuse[2]);
+		}
+		else if (strcmp(proKey, "$mat.shininess") == 0)
+		{
+			float* metallic = reinterpret_cast <float*>(property->mData);
+			pbr_mat->metallic = metallic[0] / 1000.0f;
+			pbr_mat->specularScale = metallic[0] / 1000.0f;
+			if (pbr_mat->metallic > 0.9f)pbr_mat->color = glm::vec3(1.0f);
+		}
+		else if (strcmp(proKey, "$mat.metallicFactor") == 0)
+		{
+			float* metallic = reinterpret_cast <float*>(property->mData);
+			//pbr_mat->metallic = metallic[0];
+		}		
+		else if (strcmp(proKey, "$mat.roughnessFactor") == 0 )
+		{
+			float* roughness = reinterpret_cast <float*>(property->mData);
+			pbr_mat->roughness = roughness[0];
+		}		
 	}
+	std::cout << std::endl;
+
 
 	if (p_material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
 	{
 		aiString path;
-		p_material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
+		aiTextureMapMode mapmodes[2];
+		p_material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr, nullptr, nullptr, mapmodes);
 		printf("Diffuse Texture: %s\n", path.C_Str());
-		auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()));
+		auto wrappingMode = AssimpTexModeToTransform(mapmodes[0]);
+		auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()), wrappingMode);
 		pbr_mat->albedo_texture = tex;
 	}
 
@@ -208,6 +252,8 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 	{
 		aiString path;
 		p_material->GetTexture(aiTextureType_METALNESS, 0, &path);
+		auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()));
+		pbr_mat->metallic_texture = tex;
 		printf("METALNESS Texture: %s\n", path.C_Str());
 	}
 
@@ -243,12 +289,27 @@ void Scene::AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius)
 	lights.push_back(pointLight);
 }
 
+void Scene::AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance)
+{
+	DirectionalLight * directionalLight = new DirectionalLight();
+	directionalLight->direction = direction;
+	directionalLight->radiance = radiance;
+
+	lights.push_back(directionalLight);
+}
+
 Texture* Scene::AddTexture(std::string texId, std::string path)
+{
+	return AddTexture(texId, path, TextureWrapping::Clamp);
+}
+
+Texture* Scene::AddTexture(std::string texId, std::string path, TextureWrapping wrapping)
 {
 	std::cout << "Loading Texture : " << path << std::endl;
 
 	Texture * tex = new Texture();
 	if(!LoadTexture(path, *tex)) return nullptr;
+	tex->wrapping = wrapping;
 	textures.push_back(tex);
 	textureMap[texId] = textures.size()-1;
 	return tex;
@@ -430,13 +491,29 @@ bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f &
 	return bHitAny;
 }
 
+bool IntersectScene(SceneData* sceneData, const BVHTree& bvhtree, const Ray3f& ray, float t_min, float t_max, int* stackBuffer, int stackSize, SceneIntersectData& intersect)
+{
+	bool bHitAny = BHV_Raycast(sceneData, bvhtree, ray, t_min, t_max, intersect.point, intersect.normal, intersect.uv, intersect.shapeIdx, stackSize, stackBuffer);
+	return bHitAny;
+}
 
-bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, HitInfo & hitInfo, Color & attenuation, Ray3f & scattered)
+
+bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const glm::vec3 & wi, const SceneIntersectData & intersect, /*HitInfo & hitInfo,*/ Color & attenuation/*, Ray3f & scattered*/)
 {
 	SurfaceData surface;
 	surface.position = intersect.point;
 	surface.normal = intersect.normal;
 	surface.uv = intersect.uv;
-	return mat.scatter(ray, surface, hitInfo, attenuation, scattered);
+	return mat.scatter(ray, wi, surface, /*hitInfo,*/ attenuation/*, scattered*/);
 }
+
+bool EvalMaterialBRDF(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, BsdfSample & bsdfSample)
+{
+	SurfaceData surface;
+	surface.position = intersect.point;
+	surface.normal = intersect.normal;
+	surface.uv = intersect.uv;
+	return mat.sampleBsdf(surface, ray, bsdfSample);
+}
+
 

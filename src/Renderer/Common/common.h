@@ -1,3 +1,6 @@
+#ifndef COMMON_H
+#define COMMON_H
+
 #pragma once
 #include <algorithm>
 
@@ -22,7 +25,7 @@ inline float Fresnel(float etaI, float etaT, float cosThetaI) {
 	return clamp((Rparl * Rparl + Rparp * Rparp) / 2.0f, 0.0f, 1.0f);
 }
 
-glm::vec3 FresnelSchlick(const glm::vec3 & r0, float radians)
+inline glm::vec3 FresnelSchlick(const glm::vec3 & r0, float radians)
 {
     float exponential = pow(1.0f - radians, 5.0f);
     return r0 + (glm::vec3(1.0) - r0) * exponential;
@@ -89,3 +92,5 @@ inline float Cos2Phi(const glm::vec3& w)
     float cosPhi = CosPhi(w);
     return cosPhi * cosPhi;
 }
+
+#endif

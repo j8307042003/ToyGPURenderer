@@ -1,3 +1,8 @@
+#ifndef TESTSCENE1_H
+#define TESTSCENE1_H
+
+#pragma once
+
 #include "Scene.h"
 #include "shape/Sphere.h"
 #include "shape/Triangle.h"
@@ -7,7 +12,7 @@
 #include "Material.h"
 #include "Material/PBMaterial.h"
 
-Scene* make_test_scene1() {
+inline Scene* make_test_scene1() {
 	auto scene = new Scene();
 
 	// scene.AddShape(new Sphere({0, 0, 10}, 2));	
@@ -90,27 +95,27 @@ Scene* make_test_scene1() {
 
 	
 	//Ceil
-	/*
+/*
 	scene->AddShape(new Plane(
 		{-wallOffsetX,  wallHeight,  wallWidth}, 
 		{-wallOffsetX,  wallHeight, -wallWidth}, 
 		{ wallOffsetX,  wallHeight,  wallWidth},
 		{ wallOffsetX,  wallHeight, -wallWidth}
 	), "CWall");
-	*/
+*/
 	
 	
 
 	// scene.AddShape(new Sphere({0, 0, wallWidth / 2}, 1));	
 
 	//spheres
-	scene->AddMaterial("s1", new material({.8, .8, .8}, {0, 0, 0}, 0.7));	
-	scene->AddMaterial("s2", new material({.9, .9, .9}, {0, 0, 0}, 0.3));	
-	scene->AddMaterial("s3", new material({.8, .8, .8}, {0, 0, 0}, 0.3));	
-	scene->AddMaterial("s4", new material({.8, 0.4, 0.4}, {0, 0, 0}, 1));	
-	scene->AddMaterial("s5", new material({.8, .8, .8}, {0, 0, 0}, 0.3));	
-	scene->AddMaterial("s6", new material({.8, .8, .8}, {0, 0, 0}, 0.8, .0f));	
-	scene->AddMaterial("orange", new material({224.0 / 255.0, 105 / 255.0, 13 / 255.0}, {0, 0, 0}, 0.8, .0f));	
+	//scene->AddMaterial("s1", new material({.8, .8, .8}, {0, 0, 0}, 0.7));	
+	//scene->AddMaterial("s2", new material({.9, .9, .9}, {0, 0, 0}, 0.3));	
+	//scene->AddMaterial("s3", new material({.8, .8, .8}, {0, 0, 0}, 0.3));	
+	//scene->AddMaterial("s4", new material({.8, 0.4, 0.4}, {0, 0, 0}, 1));	
+	//scene->AddMaterial("s5", new material({.8, .8, .8}, {0, 0, 0}, 0.3));	
+	//scene->AddMaterial("s6", new material({.8, .8, .8}, {0, 0, 0}, 0.8, .0f));	
+	//scene->AddMaterial("orange", new material({224.0 / 255.0, 105 / 255.0, 13 / 255.0}, {0, 0, 0}, 0.8, .0f));	
 /*	
 	scene->AddShape(new Sphere({-2.5, 0, -wallWidth / 1.2f}, 2), "s1");	
 	scene->AddShape(new Sphere({ 1, 0, -wallWidth / 1.2f}, 2), "s2");	
@@ -141,6 +146,7 @@ Scene* make_test_scene1() {
 	scene->AddShape(new Sphere({ -4,  -1 + 3.9, -10.0f}, .2f), "s6");	
 	scene->AddShape(new Sphere({ -4,  -1 + 4.1, -10.0f}, .2f), "s6");	
 */
+	/*
 	Vec3 center = { 0,  -1 + -1, -8.0f};
 	int subSphereCount = 4;
 	scene->AddShape(new Sphere(center + Vec3{ 0, 0.5f,0 }, .2f), "s6");
@@ -151,8 +157,9 @@ Scene* make_test_scene1() {
 		float len = 0.4;
 		scene->AddShape(new Sphere(center + Vec3{len * cos(angle), 0.2f, len * sin(angle)}, .25f), "s6");
 	}
+	*/
 
-	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9) * 1.0f, 3.0f);
+	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9) * 0.2f, 3.0f);
 	
 	//scene->AddPointLight(glm::dvec3(4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0, 0) * 3.0f, 1.0f);
 	//scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0, 0, 0.5) * 3.0f, 1.0f);
@@ -162,7 +169,13 @@ Scene* make_test_scene1() {
 	//scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0.5, 0.5) * 1.5f, 2.0f);
 
 	//scene->AddPointLight(glm::dvec3(2.5f, 3.0f,  -2.5f), glm::vec3(.9, .9, .9) * 0.4f, 1.0f);
-	scene->AddPointLight(glm::dvec3(2.5f, 100.0f,  2.5f), glm::vec3(.9, .9, .9) * 0.8f, 1.0f);
+	//scene->AddPointLight(glm::dvec3(0.0f, 2.0f,  0.0f), glm::vec3(.9, .9, .9) * 0.2f, 2.0f);
+	//scene->AddPointLight(glm::dvec3(0.0f, 2.0f,  2.0f), glm::vec3(.9, .9, .9) * 0.4f, 2.0f);
+	
+	// Problematic
+	scene->AddDirectionalLight(glm::normalize(glm::dvec3(2.0f, -1.0f,  -2.0f)), glm::vec3(1.0, .9333, .721) * 0.95f);
+	
+	//scene->AddPointLight(glm::dvec3(0.0f, 1000.0f,  200.0f), glm::vec3(1.0, .9333, .721) * 0.9f * 1000.0f, 10.0f);
 
 
 
@@ -171,12 +184,26 @@ Scene* make_test_scene1() {
 	//scene->AddModel("bunny.obj", "s1", {0.0f, 0.0f, -10.0f}, 1.0f);
 	//scene->AddModel("bunny.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 1.5f);
 	//scene->AddModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb", "HexMat", { 0.0f, 0.0f, 2.0f }, 1.5f);
-	scene->AddModel("DamagedHelmet/glTF/DamagedHelmet.gltf", "HexMat", { 0.0f, 0.0f, 2.0f }, glm::quat({ glm::radians(90.0f), glm::radians(45.0f), glm::radians(0.0f) }), 1.5f);
+	//scene->AddModel("DamagedHelmet/glTF/DamagedHelmet.gltf", "HexMat", { 0.0f, 0.0f, 2.0f }, glm::quat({ glm::radians(90.0f), glm::radians(45.0f), glm::radians(0.0f) }), 1.5f);
+	//scene->AddModel("cornellBox-Glossy.glb", "HexMat", { 0.0f, -8.0f, 0.0f }, glm::quat({ glm::radians(90.0f), glm::radians(0.0f), glm::radians(0.0f) }), 10.0f);
+	//scene->AddModel("cornellBox/CornellBox-Sphere.obj", "HexMat", { 0.0f, -8.0f, 0.0f }, glm::quat({ glm::radians(0.0f), glm::radians(0.0f), glm::radians(0.0f) }), 10.0f);
+	//scene->AddModel("wall-e/scene.gltf", "HexMat", { 0.0f, -2.0f, -6.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(20.0f), glm::radians(0.0f) }), 3.0f);
+	//scene->AddModel("eyegee_droid/scene.gltf", "HexMat", { 0.0f, -8.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-20.0f), glm::radians(0.0f) }), 10.0f);
+	//scene->AddModel("Living-room/lliving-room.gltf", "HexMat", { 0.0f, -1.0f, 0.0f }, glm::quat({ glm::radians(90.0f), glm::radians(20.0f), glm::radians(0.0f) }), 3.0f);
+	scene->AddModel("salle_de_bain/salle_de_bain.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 1.0f);
+	//scene->AddModel("hillside_manor_large/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 1.0f);
+	//scene->AddModel("cathedral/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.01f);
+	//scene->AddModel("ancient_corinth/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
+	//scene->AddModel("sketchfab_3d_editor_challenge_littlest_tokyo/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
+	//scene->AddModel("mandalorian_-_grogu__the_force/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
+	//scene->AddModel("5_-_take_it_from_the_top_latin_rock_house/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(180.0f), glm::radians(-60.0f), glm::radians(0.0f) }), 0.1f);
+	//scene->AddModel("in_a_monastery_garden_-_voxel/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
+	//scene->AddModel("minecraft/minecraft.gltf", "HexMat", { 0.0f, -5.0f, 0.0f }, glm::quat({ glm::radians(90.0f), glm::radians(-90.0f), glm::radians(0.0f) }), 0.1f);
 	//scene->AddModel("teapot/teapot.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 0.01f);
 	//scene->AddModel("mitsuba/mitsuba.obj", "HexMat", {0.0f, -1.0f, 2.0f}, 1.0f);
 	//scene->AddModel("Suzanne/glTF/Suzanne.gltf", "HexMat", {0.0f, 0.0f, 2.0f}, 1.0f);
 	//scene->AddModel("Sponza/glTF/Sponza.gltf", "HexMat", { 0.0f, -10.0f, 50.0f }, glm::quat({glm::radians(0.0f), glm::radians(90.0f), glm::radians(0.0f) }), 0.1f);
-	//scene->AddModel("hairball.obj", "s1", {0.0f, 0.0f, 2.0f}, 1.0f);
+	//scene->AddModel("hairball.obj", "s1", {0.0f, 0.0f, 2.0f}, glm::quat({ glm::radians(0.0f), glm::radians(0.0f), glm::radians(0.0f) }), 10.0f);
 	//scene->AddModel("DragonAttenuation/glTF/DragonAttenuation.gltf", "HexMat", { 0.0f, -1.0f, 2.0f }, glm::quat({90.0f, 45.0f, 0.0f}), 0.1f);
 	
 
@@ -202,7 +229,7 @@ Scene* make_test_scene1() {
 
 
 
-Scene make_test_scene2() {
+inline Scene make_test_scene2() {
 	auto scene = Scene();
 
 	// scene.AddShape(new Sphere({0, 0, 10}, 2));	
@@ -407,3 +434,4 @@ Scene make_test_scene2() {
 
 	return scene;
 }
+#endif

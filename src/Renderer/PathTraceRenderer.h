@@ -53,19 +53,23 @@ public:
 
 
 private:
-	char* m_imageBuffer = nullptr;
+	unsigned char* m_imageBuffer = nullptr;
 	float* m_integrater;
 	int* sampleCount;
 	void RenderLoop();
 	void Trace(int x, int y, int width, int height);
 	void SampleDenoiserBaseImage(int x, int y, int width, int height);
 	void ApplyDenoiser(int x, int y, int width, int height);
-	void ApplyChannelImage(int x, int y, int width, int height);
+	void ApplyAlbedoChannelImage(int x, int y, int width, int height);
+	void ApplyNormalChannelImage(int x, int y, int width, int height);
 	void ApplyRawImage(int x, int y, int width, int height);
 
 
 public:
 	int Iteration() { return iteration; }
+	void SetLimitIteration(bool limit) { bLimitIteration = limit; }
+	void SetMaxLimitIteration(int it) { maxIteration = it; }
+	bool IsRendering() { return m_rendering; }
 	bool GetShowDenoise() { return m_showDenoiser; }
 	void SetShowDenoise(bool show) { m_showDenoiser = show; }
 
@@ -75,8 +79,14 @@ public:
 	DisplayChannel GetShowDisplayChannel() { return m_displayChannel;}
 	void SetShowDisplayChannel(DisplayChannel displayChannel) { m_displayChannel = displayChannel;}	
 
+	int GetWidth() { return cam->GetWidth(); }
+	int GetHeight() { return cam->GetHeight(); }
+
 private:
 	int iteration;
+	bool bLimitIteration = false;
+	int maxIteration = 16;
+	bool m_rendering = false;
 
 	std::thread m_renderThread;
 

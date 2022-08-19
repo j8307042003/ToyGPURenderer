@@ -1,5 +1,5 @@
 #pragma once
-
+#include <algorithm>
 
 
 class GGX
@@ -21,7 +21,7 @@ public:
 		float dotHW = glm::dot(w, wm);
 		if (dotHW < 0.0) return 0.0f;
 
-		float absTan = abs(glm::tan(w));
+		float absTan = std::abs(glm::tan(w));
 		if (isinf(absTan)) return 0.0f;
 
 
@@ -40,7 +40,7 @@ public:
 	    //    return 0.0f;
 	    //}
 
-	    float absTanTheta = abs(glm::tan(w));
+	    float absTanTheta = std::abs(glm::tan(w));
 	    if(isinf(absTanTheta)) {
 	        return 0.0f;
 	    }
@@ -48,7 +48,7 @@ public:
 	    float a = sqrt(Cos2Phi(w) * ax * ax + Sin2Phi(w) * ay * ay);
 	    float a2Tan2Theta = square(a * absTanTheta);
 
-	    float lambda = 0.5f * (-1.0f + Sqrtf(1.0f + a2Tan2Theta));
+	    float lambda = 0.5f * (-1.0f + std::sqrtf(1.0f + a2Tan2Theta));
 	    return 1.0f / (1.0f + lambda);
 	}
 
@@ -59,12 +59,12 @@ public:
 	    float D = GGXAnisotropicD(wm, ax, ay);
 
 	    float absDotNL = AbsCosTheta(wi);
-	    float absDotHL = Absf(Dot(wm, wi));
+	    float absDotHL = std::abs(glm::dot(wm, wi));
 	    float G1v = SeparableSmithGGXG1(wo, wm, ax, ay);
 	    forwardPdfW = G1v * absDotHL * D / absDotNL;
 
 	    float absDotNV = AbsCosTheta(wo);
-	    float absDotHV = Absf(Dot(wm, wo));
+	    float absDotHV = std::abs(glm::dot(wm, wo));
 	    float G1l = SeparableSmithGGXG1(wi, wm, ax, ay);
 	    reversePdfW = G1l * absDotHV * D / absDotNV;
 	}
