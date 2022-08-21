@@ -98,7 +98,7 @@ static float EvalDisneyDiffuse(const DisneyBRDFParam & param, float dotNL, float
 
 	float lamert = (1.0 - 0.5 * fl) * (1.0 - 0.5 * fv);
 
-	float invPi = 1.0 / glm::pi<float>();
+	float invPi = 1.0;// / glm::pi<float>();
 
 	return invPi * (lamert + retro);
 }

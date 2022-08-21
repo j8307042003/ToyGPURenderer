@@ -199,6 +199,7 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
 
 	SampleDisneyBsdf(surface, param, -ray.direction, outDirection, bsdfSample);
 	bsdfSample.reflectance = bIsSpecular ? bsdfSample.reflectance : atten;
+	//bsdfSample.reflectance = bsdfSample.reflectance;
 	bsdfSample.wi = outDirection; //bIsSpecular ? outDirection : surface.normal;
 
     // scattered = {surface.position, outDirection};
