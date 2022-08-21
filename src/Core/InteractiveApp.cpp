@@ -18,10 +18,10 @@
 #endif // !STB_IMAGE_WRITE_IMPLEMENTATION
 #include "Common/stb_image_write.h"
 
-InteractiveApp::InteractiveApp(char *argv[]) : m_running(false)
+InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), m_mouse_table()
 {
-	const int kWidth = 1920 / 1;// 1920 / 1;//720;
-	const int kHeight = 1080 / 1;// 1080 / 1;//512;
+	const int kWidth = 720;//1920 / 1;// 1920 / 1;//720;
+	const int kHeight = 512;//1080 / 1;// 1080 / 1;//512;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
 	m_appWindow->SetEventCallback(f);
@@ -31,11 +31,13 @@ InteractiveApp::InteractiveApp(char *argv[]) : m_running(false)
 	m_scene = make_test_scene1();
 	//m_scene->BuildTree();
 	m_cam = new Camera(kWidth, kHeight, Vec3(200.0f, 0.0f, -200.0f));
-	m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.4f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.4f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.3f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	auto angles = glm::eulerAngles(m_cam->rotation);
 	m_rotX = angles.y;
 	m_rotY = angles.x;
-	m_cam->pos = glm::dvec3(0, 0, 10);
+	//m_cam->pos = glm::dvec3(0, 0, 10);
+	m_cam->pos = glm::dvec3(0.0f, 10.81f, 37.72f);
 
 	m_renderer->SetRenderData(m_scene, m_cam);
     
@@ -297,7 +299,7 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 
 	if (m_mouse_table[GLFW_MOUSE_BUTTON_1] == true)
 	{
-		if (m_prevMouseClicked /* && !ImGui::IsMouseDragging(0)*/)
+		if (m_prevMouseClicked && false/* && !ImGui::IsMouseDragging(0)*/)
 		{
 			float mouseX, mouseY;
 			m_appWindow->GetMousePos(mouseX, mouseY);

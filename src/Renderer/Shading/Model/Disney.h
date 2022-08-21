@@ -160,6 +160,9 @@ static void SampleDisneyBsdf(const SurfaceData & surface, const DisneyBRDFParam 
 
     //float G1v = GGX::SeparableSmithGGXG1(wo, wm, ax, ay);
     //glm::vec3 specular = G1v * F;
+    float dotNL = std::max(0.0f, glm::dot(glm::vec3(surface.normal), wi));
+    float dotNV = std::max(0.0f, glm::dot(glm::vec3(surface.normal), wo));
+    auto diffuse = EvalDisneyDiffuse(param, dotNL, dotNV);
 
-	bsdfSample.reflectance = F;// specular;
+	bsdfSample.reflectance = diffuse + F;// specular;
 }

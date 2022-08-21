@@ -194,10 +194,10 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
 	const float EPSILON = 0.0000001f;
 	if(glm::dot(result, result) < EPSILON * EPSILON) result = reflectDirection;
     glm::dvec3 outDirection = glm::normalize(result);
-    outDirection = outDirection.x != outDirection.x ? reflectDirection : outDirection;
+    outDirection = outDirection.x != outDirection.x ? glm::dvec3(reflectDirection) : outDirection;
 
 
-	SampleDisneyBsdf(surface, param, outDirection, -ray.direction, bsdfSample);
+	SampleDisneyBsdf(surface, param, -ray.direction, outDirection, bsdfSample);
 	bsdfSample.reflectance = bIsSpecular ? bsdfSample.reflectance : atten;
 	bsdfSample.wi = outDirection; //bIsSpecular ? outDirection : surface.normal;
 

@@ -195,7 +195,7 @@ void PathTraceRenderer::RenderLoop()
 		applyChannelWork.bDonoised = bDenoised;
 		applyChannelWork.bNormal = bNormal;
 		tbb::parallel_for(size_t(0), tileRenderDatas.size(), applyChannelWork);
-		std::cout << "Complete Iteration : " << iteration << std::endl;
+		//std::cout << "Complete Iteration : " << iteration << std::endl;
 	}
 
 	m_rendering = false;
