@@ -1,54 +1,17 @@
 
 
-# My WIP GPU-accelerated toy path tracing renderer.
+# This is next version branch
 
-using vulkan compute shader to compute each pixel's color( ray tracing, shading, sample integrator).
+the renderer switch from basic GPU renderer to CPU renderer in order to implement more advanced feature.
+still in very early development.
 
-![image](https://github.com/j8307042003/ToyGPURenderer/blob/master/gallery/result_3.png)
+![image](https://github.com/j8307042003/ToyGPURenderer/blob/master/gallery/minecrafttest2.png)
 
+![image](https://github.com/j8307042003/ToyGPURenderer/blob/master/gallery/coffee2.png)
 
-![image](https://github.com/j8307042003/ToyGPURenderer/blob/master/gallery/result_1.png)
+![image](https://github.com/j8307042003/ToyGPURenderer/blob/master/gallery/cathedral.png)
 
-## Requirement
-cmake
-
-vulkan sdk(Molten on mac)
-
-visual studio(windows)
-
-
-## Build
-
-### Mac
-modify this line and put your Molten library path in CMakeLists.txt
-
-```bash	
-	#define Molten sdk path here!
-	Set(MacVulkanSDK /Users/pine/lib/vulkansdk-macos-1.1.130.0)
-```
-
-### Mac and Windows
-go to build folder
-```bash
-cmake ..
-cmake --build .
-```
-
-### Windows Warning
-when rendering complex scene that makes compute shader take a lot time.
-windows system will kill the gpu task. you can turn TDR off or modify TDR delay
-https://docs.microsoft.com/en-us/windows-hardware/drivers/display/timeout-detection-and-recovery
-
-
-### Usage
-
-#### compile path tracing compute shader
-```bash
-YOUR_VULKAN_SDK_Path/glslc pathTracing.comp -O pathTracing.spv
-```
-
-#### add model to the scene. 
-```c++	
-//TestScene1.h
-scene.AddModel("dragon.obj", "s1", 1); // put model file in working folder and add model.
-```
+## Features
+	Path tracing
+	embree, open image denoise integrated
+	Disney shading model
