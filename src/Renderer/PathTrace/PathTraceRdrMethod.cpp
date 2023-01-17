@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include "../Texture/Texture.h"
 #include <algorithm>
+#include <Renderer/Accelerate/BVHStruct.cpp>
 
 glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, glm::vec2 filmRes)
 {
@@ -33,7 +34,7 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 	for (int i = 0; i < bounce_depth; ++i)
 	{
 		SceneIntersectData intersect;
-		bool bHitAny = IntersectScene(rdrData.sceneData, *bvh_tree, ray, 0.1f, 10000.0f, TraceBuffer, kTraceDepth, intersect);
+		bool bHitAny = IntersectScene(rdrData.sceneData, ray, 0.001f, 10000.0f, intersect);
 		//bool bHitAny = IntersectScene(rdrData.sceneData, *bvh_tree, ray, 0.1f, 10000.0f, intersect);
 		
 
@@ -61,8 +62,15 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 			glm::dvec3 unit_direction = ray.direction;
 			float t = 0.5f *(unit_direction.y + 1.0f);
 			//glm::vec3 r = (1.0f-t)*glm::vec3(1.0, 1.0, 1.0) + t*glm::vec3(0.5, 0.7, 1.0);
-			glm::vec3 r = (1.0f-t)*glm::vec3(1.0, 1.0, 1.0) + t*glm::vec3(0.188, 0.513, 1.0);
+			glm::vec3 r = (1.0f-t)*glm::vec3(1.0, 1.0, 1.0) + t*glm::vec3(0.188, 0.513, 1.0);			
 			sampleResults[i] = {r * 0.5f, glm::vec3(0.0f)};
+
+			if (rdrData.sceneData->envSources.size() > 0)
+			{
+				glm::vec3 r = rdrData.sceneData->envSources[0]->Sample(unit_direction);
+				sampleResults[i] = {r, glm::vec3(0.0f)};
+			}
+
 			break;
 		}
 
@@ -85,7 +93,8 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 				glm::dvec3 lightTestNormal;
 				glm::vec2 uv;
 				//bool bHitObstacle = RayTrace(*rdrData.sceneData, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, shapeIndex);
-				bool bHitObstacle = BHV_Raycast(rdrData.sceneData, *bvh_tree, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, uv, shapeIndex, bvh_depth, bvh_stack);
+				//bool bHitObstacle = BHV_Raycast(rdrData.sceneData, *bvh_tree, lightSampleRay, 0.1f, lightRayLength, lightTestPosition, lightTestNormal, uv, shapeIndex, bvh_depth, bvh_stack);
+				bool bHitObstacle = OccuScene(rdrData.sceneData, lightSampleRay, 0.001f, lightRayLength);
 				if (!bHitObstacle)
 				{
 

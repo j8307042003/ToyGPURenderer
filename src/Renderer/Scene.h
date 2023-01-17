@@ -18,6 +18,9 @@
 #include <string>
 #include "Random/SysRandom.h"
 #include "Shading/BsdfSample.h"
+#include "Env/IEnvSource.h"
+#include "Accelerate/BVHStruct.h"
+#include "RayTraceEngine/IRayTraceEngine.h"
 
 struct Mesh
 {
@@ -33,10 +36,12 @@ public:
 	std::map<std::string, int> materialMap;
 	std::map<Shape*, int> shapeMaterialMap;
 	std::map<std::string, int> textureMap;
+	std::map<std::string, int> textureFileMap = {};
 
 	std::vector<Material*> Materials = {};
 	std::vector<ILight*> lights = {};
 	std::vector<Texture*> textures = {};
+	std::vector<IEnvSource*> envSources = {};
 
 	std::vector<Mesh> meshes = {};
 
@@ -44,6 +49,7 @@ public:
 	void AddShape(Shape * s);
 	void AddShape(Shape * s, std::string mat_name);
 	void AddModel(std::string modelFile, std::string mat_name, Vec3 position = Vec3(), glm::quat rotation = glm::quat(), float scale = 1);
+	void AddEnv(IEnvSource * envSource);
 	void AddMaterial(material * m);
 	void AddMaterial(std::string name, material * m);
 
@@ -51,9 +57,11 @@ public:
 
 	void AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius = 0);
 	void AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance);
+	void AddEnvSource(const std::string & path, float scale = 1.0f);
 	Texture* AddTexture(std::string texId, std::string path);
 	Texture* AddTexture(std::string texId, std::string path, TextureWrapping wrapping);
 	Texture* AddTexture(std::string texId, const Texture & texture);
+	Texture* AddExrTexture(const std::string & texId, const std::string & path);
 
 	int GetShapeMaterialIdx(Shape * s) const;
 
@@ -73,10 +81,16 @@ struct SceneData
 	//Light
 	std::vector<ILight*> lights;
 
+	std::vector<IEnvSource*> envSources;
+
 	//Material
 	std::vector<Material*> materials;
 
 	std::vector<Texture *> textures;
+
+	BVHTree *bvh_tree;
+
+	IRayTraceEngine* pRayTraceEngine;
 };
 
 inline Material* GetMaterial(const SceneData & sceneData, int matIdx)
@@ -105,21 +119,22 @@ inline ILight* SampleLight(const SceneData & sceneData)
 	return lightIdx < 0 ? nullptr : sceneData.lights[lightIdx];
 }
 
-void MakeSceneData(const Scene & scene, SceneData & sceneData);
+void MakeSceneData(const Scene & scene, SceneData & sceneData, bool enableEmbree);
 
 
 struct SceneIntersectData
 {
 	glm::dvec3 point;
 	glm::dvec3 normal;
+	glm::dvec3 tangent;
 	glm::vec2 uv;
 	int shapeIdx;
 	int materialIdx;
 };
 
-class BVHTree;
-bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, SceneIntersectData & intersect);
-bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, int* stackBuffer, int stackSize, SceneIntersectData & intersect);
+bool IntersectScene(SceneData * sceneData, const Ray3f & ray, float t_min, float t_max, SceneIntersectData & intersect);
+bool IntersectScene(SceneData * sceneData, const Ray3f & ray, float t_min, float t_max, int* stackBuffer, int stackSize, SceneIntersectData & intersect);
+bool OccuScene(SceneData* sceneData, const Ray3f& ray, float t_min, float t_max);
 
 bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const glm::vec3& wi, const SceneIntersectData & intersect, Color & attenuation);
 bool EvalMaterialBRDF(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, BsdfSample & bsdfSample);

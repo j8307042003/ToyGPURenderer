@@ -27,3 +27,4 @@ glm::ivec2 EvalTextureUV(const Texture & texture, const glm::vec2 & texCoord);
 
 
 bool LoadTexture(std::string path, Texture & tex);
+bool LoadExrTexture(std::string path, Texture & tex);

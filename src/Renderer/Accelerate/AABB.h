@@ -46,8 +46,8 @@ inline glm::vec2 fast_intersect_aabb(const dAABB & aabb, const glm::dvec3 & invd
     glm::dvec3 n = aabb.min * invdir + oxinvdir;
     glm::dvec3 tmax = max(f, n);
     glm::dvec3 tmin = min(f, n);
-    float t1 = std::min(tmax.x, std::min(tmax.y, tmax.z));
-    float t0 = std::max(tmin.x, std::max(tmin.y, tmin.z));
+    float t1 = (float)std::min(tmax.x, std::min(tmax.y, tmax.z));
+    float t0 = (float)std::max(tmin.x, std::max(tmin.y, tmin.z));
     return glm::vec2(t0, t1);
 }
 

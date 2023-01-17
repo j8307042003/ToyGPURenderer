@@ -18,6 +18,7 @@ public:
 		Denoised = 1,
 		Albedo = 2,
 		Normal = 3,
+		SimpleShading = 4,
 	};
 	static DisplayChannel IntToDisplayChannel(int idx) 
 	{
@@ -27,6 +28,7 @@ public:
 			case 1: return DisplayChannel::Denoised;
 			case 2: return DisplayChannel::Albedo;
 			case 3: return DisplayChannel::Normal;
+			case 4: return DisplayChannel::SimpleShading;
 			default: break;
 		}
 	}
@@ -39,6 +41,7 @@ public:
 			case DisplayChannel::Denoised: return 1;
 			case DisplayChannel::Albedo: return 2;
 			case DisplayChannel::Normal: return 3;
+			case DisplayChannel::SimpleShading: return 4;
 			default: break;
 		}
 	}
@@ -62,6 +65,7 @@ private:
 	void ApplyDenoiser(int x, int y, int width, int height);
 	void ApplyAlbedoChannelImage(int x, int y, int width, int height);
 	void ApplyNormalChannelImage(int x, int y, int width, int height);
+	void ApplySimpleShadingImage(int x, int y, int width, int height);
 	void ApplyRawImage(int x, int y, int width, int height);
 
 
@@ -81,6 +85,8 @@ public:
 
 	int GetWidth() { return cam->GetWidth(); }
 	int GetHeight() { return cam->GetHeight(); }
+
+	bool IntersectTest(int posX, int posY, Material* & pMaterial);
 
 private:
 	int iteration;
@@ -107,6 +113,7 @@ private:
 	float* m_colorBuffer;
 	float* m_albedoBuffer;
 	float* m_normalBuffer;
+	float* m_simpleShadingBuffer;
 	float* m_denoiseOutputBuffer;
 
 };

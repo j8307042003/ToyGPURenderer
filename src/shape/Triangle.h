@@ -12,6 +12,7 @@ public:
 	Triangle(Vec3 v1, Vec3 v2, Vec3 v3 );
 
 	Vec3 normal[3];
+	Vec3 tangent[3];
 
 	bool RayCastTest(const Ray * ray, Vec3 & hitPos, Vec3 & direction) override;
 	virtual ShapeType Type() override {return ShapeType::Triangle;}

@@ -11,33 +11,43 @@
 #include "Renderer/TestScene1.h"
 #include "Renderer/PathTraceRenderer.h"
 #include <glm/ext/quaternion_common.hpp>
-#include <fstream>       //¸ü¤Jfstream¼ÐÀYÀÉ
+#include <fstream>       //ï¿½ï¿½ï¿½Jfstreamï¿½ï¿½ï¿½Yï¿½ï¿½
 #include <ctime>
 #include <sstream>
 #ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #endif // !STB_IMAGE_WRITE_IMPLEMENTATION
 #include "Common/stb_image_write.h"
+#include "Renderer/SceneLoader.h"
+#include <embree3/rtcore.h>
 
 InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), m_mouse_table()
 {
-	const int kWidth = 720;//1920 / 1;// 1920 / 1;//720;
-	const int kHeight = 512;//1080 / 1;// 1080 / 1;//512;
+	const int kWidth = 2560; //1920 / 1;// 1920 / 1;//720;
+	const int kHeight = 1440;//1080 / 1;// 1080 / 1;//512;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
 	m_appWindow->SetEventCallback(f);
 	// m_renderer = new VulkanRenderer();
 	// m_renderer = new ParallelRenderer();
 	m_renderer = new PathTraceRenderer();
-	m_scene = make_test_scene1();
+
+
+	m_scene = new Scene();
+	SceneLoader::Load("scene/scene1.json", *m_scene);
+	//m_scene = make_test_scene1();
+
+
 	//m_scene->BuildTree();
 	m_cam = new Camera(kWidth, kHeight, Vec3(200.0f, 0.0f, -200.0f));
 	//m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.4f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.3f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	m_cam->rotation = glm::quat(glm::vec3(2.82,-0.10,0.00));
 	auto angles = glm::eulerAngles(m_cam->rotation);
 	m_rotX = angles.y;
 	m_rotY = angles.x;
 	//m_cam->pos = glm::dvec3(0, 0, 10);
 	m_cam->pos = glm::dvec3(0.0f, 10.81f, 37.72f);
+	//m_cam->pos = glm::dvec3(-148.99, 73.11f, 196.40f); // for minecraft
 
 	m_renderer->SetRenderData(m_scene, m_cam);
     
@@ -83,6 +93,12 @@ void InteractiveApp::OnEvent(WindowEvent & event)
 	{
 		KeyReleaseEvent keyEvent = dynamic_cast<KeyReleaseEvent&>(event);
 		m_key_table[keyEvent.keyCode] = false;
+
+		if (bWaitPickObj)
+		{
+			bWaitPickObj = false;
+			bPickObj = true;
+		}
 	}
 
 	if (event.GetEventType() == EWindowEvent::KeyPressed)
@@ -107,7 +123,6 @@ void InteractiveApp::OnEvent(WindowEvent & event)
 		// {
 		// 	m_renderer->ClearImage();
 		// }
-
 	
 	}
 
@@ -153,6 +168,7 @@ void RenderUI_Camera(Camera* cam)
 	ImGui::Text("Camera rotation %.2f, %.2f, %.2f", rotation.x, rotation.y, rotation.z);
 }
 
+
 using sysclock_t = std::chrono::system_clock;
 
 std::string CurrentDate()
@@ -179,13 +195,18 @@ void TestGUI::OnGUI()
 	ImGui::Text("TimePass : %f", timePass);
 	ImGui::Text("iterate per second: %f", renderItProgress / timePass);
 
+	bool controlLock = app->GetControlLock();
+	ImGui::Checkbox("Move Lock", &controlLock);
+	app->SetControlLock(controlLock);
+
 	auto displayKind = pathTraceRenderer->GetShowDisplayChannel();
 
 	const char* DisplayLabelText[] = {
 		"RawImage",
 		"Denoised",
 		"Albedo",
-		"Normal"
+		"Normal",
+		"SimpleShading"
 	};
 
 	int idx =  PathTraceRenderer::DisplayChannelToInt(displayKind);
@@ -220,39 +241,39 @@ void TestGUI::OnGUI()
 
 		std::string fileName = std::string(saveFileBuffer) + ".png";
 		stbi_write_png(fileName.data(), width, height, 3, ptr_image, 0);
-
-		/*
-		std::fstream file;
-		file.open(CurrentDate() + ".ppm", std::ios::out | std::ios::trunc);
-
-		auto s = "P3\n" + std::to_string(width) + ' ' + std::to_string(height) + "\n255\n";
-		file.write(s.c_str(), s.length());
-
-		s = "";
-		for (int j = height - 1; j >= 0; --j) {
-			for (int i = 0; i < width; ++i) {
-				auto r = ptr_image[(width * j + i) * 3];
-				auto g = ptr_image[(width * j + i) * 3 + 1];
-				auto b = ptr_image[(width * j + i) * 3 + 2];
-
-				s += std::to_string(r) + ' ' + std::to_string(g) + ' ' + std::to_string(b) + '\n';
-			}
-		}
-		file.write(s.c_str(), s.length());
-
-		file.close();
-		*/
 	}
 
 	RenderUI_Camera(cam);
+	MaterialPickGUI();
 
 	ImGui::End();
+}
+
+void TestGUI::MaterialPickGUI()
+{
+	if (ImGui::Button("Pick"))
+	{
+		app->bWaitPickObj = true;
+	}
+
+	if (pMaterial == nullptr) return;
+
+	bool bAnyChange = false;
+	bAnyChange |= ImGui::SliderFloat("Metallic", &pMaterial->metallic, 0.0f, 1.0f);
+	bAnyChange |= ImGui::SliderFloat("Roughness", &pMaterial->roughness, 0.0f, 1.0f);
+
+	if (bAnyChange)
+	{
+		renderer->ClearImage();
+	}
 }
 
 void InteractiveApp::CameraUpdate(float deltaTime)
 {
 
 	if (m_key_table[GLFW_KEY_ESCAPE] == true) return;
+
+	if (m_controlLock) return;
 
 	float posX = 0.0f;
 	float posY = 0.0f;
@@ -299,7 +320,31 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 
 	if (m_mouse_table[GLFW_MOUSE_BUTTON_1] == true)
 	{
-		if (m_prevMouseClicked && false/* && !ImGui::IsMouseDragging(0)*/)
+
+		if (bPickObj)
+		{
+			bPickObj = false;
+
+			float mouseX, mouseY;
+			m_appWindow->GetMousePos(mouseX, mouseY);
+			Material* pMat = nullptr;
+			bool hitAny = ((PathTraceRenderer*)m_renderer)->IntersectTest(mouseX, mouseY, pMat);
+			if (hitAny)
+			{
+				m_testGUI.pMaterial = (PBMaterial*)pMat;
+			}
+		}
+
+
+		if (!m_prevMouseClicked)
+		{
+			float mouseX, mouseY;
+			m_appWindow->GetMousePos(mouseX, mouseY);
+			m_mousePosX = mouseX;
+			m_mousePosY = mouseY;
+		}
+
+		if (m_prevMouseClicked && ImGui::IsMouseDragging(0))
 		{
 			float mouseX, mouseY;
 			m_appWindow->GetMousePos(mouseX, mouseY);
@@ -317,7 +362,7 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 				auto q = glm::quat(glm::vec3{ m_rotX, -m_rotY, glm::radians(180.0f)});
 				auto adjuestRot = glm::quatLookAt(q * glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-        		m_cam->rotation = glm::normalize(adjuestRot);
+        		m_cam->rotation = glm::normalize(q);
 
 				/*
 				auto rightAxis = m_cam->rotation * glm::vec3(1.0f, 0.0f, 0.0f);

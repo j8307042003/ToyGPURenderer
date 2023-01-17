@@ -14,7 +14,9 @@ set(TBB_LIBFOLDER ${CMAKE_CURRENT_SOURCE_DIR}/${ThirdPartyFolder}/tbb/lib)
 file(GLOB TBB_LIBFILE_NAME ${TBB_LIBFOLDER}/*.lib ${TBB_LIBFOLDER}/*.dylib)
 list(APPEND TBB_LIBFILE ${TBB_LIBFILE_NAME})
 
-
+#embree
+set(EMBREE_DIR ${ThirdPartyFolder}/embree/lib/cmake/embree-3.13.5)
+find_package(EMBREE 3.13.5 REQUIRED)
 
 #Open Image Denoise
 set(OpenImageDenoise_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${ThirdPartyFolder}/oidnlib/lib/cmake/OpenImageDenoise-1.4.2)
@@ -80,12 +82,17 @@ set(all_files ${project_headers} ${project_cpps} ${project_cs} ${project_ccs})
 source_group("Header Files" FILES ${project_headers})
 source_group("Source Files" FILES ${project_cpps})
 
+enable_language(C)
+add_library(miniz STATIC src/miniz/miniz.c)
+target_include_directories(miniz PUBLIC src/miniz)
+
 add_executable(PineRdr src/main.cpp ${all_files})
 set_target_properties( PineRdr PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/working")
 set_target_properties( PineRdr PROPERTIES XCODE_SCHEME_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/working")
 target_include_directories(PineRdr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Core)
 target_include_directories(PineRdr PRIVATE third-party/oidnlib/include)
 target_include_directories(PineRdr PRIVATE third-party/tbb/include)
+target_include_directories(PineRdr PRIVATE ${EMBREE_INCLUDE_DIRS})
 target_link_libraries(PineRdr PRIVATE IMGUI)
 target_link_libraries(PineRdr PRIVATE glad)
 target_link_libraries(PineRdr PRIVATE Renderer)
@@ -98,6 +105,9 @@ target_link_libraries(PineRdr PRIVATE ${glm_LIBRARIES} glm::glm)
 target_link_libraries(PineRdr PRIVATE glfw ${GLFW_LIBRARIES})
 target_link_libraries(PineRdr PRIVATE ${TBB_LIBFILE})
 target_link_libraries(PineRdr PRIVATE Assimp)
+target_link_libraries(PineRdr PRIVATE miniz)
+target_link_libraries(PineRdr PRIVATE json11)
+target_link_libraries(PineRdr PRIVATE ${EMBREE_LIBRARY})
 
 
 if (APPLE)

@@ -84,6 +84,7 @@ inline bool DisneyBRDF(const DisneyBRDFParam & param, const Ray3f & ray, const g
 
 	auto specularFactor = reflective/*EvalDisneySpecular(param, wm, wi, -ray.direction)*/;
 	auto specular = glm::lerp(param.specularTint, param.color, param.metallic) * specularFactor;
+	specular = DisneyFresnel(surface, param, -ray.direction, wm, wi);
 
 
 	reflectance += diffuse * param.color * diffuseWeight;
@@ -121,7 +122,7 @@ glm::vec3 PBMaterial::Albedo(const SurfaceData & surface) const
     {
         param.ior = ior;
         param.metallic = metallic;
-        param.roughness = roughness;
+        param.roughness = std::max(0.01f, std::min(0.99f, roughness));
         param.color = color;
         param.emission = emission;
         param.normal = surface.normal;
@@ -138,8 +139,8 @@ bool PBMaterial::scatter(const Ray3f & ray, const glm::dvec3 & wi, const Surface
     DisneyBRDFParam param;
     {
         param.ior = ior;
-        param.metallic = metallic;
-        param.roughness = roughness;
+		param.metallic = metallic;
+        param.roughness = std::max(0.01f, std::min(0.99f, roughness));
         param.color = color;
         param.emission = emission;
         param.normal = surface.normal;
@@ -148,7 +149,21 @@ bool PBMaterial::scatter(const Ray3f & ray, const glm::dvec3 & wi, const Surface
     if (shader) param = shader(surface, *this);
     Color c;
     //attenuation.value = color;
-	return DisneyBRDF(param, ray, wi, surface, /*hitInfo,*/ attenuation/*, scattered*/);
+
+	auto wo = glm::normalize(surface.worldToTangent * ray.direction);
+	auto tan_wi = glm::normalize(surface.worldToTangent * wi);
+
+	if (wo.y <= 0.0f)
+	{
+		attenuation.value = {0.0f, 0.0f, 0.0f};
+		return true;
+	}
+
+	BsdfSample bsdfSample;
+	SampleDisneyBsdf(surface, param, wo, tan_wi, bsdfSample);
+	attenuation.value = bsdfSample.reflectance;
+	return true;
+	//return DisneyBRDF(param, ray, wi, surface, /*hitInfo,*/ attenuation/*, scattered*/);
 }
 
 DisneyBRDFParam PBMaterial::MakeParam(const SurfaceData& surface) const
@@ -157,7 +172,7 @@ DisneyBRDFParam PBMaterial::MakeParam(const SurfaceData& surface) const
     {
         param.ior = ior;
         param.metallic = metallic;
-        param.roughness = roughness;
+        param.roughness = std::max(0.01f, std::min(0.99f, roughness));
         param.color = color;
         param.emission = emission;
         param.normal = surface.normal;
@@ -173,34 +188,53 @@ DisneyBRDFParam PBMaterial::MakeParam(const SurfaceData& surface) const
 bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, BsdfSample & bsdfSample) const
 {
 	DisneyBRDFParam param = MakeParam(surface);
-	float cosTheta = glm::dot(surface.normal, -ray.direction);
-	float reflective = Fresnel(1.0f, 1.4f, cosTheta);
 
-	bool bIsSpecular = SysRandom::Random() < (param.metallic /*+ reflective*/);
-	//bIsSpecular = false;
+	auto wo = glm::normalize(surface.worldToTangent * -ray.direction);
 
-	glm::dvec3 reflected = glm::reflect(ray.direction, surface.normal);
+	float pDiffuse, pSpecular;
+ 	CalDisneyLobePdfs(param, pDiffuse, pSpecular);
 
-	const float rayRoughness = bIsSpecular ? param.roughness : 1.0f;
-	const glm::vec3 reflectDirection = bIsSpecular ? reflected : surface.normal;
-	const glm::vec3 atten = bIsSpecular ? glm::lerp(glm::vec3(1.0), param.color, param.metallic) * param.specularScale : param.color;
+ 	float p = SysRandom::Random();
 
+ 	glm::dvec3 wi;
+ 	if (p <= pDiffuse)
+ 	{
+		glm::dvec2 polarSet = random_polar(1.0f);
+		glm::dvec3 result = glm::dvec3(make_GGXRandom({0.0f, 1.0f, 0.0f}, polarSet));
+		const float EPSILON = 0.0000001f;
+		if(glm::dot(result, result) < EPSILON * EPSILON) result = {0.0f, 1.0f, 0.0f};
+		wi = glm::normalize(result);
+		wi = wi.x != wi.x ? glm::dvec3(surface.normal) : wi;
 
-	/* BRDF
+	}
+	else if (p <= pDiffuse + pSpecular)
+	{
+		float ax, ay;
+		CalculateAnisotropicParams(param.roughness, 0.0f, ax, ay);
 
-	*/ 
-	glm::dvec2 polarSet = random_polar(rayRoughness);
-	glm::dvec3 result = glm::dvec3(make_GGXRandom(reflectDirection, polarSet));
-	const float EPSILON = 0.0000001f;
-	if(glm::dot(result, result) < EPSILON * EPSILON) result = reflectDirection;
-    glm::dvec3 outDirection = glm::normalize(result);
-    outDirection = outDirection.x != outDirection.x ? glm::dvec3(reflectDirection) : outDirection;
+		float r1 = SysRandom::Random();
+		float r2 = SysRandom::Random();
+		glm::vec3 wm = SampleGgxVndfAnisotropic(wo, ax, ay, r1, r2);
+		wi = glm::normalize(glm::reflect(-wo, wm));
+		wi.y = std::abs(wi.y);
+		//glm::dvec2 polarSet = random_polar(std::max(0.05f, param.roughness));
+		//glm::dvec3 reflected = glm::reflect(ray.direction, surface.normal);
+		//glm::dvec3 result = glm::dvec3(make_GGXRandom(reflected, polarSet));
+	}
 
+	SampleDisneyBsdf(surface, param, wo, wi, bsdfSample);
 
-	SampleDisneyBsdf(surface, param, -ray.direction, outDirection, bsdfSample);
-	bsdfSample.reflectance = bIsSpecular ? bsdfSample.reflectance : atten;
-	//bsdfSample.reflectance = bsdfSample.reflectance;
-	bsdfSample.wi = outDirection; //bIsSpecular ? outDirection : surface.normal;
+	glm::mat3 tangentToWorld = glm::mat3(surface.tangent, surface.normal, surface.bitangent);
+	wi = glm::normalize(tangentToWorld * wi);
+
+	if (wi.x != wi.x)
+	{
+		std::cout << "wi error " << std::endl;
+		wi = surface.normal;
+	}
+
+	bsdfSample.reflectance = bsdfSample.reflectance * (float)abs(glm::dot(surface.normal, wi));
+	bsdfSample.wi = wi; //bIsSpecular ? outDirection : surface.normal;
 
     // scattered = {surface.position, outDirection};
     // hitInfo.emission = param.emission;

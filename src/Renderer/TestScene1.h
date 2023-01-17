@@ -159,7 +159,7 @@ inline Scene* make_test_scene1() {
 	}
 	*/
 
-	scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9) * 0.2f, 3.0f);
+	// scene->AddPointLight(glm::dvec3(0.0, wallHeight - 5e-1,  -wallWidth / 1.5f), glm::vec3(.9, .9, .9) * 0.2f, 3.0f);
 	
 	//scene->AddPointLight(glm::dvec3(4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0.5, 0, 0) * 3.0f, 1.0f);
 	//scene->AddPointLight(glm::dvec3(-4.0f, 0.0,  -wallWidth / 1.5f), glm::vec3(0, 0, 0.5) * 3.0f, 1.0f);
@@ -171,9 +171,11 @@ inline Scene* make_test_scene1() {
 	//scene->AddPointLight(glm::dvec3(2.5f, 3.0f,  -2.5f), glm::vec3(.9, .9, .9) * 0.4f, 1.0f);
 	//scene->AddPointLight(glm::dvec3(0.0f, 2.0f,  0.0f), glm::vec3(.9, .9, .9) * 0.2f, 2.0f);
 	//scene->AddPointLight(glm::dvec3(0.0f, 2.0f,  2.0f), glm::vec3(.9, .9, .9) * 0.4f, 2.0f);
+	//scene->AddPointLight(glm::dvec3(0.0f, 0.0f,  2.0f), glm::vec3(.9, .9, .9) * 0.4f, 2.0f);
+	scene->AddPointLight(glm::dvec3(0.0f, 2.0f,  3.0f), glm::vec3(.9, .9, .9) * 0.4f, 2.0f);
 	
 	// Problematic
-	scene->AddDirectionalLight(glm::normalize(glm::dvec3(2.0f, -1.0f,  -2.0f)), glm::vec3(1.0, .9333, .721) * 0.95f);
+	// scene->AddDirectionalLight(glm::normalize(glm::dvec3(2.0f, -1.0f,  -2.0f)), glm::vec3(1.0, .9333, .721) * 0.95f);
 	
 	//scene->AddPointLight(glm::dvec3(0.0f, 1000.0f,  200.0f), glm::vec3(1.0, .9333, .721) * 0.9f * 1000.0f, 10.0f);
 
@@ -190,11 +192,12 @@ inline Scene* make_test_scene1() {
 	//scene->AddModel("wall-e/scene.gltf", "HexMat", { 0.0f, -2.0f, -6.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(20.0f), glm::radians(0.0f) }), 3.0f);
 	//scene->AddModel("eyegee_droid/scene.gltf", "HexMat", { 0.0f, -8.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-20.0f), glm::radians(0.0f) }), 10.0f);
 	//scene->AddModel("Living-room/lliving-room.gltf", "HexMat", { 0.0f, -1.0f, 0.0f }, glm::quat({ glm::radians(90.0f), glm::radians(20.0f), glm::radians(0.0f) }), 3.0f);
-	scene->AddModel("salle_de_bain/salle_de_bain.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 1.0f);
+	//scene->AddModel("tea_set_01_4k.gltf/tea_set_01_4k.gltf", "HexMat", { 0.0f, 10.0f, 35.0f }, glm::quat({ glm::radians(0.0f), glm::radians(45.0f), glm::radians(0.0f) }), 3.0f);
+	//scene->AddModel("salle_de_bain/salle_de_bain.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 1.0f);
 	//scene->AddModel("hillside_manor_large/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 1.0f);
 	//scene->AddModel("cathedral/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.01f);
 	//scene->AddModel("ancient_corinth/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
-	//scene->AddModel("sketchfab_3d_editor_challenge_littlest_tokyo/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
+	// scene->AddModel("sketchfab_3d_editor_challenge_littlest_tokyo/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
 	//scene->AddModel("mandalorian_-_grogu__the_force/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
 	//scene->AddModel("5_-_take_it_from_the_top_latin_rock_house/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(180.0f), glm::radians(-60.0f), glm::radians(0.0f) }), 0.1f);
 	//scene->AddModel("in_a_monastery_garden_-_voxel/scene.gltf", "HexMat", { 0.0f, -10.0f, 0.0f }, glm::quat({ glm::radians(-90.0f), glm::radians(-30.0f), glm::radians(0.0f) }), 0.1f);
@@ -205,7 +208,16 @@ inline Scene* make_test_scene1() {
 	//scene->AddModel("Sponza/glTF/Sponza.gltf", "HexMat", { 0.0f, -10.0f, 50.0f }, glm::quat({glm::radians(0.0f), glm::radians(90.0f), glm::radians(0.0f) }), 0.1f);
 	//scene->AddModel("hairball.obj", "s1", {0.0f, 0.0f, 2.0f}, glm::quat({ glm::radians(0.0f), glm::radians(0.0f), glm::radians(0.0f) }), 10.0f);
 	//scene->AddModel("DragonAttenuation/glTF/DragonAttenuation.gltf", "HexMat", { 0.0f, -1.0f, 2.0f }, glm::quat({90.0f, 45.0f, 0.0f}), 0.1f);
+	//scene->AddModel("CoffeeCart_01_4k.gltf/CoffeeCart_01_4k.gltf", "HexMat", { 0.0f, -1.0f, 2.0f }, glm::quat({0.0f, 45.0f, 0.0f}), 0.1f);
+	//scene->AddModel("cannon_01_4k.gltf/cannon_01_4k.gltf", "HexMat", { 0.0f, -1.0f, 2.0f }, glm::quat({0.0f, 45.0f, 0.0f}), 0.1f);
+	//scene->AddModel("desk_lamp_arm_01_4k.gltf/desk_lamp_arm_01_4k.gltf", "HexMat", { 0.0f, -1.0f, 5.0f }, glm::quat({0.0f, 45.0f, 0.0f}), 0.1f);
+	//scene->AddModel("dutch_ship_large_02_4k.gltf/dutch_ship_large_02_4k.gltf", "HexMat", { 0.0f, -1.0f, 5.0f }, glm::quat({0.0f, 45.0f, 0.0f}), 1.0f);
+	scene->AddModel("island_tree_02_4k.gltf/island_tree_02_4k.gltf", "HexMat", { 0.0f, -1.0f, 5.0f }, glm::quat({0.0f, 45.0f, 0.0f}), 1.0f);
 	
+
+	//scene->AddEnvSource("Env/rainforest_trail_4k.exr");
+	//scene->AddEnvSource("Env/sunflowers_4k.exr");
+	scene->AddEnvSource("Env/kloppenheim_05_4k.exr");
 
 	Texture tex = Texture();
 	tex.width = 2;

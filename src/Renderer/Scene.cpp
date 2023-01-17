@@ -9,9 +9,10 @@
 #include "assimp/postprocess.h"
 #include "glm/gtx/transform.hpp"
 #include "Material/PBMaterial.h"
-#include "Accelerate/BVHStruct.h"
-
-
+//#include "Accelerate/BVHStruct.h"
+#include "Env/EnvMapSource.h"
+#include "RayTraceEngine/RayTraceEngine.h"
+#include "RayTraceEngine/EmbreeEngine.h"
 
 void Scene::AddShape(Shape * s) {
 	shapes.push_back(s);
@@ -88,6 +89,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 				aiFace face = mesh->mFaces[j];
 				Vec3 vertex[3];
 				Vec3 Normal[3];
+				Vec3 Tangent[3];
 				Vec3 uv[3];
                 
                 shapes.reserve(shapes.size() + face.mNumIndices);
@@ -95,7 +97,9 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
                     auto vertexId = face.mIndices[k];
 					aiVector3D & v = mesh->mVertices[vertexId];
                     auto n = mesh->mNormals[vertexId];
+					auto t = mesh->mTangents[vertexId];
                     auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
+                    auto tangent = model * glm::vec4(t.x, t.y, t.z, 0.0);
 					auto m = model * glm::vec4(v.x, v.y, v.z, 1.0);
 
 
@@ -107,6 +111,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
 					vertex[k] = {m.x, m.y, m.z};
 					Normal[k] = {normal.x, normal.y, normal.z};
+					Tangent[k] = {tangent.x, tangent.y, tangent.z};
 				}
 
 				meshData.triangles.emplace_back();
@@ -118,6 +123,9 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 				triangle.normal[0] = Normal[0];
 				triangle.normal[1] = Normal[1];
 				triangle.normal[2] = Normal[2];
+				triangle.tangent[0] = Tangent[0];
+				triangle.tangent[1] = Tangent[1];
+				triangle.tangent[2] = Tangent[2];
 				triangle.uv[0] = uv[0]; triangle.uv[1] = uv[1]; triangle.uv[2] = uv[2];
 				//triangle.uv[0] = {0.0f, 1.0f, 0.0f}; triangle.uv[1] = {1.0f, 0.0f, 0.0f}; triangle.uv[2] = {0.5f, 0.5f, 0.0f};
 			}
@@ -137,6 +145,12 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
     std::cout << "Model : " << modelFile  << " Loaded ? : " << (scene != nullptr) << std::endl;
     if (scene != nullptr) aiReleaseImport(scene);
+}
+
+
+void Scene::AddEnv(IEnvSource * envSource)
+{
+	envSources.push_back(envSource);
 }
 
 
@@ -212,7 +226,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		else if (strcmp(proKey, "$mat.metallicFactor") == 0)
 		{
 			float* metallic = reinterpret_cast <float*>(property->mData);
-			//pbr_mat->metallic = metallic[0];
+			pbr_mat->metallic = metallic[0];
 		}		
 		else if (strcmp(proKey, "$mat.roughnessFactor") == 0 )
 		{
@@ -221,7 +235,8 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		}		
 	}
 	std::cout << std::endl;
-
+	//pbr_mat->roughness = 0.3f;
+	//pbr_mat->metallic = 0.5f;
 
 	if (p_material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
 	{
@@ -298,6 +313,16 @@ void Scene::AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance)
 	lights.push_back(directionalLight);
 }
 
+void Scene::AddEnvSource(const std::string & path, float scale)
+{
+	auto texptr = AddExrTexture(path, path);
+	auto envMapSource = new EnvMapSource();
+	envMapSource->envTexture = texptr;
+	envMapSource->scale = scale;
+
+	envSources.push_back(envMapSource);
+}
+
 Texture* Scene::AddTexture(std::string texId, std::string path)
 {
 	return AddTexture(texId, path, TextureWrapping::Clamp);
@@ -307,11 +332,24 @@ Texture* Scene::AddTexture(std::string texId, std::string path, TextureWrapping 
 {
 	std::cout << "Loading Texture : " << path << std::endl;
 
+	// search if texture already loaded
+	auto search = textureFileMap.find(path);
+	if (search != textureFileMap.end())
+	{
+		int textureIndex = search->second;
+		textureMap[texId] = textureIndex;
+		return textures[textureIndex];
+	}
+
 	Texture * tex = new Texture();
-	if(!LoadTexture(path, *tex)) return nullptr;
+	if (!LoadTexture(path, *tex)) {
+		delete tex;
+		return nullptr;
+	}
 	tex->wrapping = wrapping;
 	textures.push_back(tex);
 	textureMap[texId] = textures.size()-1;
+	textureFileMap[path] = textures.size() - 1;
 	return tex;
 }
 
@@ -321,6 +359,20 @@ Texture* Scene::AddTexture(std::string texId, const Texture & texture)
 	*tex = texture;
 	textures.push_back(tex);
 	textureMap[texId] = textures.size()-1;	
+	return tex;
+}
+
+Texture* Scene::AddExrTexture(const std::string & texId, const std::string & path)
+{
+	Texture * tex = new Texture();	
+	if (!LoadExrTexture(path, *tex))
+	{
+		delete tex;
+		return nullptr;
+	}
+
+	textures.push_back(tex);
+	textureMap[texId] = textures.size()-1;
 	return tex;
 }
 
@@ -420,7 +472,7 @@ bool Scene::RayCastTest(const Ray & ray, Vec3 & hitPos, Vec3 & direction, int & 
 //}
 
 
-void MakeSceneData(const Scene & scene, SceneData & sceneData)
+void MakeSceneData(const Scene & scene, SceneData & sceneData, bool enableEmbree)
 {
 	sceneData.materials = scene.Materials;
 	for (int i = 0; i < scene.shapes.size(); ++i)
@@ -445,10 +497,15 @@ void MakeSceneData(const Scene & scene, SceneData & sceneData)
 				const auto & n1 = triangleShape->normal[1];
 				const auto & n2 = triangleShape->normal[2];
 
+				const auto & t0 = triangleShape->tangent[0];
+				const auto & t1 = triangleShape->tangent[1];
+				const auto & t2 = triangleShape->tangent[2];
+
 
 				int triangleIndex = AddShapesDataTriangle(sceneData.shapesData, 
 					glm::dvec3(v0.x, v0.y, v0.z), glm::dvec3(v1.x, v1.y, v1.z), glm::dvec3(v2.x, v2.y, v2.z),
 					glm::dvec3(n0.x, n0.y, n0.z), glm::dvec3(n1.x, n1.y, n1.z), glm::dvec3(n2.x, n2.y, n2.z),
+					glm::dvec3(t0.x, t0.y, t0.z), glm::dvec3(t1.x, t1.y, t1.z), glm::dvec3(t2.x, t2.y, t2.z),
 					glm::dvec2(uv0.x, uv0.y), glm::dvec2(uv1.x, uv1.y), glm::dvec2(uv2.x, uv2.y)
 					);
 				auto materialId = scene.GetShapeMaterialIdx(pShape); 		
@@ -478,40 +535,76 @@ void MakeSceneData(const Scene & scene, SceneData & sceneData)
 	// Light
 	sceneData.lights = scene.lights;
 
+	sceneData.envSources = scene.envSources;
+
 	sceneData.textures = scene.textures;
+
+	if (enableEmbree)
+	{
+		sceneData.pRayTraceEngine = EmbreeEngine::BuildEmgreeEngine(&sceneData);
+	}
+	else
+	{
+		sceneData.bvh_tree = new BVHTree();
+		bvh_buildTree1(&sceneData, *sceneData.bvh_tree);	
+		sceneData.pRayTraceEngine = new RayTraceEngine();
+	}
 }
 
 
-bool IntersectScene(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, SceneIntersectData & intersect)
+bool IntersectScene(SceneData * sceneData, const Ray3f & ray, float t_min, float t_max, SceneIntersectData & intersect)
 {
+	/*
 	const int kTraceStackDepth = 128;
 	int TraceStackData[kTraceStackDepth];
 	bool bHitAny = BHV_Raycast(sceneData, bvhtree, ray, t_min, t_max, intersect.point, intersect.normal, intersect.uv, intersect.shapeIdx, kTraceStackDepth, &TraceStackData[0]);
-
 	return bHitAny;
+	*/
+
+	return sceneData->pRayTraceEngine->IntersectScene(sceneData, ray, t_min, t_max, &intersect);
 }
 
-bool IntersectScene(SceneData* sceneData, const BVHTree& bvhtree, const Ray3f& ray, float t_min, float t_max, int* stackBuffer, int stackSize, SceneIntersectData& intersect)
+bool IntersectScene(SceneData* sceneData, const Ray3f& ray, float t_min, float t_max, int* stackBuffer, int stackSize, SceneIntersectData& intersect)
 {
-	bool bHitAny = BHV_Raycast(sceneData, bvhtree, ray, t_min, t_max, intersect.point, intersect.normal, intersect.uv, intersect.shapeIdx, stackSize, stackBuffer);
-	return bHitAny;
+	//bool bHitAny = BHV_Raycast(sceneData, bvhtree, ray, t_min, t_max, intersect.point, intersect.normal, intersect.uv, intersect.shapeIdx, stackSize, stackBuffer);
+	//return bHitAny;
+	return false;
 }
+
+bool OccuScene(SceneData* sceneData, const Ray3f& ray, float t_min, float t_max)
+{
+	return sceneData->pRayTraceEngine->Raycast(sceneData, ray, t_min, t_max);
+}
+
 
 
 bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const glm::vec3 & wi, const SceneIntersectData & intersect, /*HitInfo & hitInfo,*/ Color & attenuation/*, Ray3f & scattered*/)
 {
+	auto bitangent = glm::cross(intersect.normal, intersect.tangent);
+	glm::mat3 tangentToWorld = glm::mat3(intersect.tangent, intersect.normal, bitangent);
+
 	SurfaceData surface;
 	surface.position = intersect.point;
 	surface.normal = intersect.normal;
+	surface.tangent = intersect.tangent;
+	surface.bitangent = bitangent;
+	surface.worldToTangent = glm::transpose(tangentToWorld);
 	surface.uv = intersect.uv;
+
 	return mat.scatter(ray, wi, surface, /*hitInfo,*/ attenuation/*, scattered*/);
 }
 
 bool EvalMaterialBRDF(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, BsdfSample & bsdfSample)
 {
+	auto bitangent = glm::cross(intersect.normal, intersect.tangent);
+	glm::mat3 tangentToWorld = glm::mat3(intersect.tangent, intersect.normal, bitangent);
+	
 	SurfaceData surface;
 	surface.position = intersect.point;
 	surface.normal = intersect.normal;
+	surface.tangent = intersect.tangent;
+	surface.bitangent = bitangent;
+	surface.worldToTangent = glm::transpose(tangentToWorld);
 	surface.uv = intersect.uv;
 	return mat.sampleBsdf(surface, ray, bsdfSample);
 }

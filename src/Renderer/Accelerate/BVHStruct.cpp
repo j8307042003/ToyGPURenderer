@@ -156,7 +156,38 @@ void build_bvh_tree(BVHTree & tree, std::vector<dAABB> boundingBoxs)
     std::cout << "Build BVH Done!" << std::endl;
 }
 
+void bvh_buildTree1(SceneData * sceneData, BVHTree & tree) {
+	std::vector<dAABB> boundingBoxList;
+	boundingBoxList.reserve(sceneData->shapes.size());
 
+	const ShapesData & shapesData = sceneData->shapesData;
+	for (int i = 0; i < sceneData->shapes.size(); ++i) {
+		const ShapeData & shapeData = sceneData->shapes[i];
+		dAABB aabb;
+
+		int primitiveId = shapeData.primitiveId;
+		switch(shapeData.type)
+		{
+			case ShapeType::Sphere:
+			{
+				auto sphereData = shapesData.spheres[primitiveId];
+				aabb = make_aabb(shapesData.positions[sphereData.x], shapesData.radius[sphereData.y]);
+				break;
+			}
+			case ShapeType::Triangle:
+			{
+				auto triangleData = shapesData.triangles[primitiveId];
+				aabb = make_aabb(shapesData.positions[triangleData.x], shapesData.positions[triangleData.y], shapesData.positions[triangleData.z]);
+				break;
+			}
+		}
+
+		boundingBoxList.push_back(aabb);
+	}
+
+	//build_bvh_SAH_d(tree, boundingBoxList);
+	build_bvh_tree(tree, boundingBoxList);
+}
 
 bool BHV_Raycast(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, glm::dvec3 & hitPos, glm::dvec3 & direction, glm::vec2 & uv, int & primitiveIdx, int MaxDepth, int* bvh_visit_stack) {	
 	int stackCount = 1;

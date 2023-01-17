@@ -6,10 +6,14 @@
 #include <vector>
 
 class InteractiveApp;
+class PBMaterial;
 class TestGUI : public ImguiUI
 {
 
 	virtual void OnGUI();
+
+private:
+	void MaterialPickGUI();
 private:
 	float myColor[4];
 	char saveFileBuffer[128];
@@ -17,6 +21,8 @@ public:
 	Renderer* renderer;
 	InteractiveApp* app;
 	Camera* cam;
+
+	PBMaterial* pMaterial = nullptr;
 };
 
 
@@ -33,10 +39,18 @@ public:
 	float TimeStart() const {return m_timeStart;}
 	float TimePass() const {return m_timePass;}
 
+	bool GetControlLock() { return m_controlLock; }
+	void SetControlLock(bool v) { m_controlLock = v;}
+
 private:
 	void OnEvent(WindowEvent & event);
 	void SignalCloseApp();
 	void CameraUpdate(float deltaTime);
+
+
+public:
+	bool bPickObj;
+	bool bWaitPickObj;
 
 private:
 	AppWindow * m_appWindow;
@@ -52,6 +66,7 @@ private:
 	TestGUI m_testGUI;
 	float m_timeStart;
 	float m_timePass;
+	bool m_controlLock = false;
 
 private:
 	bool m_running;

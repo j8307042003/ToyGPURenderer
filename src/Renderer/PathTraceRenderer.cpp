@@ -9,6 +9,7 @@
 #include <Renderer/RayTrace/RayTrace.h>
 #include <oneapi/tbb/parallel_for.h>
 #include "Texture/Texture.h"
+#include <glm/geometric.hpp>
 
 
 void PathTraceRenderer::StartRender()
@@ -30,6 +31,7 @@ void PathTraceRenderer::StartRender()
 	m_colorBuffer = new float[rgbBufferSize];
 	m_albedoBuffer = new float[rgbBufferSize];
 	m_normalBuffer = new float[rgbBufferSize];
+	m_simpleShadingBuffer = new float[rgbBufferSize];
 	m_denoiseOutputBuffer = new float[rgbBufferSize];
 
 	m_filterRef = m_oidnDevice.newFilter("RT"); // generic ray tracing filter
@@ -40,8 +42,8 @@ void PathTraceRenderer::StartRender()
 	m_filterRef.set("cleanAux", true); // auxiliary images will be prefiltered
 	m_filterRef.commit();
 
-	MakeSceneData(*s, m_sceneData);
-	bvh_buildTree1(&m_sceneData, m_bvh);
+	MakeSceneData(*s, m_sceneData, true);
+	//bvh_buildTree1(&m_sceneData, m_bvh);
 	m_rendering = true;
 	m_renderThread = std::thread(&PathTraceRenderer::RenderLoop, this);
 }
@@ -92,6 +94,7 @@ void PathTraceRenderer::RenderLoop()
 		bool bAlbedo = false;
 		bool bDonoised = false;
 		bool bNormal = false;
+		bool bSimpleShading = false;
 
 	public:
 		ApplySampleChannelJob(std::vector<glm::ivec4>* tileJobs, PathTraceRenderer* instance) : tileDatas(tileJobs), instance(instance) {}
@@ -107,6 +110,10 @@ void PathTraceRenderer::RenderLoop()
 			else if (bNormal)
 			{
 				instance->ApplyNormalChannelImage(data.x, data.y, data.z, data.w);
+			}
+			else if (bSimpleShading)
+			{
+				instance->ApplySimpleShadingImage(data.x, data.y, data.z, data.w);
 			}
 			else if (bDonoised)
 			{
@@ -165,6 +172,7 @@ void PathTraceRenderer::RenderLoop()
 		bool bDenoised = false;
 		bool bAlbedo = false;
 		bool bNormal = false;
+		bool bSimpleShading = false;
 
 		switch(m_displayChannel)
 		{
@@ -172,6 +180,7 @@ void PathTraceRenderer::RenderLoop()
 			case DisplayChannel::Denoised: bIterate = true; bDenoised = true; break;
 			case DisplayChannel::Albedo: bAlbedo = true; break;
 			case DisplayChannel::Normal: bNormal = true; break;
+			case DisplayChannel::SimpleShading: bSimpleShading = true; break;
 			default: break;
 		}
 
@@ -194,6 +203,7 @@ void PathTraceRenderer::RenderLoop()
 		applyChannelWork.bAlbedo = bAlbedo;
 		applyChannelWork.bDonoised = bDenoised;
 		applyChannelWork.bNormal = bNormal;
+		applyChannelWork.bSimpleShading = bSimpleShading;
 		tbb::parallel_for(size_t(0), tileRenderDatas.size(), applyChannelWork);
 		//std::cout << "Complete Iteration : " << iteration << std::endl;
 	}
@@ -205,8 +215,8 @@ void PathTraceRenderer::ApplyDenoiser(int x, int y, int width, int height)
 {
 	int filmWidth = cam->GetWidth();
 	int filmHeight = cam->GetHeight();
-	for (int i = 0; i < width; ++i)
-		for (int j = 0; j < height; ++j)
+	for (int j = 0; j < height; ++j)
+		for (int i = 0; i < width; ++i)
 		{
 			int nowX = x + i;
 			int nowY = y + j;
@@ -224,8 +234,8 @@ void PathTraceRenderer::ApplyAlbedoChannelImage(int x, int y, int width, int hei
 {
 	int filmWidth = cam->GetWidth();
 	int filmHeight = cam->GetHeight();
-	for (int i = 0; i < width; ++i)
-		for (int j = 0; j < height; ++j)
+	for (int j = 0; j < height; ++j)
+		for (int i = 0; i < width; ++i)
 		{
 			int nowX = x + i;
 			int nowY = y + j;
@@ -257,6 +267,26 @@ void PathTraceRenderer::ApplyNormalChannelImage(int x, int y, int width, int hei
 			m_imageBuffer[currentPixPos + 2] = (int)(m_normalBuffer[currentPixPos + 2] * 255.0f);
 		}	
 }
+
+void PathTraceRenderer::ApplySimpleShadingImage(int x, int y, int width, int height)
+{
+	int filmWidth = cam->GetWidth();
+	int filmHeight = cam->GetHeight();
+	for (int i = 0; i < width; ++i)
+		for (int j = 0; j < height; ++j)
+		{
+			int nowX = x + i;
+			int nowY = y + j;
+
+			int currentPixPos = (nowX + nowY * filmWidth) * 3;
+			int sampleCountIndex = nowX + nowY * filmWidth;
+
+			m_imageBuffer[currentPixPos] = (int)(m_simpleShadingBuffer[currentPixPos] * 255.0f);
+			m_imageBuffer[currentPixPos + 1] = (int)(m_simpleShadingBuffer[currentPixPos + 1] * 255.0f);
+			m_imageBuffer[currentPixPos + 2] = (int)(m_simpleShadingBuffer[currentPixPos + 2] * 255.0f);
+		}	
+}
+
 
 void PathTraceRenderer::ApplyRawImage(int x, int y, int width, int height)
 {
@@ -296,8 +326,9 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
     int filmWidth = cam->GetWidth();
     int filmHeight = cam->GetHeight();
     glm::vec2 uv;
-	for (int i = 0; i < width; ++i)
-		for (int j = 0; j < height; ++j)
+	glm::vec3 lightDir = glm::normalize(glm::vec3(0.3f, 0.8f, 0.0f));
+	for (int j = 0; j < height; ++j)
+		for (int i = 0; i < width; ++i)
 		{
 			int nowX = x + i;
 			int nowY = y + j;
@@ -314,7 +345,13 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			uv = {};
 			int shapeIndex = -1;
 			//bool bHitAny = RayTrace(*renderData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
-			bool bHitAny = BHV_Raycast(renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num / 2, &bvh_stack[0]);
+			//bool bHitAny = BHV_Raycast(renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num / 2, &bvh_stack[0]);
+			SceneIntersectData intersect;
+			bool bHitAny = IntersectScene(renderData.sceneData, ray, 0.1f, 10000.0f, intersect);
+			rayHitPosition = intersect.point;
+			rayHitNormal = intersect.normal;
+			shapeIndex = intersect.shapeIdx;
+			uv = intersect.uv;
 
 			glm::vec3 albedo = {};
 			if (bHitAny)
@@ -345,6 +382,12 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			m_normalBuffer[currentPixPos + 1] = (float) rayHitNormal.y * 0.5f + 0.5f;
 			m_normalBuffer[currentPixPos + 2] = (float) rayHitNormal.z * 0.5f + 0.5f;			
 
+			float lighting = glm::dot(glm::vec3(rayHitNormal), lightDir) * 0.5f + 0.5f;
+			auto diffuse = glm::vec3(albedo) * std::min(1.0f, lighting + 0.1f);
+			m_simpleShadingBuffer[currentPixPos] = diffuse.x;
+			m_simpleShadingBuffer[currentPixPos + 1] = diffuse.y;
+			m_simpleShadingBuffer[currentPixPos + 2] = diffuse.z;
+
 			//m_normalBuffer[currentPixPos] = uv.x;//(float) rayHitNormal.x;
 			//m_normalBuffer[currentPixPos + 1] = uv.y;//(float) rayHitNormal.y;
 			//m_normalBuffer[currentPixPos + 2] = uv.x < 0.0f || uv.y < 0.0f ? 1.0f : 0.0f;//(float) rayHitNormal.z;
@@ -373,8 +416,8 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
     int filmWidth = cam->GetWidth();
     int filmHeight = cam->GetHeight();
     
-	for (int i = 0; i < width; ++i)
-		for (int j = 0; j < height; ++j)
+	for (int j = 0; j < height; ++j)
+		for (int i = 0; i < width; ++i)
 		{
 			int nowX = x + i;
 			int nowY = y + j;
@@ -417,4 +460,19 @@ void PathTraceRenderer::ClearImage()
 	memset(sampleCount, 0, whRes * sizeof(int));
 	iteration = 0;
 	m_resetFlag = true;
+}
+
+bool PathTraceRenderer::IntersectTest(int posX, int posY, Material* & pMaterial)
+{
+	auto camData = DefaultCameraData();
+	int filmWidth = cam->GetWidth();
+	int filmHeight = cam->GetHeight();
+	auto filmRes = glm::vec2(filmWidth, filmHeight);
+	auto camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+	const auto cam_ray = SampleCamRay(camData, cam->pos, camDirection, filmRes, glm::vec2(posX, posY));
+	SceneIntersectData intersect;
+	if (!IntersectScene(&m_sceneData, cam_ray, 0.1f, 10000.0f, intersect)) return false;
+
+	pMaterial = GetMaterial(m_sceneData, intersect.materialIdx);
+	return true;
 }

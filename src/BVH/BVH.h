@@ -159,7 +159,6 @@ struct bvhBuildingNode {
 	bvhBuildingNode * right;
 };
 
-constexpr int nBuckets = 12;
 struct BucketInfo {
 	int count = 0;
 	AABB bound;
@@ -173,6 +172,7 @@ inline void handleBoundingBox(bvhBuildingNode * node)
 }
 
 inline void BuildBVH_SAH(int start, int end, std::vector<bvhPrimitiveInfo> & primitives, bvhBuildingNode * parent) {
+	const int nBuckets = 12;
 	// std::cout << "Start : " << start << ". end : " << end << std::endl;
 	int primitiveNum = end - start + 1;
 	int mid = (start + end) / 2;

@@ -1,9 +1,10 @@
+#ifndef BVHSTRUCT_H
+#define BVHSTRUCT_H
 #pragma once
 #include "AABB.h"
-#include "../Scene.h"
 #include "../RayTrace/RayTrace.h"
 #include <vector>
-class SceneData;
+struct SceneData;
 
 struct BVH_node
 {
@@ -16,7 +17,7 @@ struct BVH_node
 	int right;
 };
 
-
+constexpr int nBuckets = 12;
 
 struct dbvhPrimitiveInfo {
 	dbvhPrimitiveInfo(){}
@@ -62,6 +63,7 @@ inline void handleBoundingBox(dbvhBuildingNode * node)
 }
 
 inline void BuildBVH_SAH(int start, int end, std::vector<dbvhPrimitiveInfo> & primitives, dbvhBuildingNode * parent) {
+	const int nBuckets = 12;
 	// std::cout << "Start : " << start << ". end : " << end << std::endl;
 	int primitiveNum = end - start + 1;
 	int mid = (start + end) / 2;
@@ -245,38 +247,7 @@ glm::ivec2 cal_sah(int start, int end, std::vector<dbvhPrimitiveInfo> & primitiv
 
 void build_bvh_tree(BVHTree & tree, std::vector<dAABB> boundingBoxs);
 
-inline void bvh_buildTree1(SceneData * sceneData, BVHTree & tree) {
-	std::vector<dAABB> boundingBoxList;
-	boundingBoxList.reserve(sceneData->shapes.size());
-
-	const ShapesData & shapesData = sceneData->shapesData;
-	for (int i = 0; i < sceneData->shapes.size(); ++i) {
-		const ShapeData & shapeData = sceneData->shapes[i];
-		dAABB aabb;
-
-		int primitiveId = shapeData.primitiveId;
-		switch(shapeData.type)
-		{
-			case ShapeType::Sphere:
-			{
-				auto sphereData = shapesData.spheres[primitiveId];
-				aabb = make_aabb(shapesData.positions[sphereData.x], shapesData.radius[sphereData.y]);
-				break;
-			}
-			case ShapeType::Triangle:
-			{
-				auto triangleData = shapesData.triangles[primitiveId];
-				aabb = make_aabb(shapesData.positions[triangleData.x], shapesData.positions[triangleData.y], shapesData.positions[triangleData.z]);
-				break;
-			}
-		}
-
-		boundingBoxList.push_back(aabb);
-	}
-
-	//build_bvh_SAH_d(tree, boundingBoxList);
-	build_bvh_tree(tree, boundingBoxList);
-}
+void bvh_buildTree1(SceneData* sceneData, BVHTree& tree);
 
 template <typename T> int sgn(T val) {
 	return (T(0) < val) - (val < T(0));
@@ -298,3 +269,4 @@ inline glm::dvec3 safe_invdir(glm::dvec3 d)
 
 bool BHV_Raycast(SceneData * sceneData, const BVHTree& bvhtree, const Ray3f & ray, float t_min, float t_max, glm::dvec3 & hitPos, glm::dvec3 & direction, glm::vec2 & uv, int & primitiveIdx, int MaxDepth, int* bvh_visit_stack);
 
+#endif

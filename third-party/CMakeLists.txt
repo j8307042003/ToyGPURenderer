@@ -18,7 +18,12 @@ if(NOT TARGET glm)
     endif()
 endif()
 
-
+#miniz
+#enable_language(C)
+#add_library(miniz STATIC miniz/miniz.c)
+#target_include_directories(miniz PUBLIC miniz)
+#set_target_properties(miniz PROPERTIES FOLDER "deps")
+#list(APPEND TINYEXR_EXT_LIBRARIES miniz)
 
 project(glad)
 add_library(glad STATIC)
@@ -31,6 +36,13 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(glfw)
+
+# json11
+project(json11)
+add_library(json11 STATIC)
+set(JSON_DIR json11)
+target_include_directories(json11 PUBLIC ${JSON_DIR})
+target_sources( json11 PRIVATE json11/json11.cpp )
 
 # Assimp
 SET(ASSIMP_BUILD_TESTS CACHE BOOL OFF)

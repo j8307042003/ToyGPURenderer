@@ -87,6 +87,20 @@ static float EvalDisneyRetroDiffuseTerm(float dotNL, float dotNV, float roughnes
 	return Rr * (fl + fv + fl * fv * (Rr - 1.0));
 }
 
+static glm::vec3 DisneyDiffuse(const DisneyBRDFParam & param, float dotNL, float dotNV, float dotLH)
+{
+	float Rr = 2.0 * param.roughness * dotLH * dotLH;
+	float f90 = 0.5 + Rr;
+	float dotNLReverse = (1.0 - dotNL);
+	float dotNLReverse2 = dotNLReverse * dotNLReverse;
+	float dotNVReverse = (1.0 - dotNV);
+	float dotNVReverse2 = dotNVReverse * dotNVReverse;
+
+	return (1.0f + (f90 - 1.0f) * dotNLReverse2 * dotNLReverse2 * dotNLReverse) * (1.0f + (f90 - 1.0f) * dotNVReverse2 * dotNVReverse2 * dotNVReverse) * param.color;// / 3.1415926f;
+
+}
+
+
 static float EvalDisneyDiffuse(const DisneyBRDFParam & param, float dotNL, float dotNV)
 {
 	//fd=fLambert(1−0.5FL)(1−0.5FV)+fretro−reflection
@@ -142,13 +156,131 @@ static glm::vec3 DisneyFresnel(const SurfaceData & surface, const DisneyBRDFPara
 	// -- See section 3.1 and 3.2 of the 2015 PBR presentation + the Disney BRDF explorer (which does their 2012 remapping
 	// -- rather than the SchlickR0FromRelativeIOR seen here but they mentioned the switch in 3.2).
 	glm::vec3 R0 = Fresnel::SchlickR0FromRelativeIOR(param.ior) * glm::lerp(glm::vec3(1.0f), tint, param.specularTint);
-		   R0 = glm::lerp(R0, param.color, param.metallic);
+			 R0 = glm::lerp(R0, param.color, param.metallic);
 
 	float dielectricFresnel = Fresnel::Dielectric(dotHV, 1.0f, param.ior);
 	glm::vec3 metallicFresnel = Fresnel::Schlick(R0, glm::dot(wi, wm));
 
 	return glm::lerp(glm::vec3(dielectricFresnel), metallicFresnel, param.metallic);
 }
+
+static float DisneySpecularD(const DisneyBRDFParam& param, float dotNH)
+{
+	auto a2 = param.roughness * param.roughness;
+	auto dotNH2 = dotNH * dotNH;
+	auto d = a2 * dotNH2 + (1.0f - dotNH2);
+	return std::min(65504.0f, 1.0f / d * d);
+}
+
+static float D_GGX(float a, float dotNH) {
+	//float a2 = a * a;
+	//float dotNH2 = dotNH * dotNH;
+	//float d = dotNH2 * (a2 - 1.0) + 1.0;
+	//return std::min(65504.0f, a2 / (3.1415926f * d * d));
+
+	float a2 = dotNH * a;
+	if (a2 == 0.0f) return 1.0f;
+	float k = a2 / (1.0 - dotNH * dotNH + 2 * 2);
+	return k * k * (1.0 / 3.1415926f);
+}
+
+static float microfacet_distribution(
+	float roughness, const glm::vec3& normal, const glm::vec3& halfway) {
+	// https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
+	// http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+	auto cosine = glm::dot(normal, halfway);
+	if (roughness <= 0.0f) roughness = 0.001f;
+	if (cosine <= 0 || roughness <= 0.0f) return 0;
+	auto roughness2 = roughness * roughness;
+	auto cosine2    = cosine * cosine;
+	
+	return roughness2 / (3.1415926f * (cosine2 * roughness2 + 1 - cosine2) *
+														(cosine2 * roughness2 + 1 - cosine2));
+}
+
+static float GTR2Aniso(float NDotH, float HDotX, float HDotY, float ax, float ay)
+{
+	float a = HDotX / ax;
+	float b = HDotY / ay;
+	float c = a * a + b * b + NDotH * NDotH;
+	return 1.0 / (3.1415926 * ax * ay * c * c);
+}
+
+static float SmithGAniso(float NDotV, float VDotX, float VDotY, float ax, float ay)
+{
+	float a = VDotX * ax;
+	float b = VDotY * ay;
+	float c = NDotV;
+	return (2.0 * NDotV) / (NDotV + sqrt(a * a + b * b + c * c));
+}
+
+
+
+static float GeometrySchlickGGX(float NdotV, float k)
+{
+	float nom = NdotV;
+	float denom = NdotV * (1.0 - k) + k;
+	return nom / denom;
+}
+
+static float GeometrySmith(float NdotV, float NdotL, float Roughness)
+{
+	float squareRoughness = Roughness * Roughness;
+	float k = pow(squareRoughness + 1, 2) / 8;
+	float ggx1 = GeometrySchlickGGX(NdotV, k);
+	float ggx2 = GeometrySchlickGGX(NdotL, k);
+	return ggx1 * ggx2;
+}
+
+static float V_SmithGGXCorrelatedFast(float NoV, float NoL, float roughness) {
+	float a = roughness;
+	float GGXV = NoL * (NoV * (1.0 - a) + a);
+	float GGXL = NoV * (NoL * (1.0 - a) + a);
+	return 0.5 / (GGXV + GGXL);
+}
+
+
+static void CalDisneyLobePdfs(const DisneyBRDFParam & param, float & pDiffuse, float & pSpecular)
+{
+	float metallicBRDF   = param.metallic;
+	float dielectricBRDF = (1.0f - param.metallic);
+
+	float specularWeight     = metallicBRDF;
+	float diffuseWeight      = dielectricBRDF;
+
+	float norm = 1.0f / (specularWeight + diffuseWeight);
+
+	pSpecular  = specularWeight     * norm;
+	pDiffuse   = diffuseWeight      * norm;
+}
+
+//=========================================================================================================================
+static glm::vec3 SampleGgxVndfAnisotropic(const glm::vec3& wo, float ax, float ay, float u1, float u2)
+{
+		// -- Stretch the view vector so we are sampling as though roughness==1
+		glm::vec3 v = glm::normalize(glm::vec3(wo.x * ax, wo.y, wo.z * ay));
+
+		// -- Build an orthonormal basis with v, t1, and t2
+		glm::vec3 t1 = (v.y < 0.9999f) ? glm::normalize(glm::cross(v, {0.0f, 1.0f, 0.0f})) : glm::vec3(1.0f, 0.0f, 0.0f);
+		glm::vec3 t2 = glm::cross(t1, v);
+
+		const float pi = 3.1415926f;
+
+		// -- Choose a point on a disk with each half of the disk weighted proportionally to its projection onto direction v
+		float a = 1.0f / (1.0f + v.y);
+		float r = sqrt(u1);
+		float phi = (u2 < a) ? (u2 / a) * pi : pi + (u2 - a) / (1.0f - a) * pi;
+		float p1 = r * glm::cos(phi);
+		float p2 = r * glm::sin(phi) * ((u2 < a) ? 1.0f : v.y);
+
+		// -- Calculate the normal in this stretched tangent space
+		glm::vec3 n = p1 * t1 + p2 * t2 + sqrt(std::max(0.0f, 1.0f - p1 * p1 - p2 * p2)) * v;
+
+		// -- unstretch and normalize the normal
+		return glm::normalize(glm::vec3(ax * n.x, n.y, ay * n.z));
+}
+
+
 
 static void SampleDisneyBsdf(const SurfaceData & surface, const DisneyBRDFParam & param, const glm::vec3 & wo, const glm::vec3 & wi, BsdfSample & bsdfSample)
 {
@@ -158,11 +290,30 @@ static void SampleDisneyBsdf(const SurfaceData & surface, const DisneyBRDFParam 
 	float ax, ay;
 	CalculateAnisotropicParams(param.roughness, 0.0f, ax, ay);
 
-    //float G1v = GGX::SeparableSmithGGXG1(wo, wm, ax, ay);
-    //glm::vec3 specular = G1v * F;
-    float dotNL = std::max(0.0f, glm::dot(glm::vec3(surface.normal), wi));
-    float dotNV = std::max(0.0f, glm::dot(glm::vec3(surface.normal), wo));
-    auto diffuse = EvalDisneyDiffuse(param, dotNL, dotNV);
+	//float G1v = GGX::SeparableSmithGGXG1(wo, wm, ax, ay);
+	//glm::vec3 specular = G1v * F;
+	const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+	float dotNL = std::min(1.0f, std::max(0.0f, glm::dot(up, wi)));
+	float dotNV = std::min(1.0f, std::max(0.0f, glm::dot(up, wo)));
+	float dotNH = std::min(1.0f, std::max(0.0f, glm::dot(up, wm)));
+	float dotLH = std::min(1.0f, std::max(0.0f, glm::dot(glm::vec3(wi), glm::vec3(wm))));
+	//auto diffuse = EvalDisneyDiffuse(param, dotNL, dotNV);
+	auto diffuse = DisneyDiffuse(param, dotNL, dotNV, dotLH);  
 
-	bsdfSample.reflectance = diffuse + F;// specular;
+	//auto d = DisneySpecularD(param, dotNH);
+	//auto d = D_GGX(param.roughness * param.roughness, dotNH);
+	//auto d = microfacet_distribution(param.roughness, up, glm::vec3(wm));
+	//auto g = GeometrySmith(dotNV, dotNL, param.roughness);
+	auto g = V_SmithGGXCorrelatedFast(dotNV, dotNL, param.roughness);
+
+	auto d = GTR2Aniso(wm.y, wm.x, wm.z, 1.0f, 1.0f);
+	float G1 = SmithGAniso(dotNV, wo.x, wo.z, 1.0f, 1.0f);
+	float G2 = G1 * SmithGAniso(dotNL, wi.x, wi.z, 1.0f, 1.0f);
+
+	float pdf = G1 * d / (4.0 * dotNV);
+	g = G2;
+
+	auto specular = d * F * G2 / (4.0f * dotNL * dotNV + 1e-6f);
+	
+	bsdfSample.reflectance = diffuse * (1.0f - param.metallic) + specular /pdf;// *pdf;// specular;
 }

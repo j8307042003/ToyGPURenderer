@@ -9,7 +9,10 @@
 struct SurfaceData
 {
 	glm::dvec3 normal;
+	glm::dvec3 tangent;
+	glm::dvec3 bitangent;
 	glm::dvec3 position;
+	glm::mat3 worldToTangent;
 	glm::vec2 uv;
 };
 

@@ -1,6 +1,10 @@
 #include "Texture.h"
 //#define STB_IMAGE_IMPLEMENTATION
 #include "../../assimp/contrib/stb/stb_image.h"
+#define TINYEXR_IMPLEMENTATION
+#define TINYEXR_USE_MINIZ 0
+#include <miniz/miniz.h>
+#include "tinyexr.h"
 
 glm::vec4 SampleTexPixel(const Texture & texture, const glm::ivec2 & pixel)
 {
@@ -62,9 +66,9 @@ bool LoadTexture(std::string path, Texture & tex)
 	tex.height = height;
 	tex.pixels_data = std::vector<glm::vec4>(width * height);
 
-	for (int i = 0; i < width; ++i)
+	for (int j = 0; j < height; ++j)
 	{
-		for (int j = 0; j < height; ++j)
+		for (int i = 0; i < width; ++i)
 		{
 			int pix = (j * width + i);
 			int offset = pix * 4;
@@ -74,6 +78,35 @@ bool LoadTexture(std::string path, Texture & tex)
 	}
 
 	stbi_image_free(imageFileData);
+
+	return true;
+}
+
+bool LoadExrTexture(std::string path, Texture & tex)
+{
+	float* data;
+	int width, height;
+	const char* err = NULL;
+	int ret = LoadEXR(&data, &width, &height, path.c_str(), &err);
+
+	if (ret != TINYEXR_SUCCESS)
+	{
+		return false;
+	}	
+
+	tex.width = width;
+	tex.height = height;
+	tex.pixels_data = std::vector<glm::vec4>(width * height);
+	for (int j = 0; j < height; ++j)
+	{
+		for (int i = 0; i < width; ++i)
+		{
+			int pix = (j * width + i);
+			int offset = pix * 4;
+
+			tex.pixels_data[pix] = { pow(data[offset], 1.0 / 2.2), pow(data[offset+1], 1.0 / 2.2) , pow(data[offset+2], 1.0 / 2.2), data[offset+3] };
+		}
+	}	
 
 	return true;
 }
