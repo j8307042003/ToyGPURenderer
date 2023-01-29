@@ -18,11 +18,11 @@ public:
 	    return uv;
 	}
 
-	virtual glm::vec3 Sample(const glm::dvec3 & direction)
+	virtual glm::vec3 Sample(const glm::dvec3 & direction, bool bEye)
 	{
 		auto uv = SampleSphericalMap(direction);
 
 		auto pixData = SampleTex(*envTexture, uv);
-		return glm::vec3(pixData) * scale;
+		return glm::vec3(pixData) * (bEye ? 1.0f : scale);
 	}
 };

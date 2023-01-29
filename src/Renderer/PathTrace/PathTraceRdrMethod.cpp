@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include "../Texture/Texture.h"
 #include <algorithm>
-#include <Renderer/Accelerate/BVHStruct.cpp>
+#include <Renderer/Accelerate/BVHStruct.h>
 
 glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, glm::vec2 filmRes)
 {
@@ -67,7 +67,7 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 
 			if (rdrData.sceneData->envSources.size() > 0)
 			{
-				glm::vec3 r = rdrData.sceneData->envSources[0]->Sample(unit_direction);
+				glm::vec3 r = rdrData.sceneData->envSources[0]->Sample(unit_direction, i == 0);
 				sampleResults[i] = {r, glm::vec3(0.0f)};
 			}
 

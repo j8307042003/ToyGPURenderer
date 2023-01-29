@@ -20,7 +20,7 @@
 #include "Renderer/SceneLoader.h"
 #include <embree3/rtcore.h>
 
-InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), m_mouse_table()
+InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), m_mouse_table(), m_imguiUIs()
 {
 	const int kWidth = 2560; //1920 / 1;// 1920 / 1;//720;
 	const int kHeight = 1440;//1080 / 1;// 1080 / 1;//512;

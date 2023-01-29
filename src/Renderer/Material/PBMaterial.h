@@ -39,6 +39,13 @@ public:
 	glm::vec3 emission = glm::vec3(0.0);
 	Texture * albedo_texture = nullptr;
 	Texture * metallic_texture = nullptr;
+	int metallic_channel = 0;
+
+	Texture * ao_texture = nullptr;
+	int ao_channel = 0;
+
+	Texture * roughness_texture = nullptr;
+	int roughness_channel = 0;
 
 
 	std::function<DisneyBRDFParam(const SurfaceData & surface, const PBMaterial &)> shader;

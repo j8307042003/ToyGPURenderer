@@ -238,6 +238,23 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 	//pbr_mat->roughness = 0.3f;
 	//pbr_mat->metallic = 0.5f;
 
+    
+    for(int texType = aiTextureType_NONE; texType <= AI_TEXTURE_TYPE_MAX; ++texType)
+    {
+        aiTextureType t = (aiTextureType) texType;
+        int texCount = p_material->GetTextureCount((aiTextureType)texType);
+        if (texCount == 0) continue;
+        
+        auto typeStr = TextureTypeToString(t);
+        for (int texindex = 0; texindex < texCount; ++texindex)
+        {
+            aiString path;
+            p_material->GetTexture(t, texindex, &path);
+            std::cout << "Type " << typeStr << " : " << path.C_Str() << std::endl;
+        }
+    }
+    
+    
 	if (p_material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
 	{
 		aiString path;
@@ -271,6 +288,19 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		pbr_mat->metallic_texture = tex;
 		printf("METALNESS Texture: %s\n", path.C_Str());
 	}
+    
+    if (p_material->GetTextureCount(aiTextureType_UNKNOWN) > 0)
+    {
+        aiString path;
+        p_material->GetTexture(aiTextureType_UNKNOWN, 0, &path);
+        auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()));
+        pbr_mat->metallic_texture = tex;
+        pbr_mat->metallic_channel = 2;
+        pbr_mat->roughness_texture = tex;
+        pbr_mat->roughness_channel = 1;
+        printf("Unknown Texture: %s\n", path.C_Str());
+    }
+    
 
 	if (p_material->GetTextureCount(aiTextureType_BASE_COLOR) > 0)
 	{
