@@ -247,6 +247,10 @@ void TestGUI::OnGUI()
 	MaterialPickGUI();
 
 	ImGui::End();
+
+	ImGui::Begin("Camera");
+	CameraGUI();
+	ImGui::End();
 }
 
 void TestGUI::MaterialPickGUI()
@@ -266,6 +270,25 @@ void TestGUI::MaterialPickGUI()
 	{
 		renderer->ClearImage();
 	}
+}
+
+void TestGUI::CameraGUI()
+{
+	auto pRenderData = renderer->GetRenderData();
+	if (pRenderData == nullptr) return;
+
+	auto pCamData = &pRenderData->camData;
+
+	bool bAnyChange = false;
+	bAnyChange |= ImGui::InputFloat("Film", &pCamData->film, 0.01f, 1.0f, "%.3f");
+	bAnyChange |= ImGui::InputFloat("Lens", &pCamData->lens, 0.01f, 1.0f, "%.3f");
+	bAnyChange |= ImGui::InputFloat("Focal", &pCamData->focal, 0.001f, 2.0f, "%.3f");
+
+	if (bAnyChange)
+	{
+		renderer->ClearImage();
+	}
+
 }
 
 void InteractiveApp::CameraUpdate(float deltaTime)

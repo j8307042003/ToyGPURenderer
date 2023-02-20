@@ -8,6 +8,7 @@
 #include <OpenImageDenoise/oidn.hpp>
 //#include <OpenImageDenoise/oidn.hpp>
 #include "Accelerate/BVHStruct.h"
+#include "PathTrace/IRenderMethod.h"
 
 class PathTraceRenderer : public Renderer
 {
@@ -53,6 +54,7 @@ public:
 	virtual void UpdateFrame();
 	virtual void ClearImage();
 	virtual void* GetImage() override;
+	virtual RenderData* GetRenderData() override {return &m_renderData;}
 
 
 private:
@@ -99,6 +101,7 @@ private:
 	//
 	SceneData m_sceneData;
 	BVHTree m_bvh;
+	RenderData m_renderData;
 
 	//
 	bool m_showDenoiser = true;

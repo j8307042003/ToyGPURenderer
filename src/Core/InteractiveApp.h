@@ -14,6 +14,7 @@ class TestGUI : public ImguiUI
 
 private:
 	void MaterialPickGUI();
+	void CameraGUI();
 private:
 	float myColor[4];
 	char saveFileBuffer[128];

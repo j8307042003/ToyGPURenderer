@@ -12,6 +12,8 @@
 #include <glm/geometric.hpp>
 
 
+
+
 void PathTraceRenderer::StartRender()
 {
 	const int kWidth = 512;
@@ -44,6 +46,17 @@ void PathTraceRenderer::StartRender()
 
 	MakeSceneData(*s, m_sceneData, true);
 	//bvh_buildTree1(&m_sceneData, m_bvh);
+
+
+	auto camData = DefaultCameraData();
+	m_renderData.camData = camData;
+	//m_renderData.camDirection = glm::dvec3(0, 0, -1);
+	//m_renderData.camPosition = glm::dvec3(0, 0, 10);
+	m_renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+	m_renderData.camPosition = cam->pos;	
+	m_renderData.scene = s;
+	m_renderData.sceneData = &m_sceneData;	
+
 	m_rendering = true;
 	m_renderThread = std::thread(&PathTraceRenderer::RenderLoop, this);
 }
@@ -155,6 +168,7 @@ void PathTraceRenderer::RenderLoop()
 	TileSampleChannelJob sampleChannelWork = TileSampleChannelJob(&tileRenderDatas, this);
 	ApplySampleChannelJob applyChannelWork = ApplySampleChannelJob(&tileRenderDatas, this);
 
+    std::cout << "TBB crash stage 1" << std::endl;
 	// Sample Albedo, Normal Buffer for denoiser
 	tbb::parallel_for(size_t(0), tileRenderDatas.size(), sampleChannelWork);
 
@@ -165,6 +179,7 @@ void PathTraceRenderer::RenderLoop()
 		if (m_resetFlag)
 		{
 			m_resetFlag = false;
+            std::cout << "TBB crash stage 2" << std::endl;
 			tbb::parallel_for(size_t(0), tileRenderDatas.size(), sampleChannelWork);
 		}
 
@@ -186,6 +201,7 @@ void PathTraceRenderer::RenderLoop()
 
 		if (bIterate)
 		{
+            std::cout << "TBB crash stage 3" << std::endl;
 			tbb::parallel_for(size_t(0), tileRenderDatas.size(), renderWork);
 			iteration++;
 		}
@@ -204,6 +220,7 @@ void PathTraceRenderer::RenderLoop()
 		applyChannelWork.bDonoised = bDenoised;
 		applyChannelWork.bNormal = bNormal;
 		applyChannelWork.bSimpleShading = bSimpleShading;
+        std::cout << "TBB crash stage 4" << std::endl;
 		tbb::parallel_for(size_t(0), tileRenderDatas.size(), applyChannelWork);
 		//std::cout << "Complete Iteration : " << iteration << std::endl;
 	}
@@ -310,15 +327,17 @@ void PathTraceRenderer::ApplyRawImage(int x, int y, int width, int height)
 
 void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int height)
 {
+	/*
 	auto camData = DefaultCameraData();
-	RenderData renderData = {};
-	renderData.camData = camData;
-	//renderData.camDirection = glm::dvec3(0, 0, -1);
-	//renderData.camPosition = glm::dvec3(0, 0, 10);
-	renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
-	renderData.camPosition = cam->pos;	
-	renderData.scene = s;
-	renderData.sceneData = &m_sceneData;
+	RenderData m_renderData = {};
+	m_renderData.camData = camData;
+	//m_renderData.camDirection = glm::dvec3(0, 0, -1);
+	//m_renderData.camPosition = glm::dvec3(0, 0, 10);
+	m_renderData.scene = s;
+	m_renderData.sceneData = &m_sceneData;
+	*/
+	m_renderData.camPosition = cam->pos;	
+	m_renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
 
 	const int BVH_Stack_Num = 128;
 	int bvh_stack[BVH_Stack_Num];
@@ -337,17 +356,17 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
 			auto filmRes = glm::vec2(filmWidth, filmHeight);
-			const auto cam_ray = SampleCamRay(renderData.camData, renderData.camPosition, renderData.camDirection, filmRes, glm::vec2(nowX, nowY));
+			const auto cam_ray = SampleCamRay(m_renderData.camData, m_renderData.camPosition, m_renderData.camDirection, filmRes, glm::vec2(nowX, nowY));
 			Ray3f ray = cam_ray;
 			HitInfo hitInfo;
 			glm::dvec3 rayHitPosition = {};
 			glm::dvec3 rayHitNormal = {};
 			uv = {};
 			int shapeIndex = -1;
-			//bool bHitAny = RayTrace(*renderData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
-			//bool bHitAny = BHV_Raycast(renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num / 2, &bvh_stack[0]);
+			//bool bHitAny = RayTrace(*m_renderData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
+			//bool bHitAny = BHV_Raycast(m_renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num / 2, &bvh_stack[0]);
 			SceneIntersectData intersect;
-			bool bHitAny = IntersectScene(renderData.sceneData, ray, 0.1f, 10000.0f, intersect);
+			bool bHitAny = IntersectScene(m_renderData.sceneData, ray, 0.1f, 10000.0f, intersect);
 			rayHitPosition = intersect.point;
 			rayHitNormal = intersect.normal;
 			shapeIndex = intersect.shapeIdx;
@@ -356,7 +375,7 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			glm::vec3 albedo = {};
 			if (bHitAny)
 			{
-				auto mat = GetShapeMaterial(*renderData.sceneData, shapeIndex);
+				auto mat = GetShapeMaterial(*m_renderData.sceneData, shapeIndex);
 				SurfaceData surface = {};
 				surface.position = rayHitPosition;
 				surface.normal = rayHitNormal;
@@ -364,12 +383,12 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 				albedo = mat->Albedo(surface);
 
 				/*
-				auto shapePtr = GetShapeData(*renderData.sceneData, shapeIndex);
+				auto shapePtr = GetShapeData(*m_renderData.sceneData, shapeIndex);
 				if (shapePtr != nullptr && shapePtr.type == ShapeType::Triangle)
 				{
 					auto primitiveIdx = shapePtr->primitiveId;	
 					auto triangleData = sceneData.shapesData.triangles[primitiveIdx];
-					renderData.sceneData.shapesData.positions[triangleData.x]
+					m_renderData.sceneData.shapesData.positions[triangleData.x]
 				}
 				*/
 			}
@@ -401,14 +420,16 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
 	auto camData = DefaultCameraData();
 	glm::dvec3 camPos = glm::dvec3(0.0f, 0.0f, 0.0f);
 
-	RenderData renderData = {};
-	renderData.camData = camData;
-	//renderData.camDirection = glm::dvec3(0, 0, -1);
-	//renderData.camPosition = glm::dvec3(0, 0, 10);
-	renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
-	renderData.camPosition = cam->pos;
-	renderData.scene = s;
-	renderData.sceneData = &m_sceneData;
+	/*
+	RenderData m_renderData = {};
+	m_renderData.camData = camData;
+	//m_renderData.camDirection = glm::dvec3(0, 0, -1);
+	//m_renderData.camPosition = glm::dvec3(0, 0, 10);
+	m_renderData.scene = s;
+	m_renderData.sceneData = &m_sceneData;
+	*/
+	m_renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+	m_renderData.camPosition = cam->pos;
 
 	PathTraceRdrMethod renderMethod = {};
 	renderMethod.bvh_tree = &m_bvh;
@@ -425,7 +446,7 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
 			int currentPixPos = (nowX + nowY * filmWidth) * 3;
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
-			auto result = renderMethod.Sample(renderData, nowX, nowY, glm::vec2(filmWidth + (SysRandom::Random() - 0.5f) * 2.0f, filmHeight + (SysRandom::Random() - 0.5f) * 2.0f));
+			auto result = renderMethod.Sample(m_renderData, nowX, nowY, glm::vec2(filmWidth + (SysRandom::Random() - 0.5f) * 2.0f, filmHeight + (SysRandom::Random() - 0.5f) * 2.0f));
 			result = glm::clamp(result, glm::vec3(0.0f), glm::vec3(0.99f));
 
 			m_integrater[currentPixPos] += result.x;

@@ -4,6 +4,7 @@
 #include "Scene.h"
 #include "Camera.h"
 
+class RenderData;
 class Renderer {
 public:
 	Renderer(){};
@@ -16,6 +17,8 @@ public:
 	virtual void Stall() {running = false;}
 	virtual void Resume() {running = true;}
 	virtual void* GetImage() { return nullptr; }
+	virtual Camera* GetCam() { return cam; }
+	virtual RenderData* GetRenderData() { return nullptr;}
 protected:
 	Scene * s;
 	Camera * cam;
