@@ -45,6 +45,18 @@ void Scene::AddShape(Shape * s, std::string mat_name) {
 	shapeMaterialMap[s] = it->second;
 }
 
+inline void MakeOrthogonalCoordinateSystem(const glm::vec3 & v1, glm::vec3* v2, glm::vec3* v3)
+{
+	if (glm::abs(v1.x) > glm::abs(v1.y))
+		*v2 = glm::vec3(-v1.z, 0, v1.x) * (1.0f / glm::sqrt(v1.x * v1.x + v1.z * v1.z));
+	else
+		*v2 = glm::vec3(0, v1.z, -v1.y) * (1.0f / glm::sqrt(v1.y * v1.y + v1.z * v1.z));
+	*v3 = glm::cross(v1, *v2);
+
+	*v2 = *v2 - glm::dot(v1, *v2) * v1;
+
+}
+
 
 void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position, glm::quat rotation, float scale) {
 	std::map<std::string,int>::iterator it = materialMap.find(mat_name);
@@ -58,19 +70,30 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
     aiPropertyStore* props = aiCreatePropertyStore();
     std::cout << "Loading Model : " << modelFile << std::endl;
 
-	//auto scene = aiImportFile("dragon.obj",aiProcessPreset_TargetRealtime_MaxQuality);	
+	std::map<int, int> materialMap = {};
+	int saveByMaterialInstanced = 0;
+
 	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
 	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_Fast | aiProcess_FlipWindingOrder | aiProcess_FlipUVs, NULL, props);
 	if (scene) {
 		std::string directory = modelFile.substr(0, modelFile.find_last_of('/'));
-		//std::cout << "num of mNumMeshes : " << scene->mNumMeshes << std::endl;
 		for( unsigned int i = 0; i < scene->mNumMeshes; ++i) {
 			aiMesh* mesh = scene->mMeshes[i];
 			auto materialIdx = mesh->mMaterialIndex;
 			if (materialIdx >= 0) 
 			{
-				auto* p_material = scene->mMaterials[materialIdx];
-				materialIndex = CreateMaterial(p_material, directory);
+				auto materialPair = materialMap.find(materialIdx);
+				if (materialPair != materialMap.end())
+				{
+					materialIndex = materialPair->second;
+					saveByMaterialInstanced++;
+				}
+				else
+				{
+					auto* p_material = scene->mMaterials[materialIdx];
+					materialIndex = CreateMaterial(p_material, directory);
+					materialMap.emplace(materialIdx, materialIndex);
+				}
 			}
 
 			meshes.emplace_back();
@@ -79,25 +102,36 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
 			glm::mat4 model = glm::mat4(1.0);
 			model = glm::translate(model, glm::vec3(position.x, position.y, position.z));
-			//model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-			//model = glm::rotate(model, glm::radians(45.0f), glm::vec3(.0f, 1.0f, 0.0f));
-			//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			model = glm::scale(model * toMat4(rotation), glm::vec3(scale));
+
+			int faceIndexNum = 0;
 
 			for (unsigned int j = 0; j < mesh->mNumFaces; j++)
 			{
 				aiFace face = mesh->mFaces[j];
+				faceIndexNum += face.mNumIndices;
 				Vec3 vertex[3];
 				Vec3 Normal[3];
 				Vec3 Tangent[3];
 				Vec3 uv[3];
+				bool bHaveTangent = mesh->mTangents != nullptr;
                 
-                shapes.reserve(shapes.size() + face.mNumIndices);
 				for (unsigned int k = 0; k < face.mNumIndices; k++) {
                     auto vertexId = face.mIndices[k];
 					aiVector3D & v = mesh->mVertices[vertexId];
                     auto n = mesh->mNormals[vertexId];
-					auto t = mesh->mTangents[vertexId];
+					aiVector3D t;
+					if (bHaveTangent)
+					{
+						t = mesh->mTangents[vertexId];
+					}
+					else
+					{
+						glm::vec3 glm_t, bt;
+						MakeOrthogonalCoordinateSystem({n.x, n.y, n.z}, &glm_t, &bt);
+						t = {glm_t.x, glm_t.y, glm_t.z};
+					}
+
                     auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
                     auto tangent = model * glm::vec4(t.x, t.y, t.z, 0.0);
 					auto m = model * glm::vec4(v.x, v.y, v.z, 1.0);
@@ -130,6 +164,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 				//triangle.uv[0] = {0.0f, 1.0f, 0.0f}; triangle.uv[1] = {1.0f, 0.0f, 0.0f}; triangle.uv[2] = {0.5f, 0.5f, 0.0f};
 			}
 
+			shapes.reserve(shapes.size() + faceIndexNum);
 			for (int i = 0; i < meshData.triangles.size(); ++i)
 			{
 				auto pTriangle = &meshData.triangles[i];
@@ -144,6 +179,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 	}
 
     std::cout << "Model : " << modelFile  << " Loaded ? : " << (scene != nullptr) << std::endl;
+	std::cout << "Save By material instanced " << saveByMaterialInstanced << std::endl;
     if (scene != nullptr) aiReleaseImport(scene);
 }
 

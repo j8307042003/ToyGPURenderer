@@ -152,5 +152,17 @@ void SceneLoader::LoadLight(const json11::Json& lightJson, Scene* scene)
 
 			scene->AddPointLight(glm::dvec3(posData.x, posData.y, posData.z), glm::dvec3(radianceData.x, radianceData.y, radianceData.z), radius);
 		}
+		else if (type == "directional")
+		{
+			auto direction = lightData["direction"];
+			auto radiance = lightData["radiance"];
+
+			auto directionData = ArrayToVec3(direction);
+			auto radianceData = ArrayToVec3(radiance);			
+			directionData.normalize();
+
+
+			scene->AddDirectionalLight(glm::vec3(directionData.x, directionData.y, directionData.z), glm::vec3(radianceData.x, radianceData.y, radianceData.z));
+		}
 	}
 }

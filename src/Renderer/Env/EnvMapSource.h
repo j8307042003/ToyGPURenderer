@@ -23,6 +23,14 @@ public:
 		auto uv = SampleSphericalMap(direction);
 
 		auto pixData = SampleTex(*envTexture, uv);
-		return glm::vec3(pixData) * (bEye ? 1.0f : scale);
+
+		//auto pixData_0 = SampleTex(*envTexture, uv + glm::vec2(0.0f, 0.0f) );
+		//auto pixData_1 = SampleTex(*envTexture, uv + glm::vec2(0.0f, 0.1f) );
+		//auto pixData_2 = SampleTex(*envTexture, uv + glm::vec2(0.1f, 0.0f) );
+		//auto pixData_3 = SampleTex(*envTexture, uv + glm::vec2(0.1f, 0.1f) );
+
+		//pixData = pixData * 0.6f + (pixData_0 + pixData_1 + pixData_2 + pixData_3) * 0.1f;
+
+		return glm::vec3(pixData) * scale;
 	}
 };
