@@ -13,7 +13,7 @@ public:
 	virtual int getWidth() = 0;
 	virtual int getHeight() = 0;
 	virtual void SetEventCallback(const EventCallback & callback) = 0;
-    virtual bool WindowShouldClose() {};
+    virtual bool WindowShouldClose() = 0;
 	virtual void SetSourceImage(int width, int height, char* buffer, ColorFormat format = ColorFormat::RGBFloat) = 0;
 	virtual void GetMousePos(float& x, float& y) = 0;
 	virtual void Update() = 0;
