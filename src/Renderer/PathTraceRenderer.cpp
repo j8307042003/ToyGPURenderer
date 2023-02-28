@@ -241,9 +241,9 @@ void PathTraceRenderer::ApplyDenoiser(int x, int y, int width, int height)
 			int currentPixPos = (nowX + nowY * filmWidth) * 3;
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
-			m_imageBuffer[currentPixPos] = (int)(m_denoiseOutputBuffer[currentPixPos] * 255.0f);
-			m_imageBuffer[currentPixPos + 1] = (int)(m_denoiseOutputBuffer[currentPixPos + 1] * 255.0f);
-			m_imageBuffer[currentPixPos + 2] = (int)(m_denoiseOutputBuffer[currentPixPos + 2] * 255.0f);
+			m_imageBuffer[currentPixPos] = (int)(glm::pow(m_denoiseOutputBuffer[currentPixPos], 1.0f / 2.2f) * 255.0f);
+			m_imageBuffer[currentPixPos + 1] = (int)(glm::pow(m_denoiseOutputBuffer[currentPixPos + 1], 1.0f / 2.2f) * 255.0f);
+			m_imageBuffer[currentPixPos + 2] = (int)(glm::pow(m_denoiseOutputBuffer[currentPixPos + 2], 1.0f / 2.2f) * 255.0f);
 		}
 }
 
@@ -260,9 +260,9 @@ void PathTraceRenderer::ApplyAlbedoChannelImage(int x, int y, int width, int hei
 			int currentPixPos = (nowX + nowY * filmWidth) * 3;
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
-			m_imageBuffer[currentPixPos] = (int)(m_albedoBuffer[currentPixPos] * 255.0f);
-			m_imageBuffer[currentPixPos + 1] = (int)(m_albedoBuffer[currentPixPos + 1] * 255.0f);
-			m_imageBuffer[currentPixPos + 2] = (int)(m_albedoBuffer[currentPixPos + 2] * 255.0f);
+			m_imageBuffer[currentPixPos] = (int)(glm::pow(m_albedoBuffer[currentPixPos], 1.0f / 2.2f) * 255.0f);
+			m_imageBuffer[currentPixPos + 1] = (int)(glm::pow(m_albedoBuffer[currentPixPos + 1], 1.0f / 2.2f) * 255.0f);
+			m_imageBuffer[currentPixPos + 2] = (int)(glm::pow(m_albedoBuffer[currentPixPos + 2], 1.0f / 2.2f) * 255.0f);
 		}	
 }
 
@@ -318,9 +318,9 @@ void PathTraceRenderer::ApplyRawImage(int x, int y, int width, int height)
 			int currentPixPos = (nowX + nowY * filmWidth) * 3;
 			int sampleCountIndex = nowX + nowY * filmWidth;
 
-			m_imageBuffer[currentPixPos] = (uint8_t)(std::max(0.0f, std::min(255.0f, m_colorBuffer[currentPixPos] * 255.0f)));
-			m_imageBuffer[currentPixPos + 1] = (uint8_t)(std::max(0.0f, std::min(255.0f, m_colorBuffer[currentPixPos + 1] * 255.0f)));
-			m_imageBuffer[currentPixPos + 2] = (uint8_t)(std::max(0.0f, std::min(255.0f, m_colorBuffer[currentPixPos + 2] * 255.0f)));
+			m_imageBuffer[currentPixPos] = (uint8_t)(std::max(0.0f, std::min(255.0f, glm::pow(m_colorBuffer[currentPixPos], 1.0f / 2.2f) * 255.0f)));
+			m_imageBuffer[currentPixPos + 1] = (uint8_t)(std::max(0.0f, std::min(255.0f, glm::pow(m_colorBuffer[currentPixPos + 1], 1.0f / 2.2f) * 255.0f)));
+			m_imageBuffer[currentPixPos + 2] = (uint8_t)(std::max(0.0f, std::min(255.0f, glm::pow(m_colorBuffer[currentPixPos + 2], 1.0f / 2.2f) * 255.0f)));
 		}
 }
 

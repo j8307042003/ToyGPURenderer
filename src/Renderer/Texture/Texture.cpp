@@ -73,7 +73,7 @@ bool LoadTexture(std::string path, Texture & tex)
 			int pix = (j * width + i);
 			int offset = pix * 4;
 
-			tex.pixels_data[pix] = { imageFileData[offset] / 255.0f, imageFileData[offset+1] / 255.0f , imageFileData[offset+2] / 255.0f, imageFileData[offset+3] / 255.0f };
+			tex.pixels_data[pix] = { pow(imageFileData[offset] / 255.0f, 2.2f), pow(imageFileData[offset+1] / 255.0f, 2.2) , pow(imageFileData[offset+2] / 255.0f, 2.2), pow(imageFileData[offset+3] / 255.0f, 2.2) };
 		}
 	}
 
@@ -104,7 +104,7 @@ bool LoadExrTexture(std::string path, Texture & tex)
 			int pix = (j * width + i);
 			int offset = pix * 4;
 
-			tex.pixels_data[pix] = { pow(data[offset], 1.0 / 2.2), pow(data[offset+1], 1.0 / 2.2) , pow(data[offset+2], 1.0 / 2.2), data[offset+3] };
+			tex.pixels_data[pix] = { pow(data[offset], 2.2), pow(data[offset+1], 2.2) , pow(data[offset+2], 2.2), data[offset+3] };
 		}
 	}	
 

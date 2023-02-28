@@ -13,6 +13,7 @@
 #include "Env/EnvMapSource.h"
 #include "RayTraceEngine/RayTraceEngine.h"
 #include "RayTraceEngine/EmbreeEngine.h"
+#include <stack>
 
 void Scene::AddShape(Shape * s) {
 	shapes.push_back(s);
@@ -77,104 +78,136 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_Fast | aiProcess_FlipWindingOrder | aiProcess_FlipUVs, NULL, props);
 	if (scene) {
 		std::string directory = modelFile.substr(0, modelFile.find_last_of('/'));
-		for( unsigned int i = 0; i < scene->mNumMeshes; ++i) {
-			aiMesh* mesh = scene->mMeshes[i];
-			auto materialIdx = mesh->mMaterialIndex;
-			if (materialIdx >= 0) 
+
+		glm::mat4 model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(position.x, position.y, position.z));
+		model = glm::scale(model * toMat4(rotation), glm::vec3(scale));
+
+		struct NodeTraversalData
+		{
+			aiMatrix4x4 transform;
+			aiNode* node;
+		};
+
+		std::stack<NodeTraversalData> nodeStack = {};
+		nodeStack.push({aiMatrix4x4(), scene->mRootNode});
+		while (nodeStack.size() > 0)
+		{
+			auto nodeData = nodeStack.top();
+			nodeStack.pop();
+			auto transform = nodeData.transform * nodeData.node->mTransformation;
+			aiVector3D node_translation, node_scale;
+			aiQuaternion node_rotation;
+			transform.Decompose(node_translation, node_rotation, node_scale);
+			for (int c = 0; c < nodeData.node->mNumChildren; ++c)
 			{
-				auto materialPair = materialMap.find(materialIdx);
-				if (materialPair != materialMap.end())
-				{
-					materialIndex = materialPair->second;
-					saveByMaterialInstanced++;
-				}
-				else
-				{
-					auto* p_material = scene->mMaterials[materialIdx];
-					materialIndex = CreateMaterial(p_material, directory);
-					materialMap.emplace(materialIdx, materialIndex);
-				}
+				auto child = nodeData.node->mChildren[c];
+				nodeStack.push({ transform , child });
 			}
 
-			meshes.emplace_back();
-			auto & meshData = meshes[meshes.size() - 1];
-			meshData.triangles.reserve(mesh->mNumFaces);
 
-			glm::mat4 model = glm::mat4(1.0);
-			model = glm::translate(model, glm::vec3(position.x, position.y, position.z));
-			model = glm::scale(model * toMat4(rotation), glm::vec3(scale));
-
-			int faceIndexNum = 0;
-
-			for (unsigned int j = 0; j < mesh->mNumFaces; j++)
-			{
-				aiFace face = mesh->mFaces[j];
-				faceIndexNum += face.mNumIndices;
-				Vec3 vertex[3];
-				Vec3 Normal[3];
-				Vec3 Tangent[3];
-				Vec3 uv[3];
-				bool bHaveTangent = mesh->mTangents != nullptr;
-                
-				for (unsigned int k = 0; k < face.mNumIndices; k++) {
-                    auto vertexId = face.mIndices[k];
-					aiVector3D & v = mesh->mVertices[vertexId];
-                    auto n = mesh->mNormals[vertexId];
-					aiVector3D t;
-					if (bHaveTangent)
+			for (unsigned int i = 0; i < nodeData.node->mNumMeshes; ++i) {
+				aiMesh* mesh = scene->mMeshes[nodeData.node->mMeshes[i]];
+				auto materialIdx = mesh->mMaterialIndex;
+				if (materialIdx >= 0)
+				{
+					auto materialPair = materialMap.find(materialIdx);
+					if (materialPair != materialMap.end())
 					{
-						t = mesh->mTangents[vertexId];
+						materialIndex = materialPair->second;
+						saveByMaterialInstanced++;
 					}
 					else
 					{
-						glm::vec3 glm_t, bt;
-						MakeOrthogonalCoordinateSystem({n.x, n.y, n.z}, &glm_t, &bt);
-						t = {glm_t.x, glm_t.y, glm_t.z};
+						auto* p_material = scene->mMaterials[materialIdx];
+						materialIndex = CreateMaterial(p_material, directory);
+						materialMap.emplace(materialIdx, materialIndex);
 					}
-
-                    auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
-                    auto tangent = model * glm::vec4(t.x, t.y, t.z, 0.0);
-					auto m = model * glm::vec4(v.x, v.y, v.z, 1.0);
-
-
-
-                    auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][vertexId]) : aiVector3D();
-					//std::vector<aiVector3D> uvDatas = std::vector<aiVector3D>(mesh->mNumVertices);
-					//memcpy(uvDatas.data(), mesh->mTextureCoords[0], sizeof(mesh->mTextureCoords[0][0]) * mesh->mNumVertices);
-					uv[k] = Vec3(abs(uvData.x), abs(uvData.y), 0.0f);
-
-					vertex[k] = {m.x, m.y, m.z};
-					Normal[k] = {normal.x, normal.y, normal.z};
-					Tangent[k] = {tangent.x, tangent.y, tangent.z};
 				}
 
-				meshData.triangles.emplace_back();
+				meshes.emplace_back();
+				auto& meshData = meshes[meshes.size() - 1];
+				meshData.triangles.reserve(mesh->mNumFaces);
 
-				Triangle & triangle = meshData.triangles[meshData.triangles.size() - 1];
-				triangle.Vertices[0] = vertex[0];
-				triangle.Vertices[1] = vertex[1];
-				triangle.Vertices[2] = vertex[2];
-				triangle.normal[0] = Normal[0];
-				triangle.normal[1] = Normal[1];
-				triangle.normal[2] = Normal[2];
-				triangle.tangent[0] = Tangent[0];
-				triangle.tangent[1] = Tangent[1];
-				triangle.tangent[2] = Tangent[2];
-				triangle.uv[0] = uv[0]; triangle.uv[1] = uv[1]; triangle.uv[2] = uv[2];
-				//triangle.uv[0] = {0.0f, 1.0f, 0.0f}; triangle.uv[1] = {1.0f, 0.0f, 0.0f}; triangle.uv[2] = {0.5f, 0.5f, 0.0f};
+				int faceIndexNum = 0;
+
+				for (unsigned int j = 0; j < mesh->mNumFaces; j++)
+				{
+					aiFace face = mesh->mFaces[j];
+					faceIndexNum += face.mNumIndices;
+					Vec3 vertex[3];
+					Vec3 Normal[3];
+					Vec3 Tangent[3];
+					Vec3 uv[3];
+					bool bHaveTangent = mesh->mTangents != nullptr;
+
+					for (unsigned int k = 0; k < face.mNumIndices; k++) {
+						auto vertexId = face.mIndices[k];
+						aiVector3D& v = transform * mesh->mVertices[vertexId];
+						auto n = mesh->mNormals[vertexId];
+						aiVector3D t;
+						if (bHaveTangent)
+						{
+							t = mesh->mTangents[vertexId];
+						}
+						else
+						{
+							glm::vec3 glm_t, bt;
+							MakeOrthogonalCoordinateSystem({ n.x, n.y, n.z }, &glm_t, &bt);
+							t = { glm_t.x, glm_t.y, glm_t.z };
+						}
+
+						// TODO : Check normal 
+						t = transform * t;
+						t = t.NormalizeSafe();
+
+						n = transform * n;
+						n = n.NormalizeSafe();
+
+						auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
+						auto tangent = model * glm::vec4(t.x, t.y, t.z, 0.0);
+						auto m = model * glm::vec4(v.x, v.y, v.z, 1.0);
+
+
+
+						auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][vertexId]) : aiVector3D();
+						//std::vector<aiVector3D> uvDatas = std::vector<aiVector3D>(mesh->mNumVertices);
+						//memcpy(uvDatas.data(), mesh->mTextureCoords[0], sizeof(mesh->mTextureCoords[0][0]) * mesh->mNumVertices);
+						uv[k] = Vec3(abs(uvData.x), abs(uvData.y), 0.0f);
+
+						vertex[k] = { m.x, m.y, m.z };
+						Normal[k] = { normal.x, normal.y, normal.z };
+						Tangent[k] = { tangent.x, tangent.y, tangent.z };
+					}
+
+					meshData.triangles.emplace_back();
+
+					Triangle& triangle = meshData.triangles[meshData.triangles.size() - 1];
+					triangle.Vertices[0] = vertex[0];
+					triangle.Vertices[1] = vertex[1];
+					triangle.Vertices[2] = vertex[2];
+					triangle.normal[0] = Normal[0];
+					triangle.normal[1] = Normal[1];
+					triangle.normal[2] = Normal[2];
+					triangle.tangent[0] = Tangent[0];
+					triangle.tangent[1] = Tangent[1];
+					triangle.tangent[2] = Tangent[2];
+					triangle.uv[0] = uv[0]; triangle.uv[1] = uv[1]; triangle.uv[2] = uv[2];
+					//triangle.uv[0] = {0.0f, 1.0f, 0.0f}; triangle.uv[1] = {1.0f, 0.0f, 0.0f}; triangle.uv[2] = {0.5f, 0.5f, 0.0f};
+				}
+
+				shapes.reserve(shapes.size() + faceIndexNum);
+				for (int i = 0; i < meshData.triangles.size(); ++i)
+				{
+					auto pTriangle = &meshData.triangles[i];
+					shapes.push_back(pTriangle);
+					shapeMaterialMap[pTriangle] = materialIndex;
+				}
+
+
+				//std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
+
 			}
-
-			shapes.reserve(shapes.size() + faceIndexNum);
-			for (int i = 0; i < meshData.triangles.size(); ++i)
-			{
-				auto pTriangle = &meshData.triangles[i];
-				shapes.push_back(pTriangle);
-				shapeMaterialMap[pTriangle] = materialIndex;
-			}
-
-
-			//std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
-
 		}
 	}
 

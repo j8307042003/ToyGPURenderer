@@ -19,7 +19,7 @@ struct CameraData
 
 inline CameraData DefaultCameraData()
 {
-		return { 0.036f, 0.05f, 0.5f };
+		return { 0.036f, 0.05f, 0.0f };
 }
 
 inline Ray3f SampleCamRay(const CameraData & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, bool SimCam = false)
