@@ -28,11 +28,19 @@ void AppWindowGLFW::init(int width, int height)
 	{
 		if (!glfwInit()) return;
 		s_glfwInitCount++;
+        
+        auto errorCallback = [](int code, const char* description)
+        {
+            std::cout << "error: %s\n" << description << std::endl;
+        };
+        
+        glfwSetErrorCallback(errorCallback);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
-
+        glfwWindowHint(GLFW_CONTEXT_DEBUG, GL_TRUE);
+        glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GL_TRUE);
 		//gladLoadGL();
 		
 	}
@@ -60,6 +68,8 @@ void AppWindowGLFW::init(int width, int height)
 	{
 		static_cast<AppWindowGLFW*>(glfwGetWindowUserPointer(w))->key_callback(w, key, scancode, action, mode);
 	};
+    
+
 
 	/* Make the window's context current */
 	glfwMakeContextCurrent(m_window);
@@ -174,6 +184,8 @@ void AppWindowGLFW::init(int width, int height)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	*/
+    
+    std::cout << "gl error : " << glGetError() << std::endl;
 }
 
 
@@ -204,6 +216,11 @@ void AppWindowGLFW::SetSourceImage(int width, int height, char* buffer, ColorFor
 void AppWindowGLFW::SetEventCallback(const EventCallback & callback)
 {
 	m_eventCallback = callback;
+}
+
+bool AppWindowGLFW::WindowShouldClose()
+{
+    return glfwWindowShouldClose(m_window);
 }
 
 

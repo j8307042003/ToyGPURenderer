@@ -214,7 +214,7 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
 
 		float r1 = SysRandom::Random();
 		float r2 = SysRandom::Random();
-		glm::vec3 wm = SampleGgxVndfAnisotropic(wo, ax, ay, r1, r2);
+		glm::vec3 wm = SampleGgxVndfAnisotropic(wo, param.roughness, param.roughness, r1, r2);
 		wi = glm::normalize(glm::reflect(-wo, wm));
 		wi.y = std::abs(wi.y);
 		//glm::dvec2 polarSet = random_polar(std::max(0.05f, param.roughness));

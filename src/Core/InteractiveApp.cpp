@@ -429,7 +429,7 @@ void InteractiveApp::Run()
 	m_running = true;
 	m_renderer->StartRender();
     float myColor[4];
-	while(m_running)
+	while(m_running && !m_appWindow->WindowShouldClose())
 	{
 		float currentTime = (float)glfwGetTime();
 		float deltaTime = currentTime - time;

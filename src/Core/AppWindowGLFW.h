@@ -18,6 +18,7 @@ public:
 	virtual void GetMousePos(float & x, float & y) override;
 	virtual void SetSourceImage(int width, int height, char* buffer, ColorFormat format) override;
 	virtual void SetEventCallback(const EventCallback & callback) override;
+    virtual bool WindowShouldClose() override;
     virtual void* GetWindowHandle() override {return m_window;};
     virtual void SwapBuffer() override {glfwSwapBuffers(m_window);};
 

@@ -151,7 +151,7 @@ static glm::vec3 DisneyFresnel(const SurfaceData & surface, const DisneyBRDFPara
 {
 	float dotHV = glm::dot(wm, wo);
 
-	glm::vec3 tint = CalculateTint(param.color);
+	glm::vec3 tint = CalculateTint(glm::vec3(1.0f));
 
 	// -- See section 3.1 and 3.2 of the 2015 PBR presentation + the Disney BRDF explorer (which does their 2012 remapping
 	// -- rather than the SchlickR0FromRelativeIOR seen here but they mentioned the switch in 3.2).
@@ -245,7 +245,7 @@ static void CalDisneyLobePdfs(const DisneyBRDFParam & param, float & pDiffuse, f
 	float metallicBRDF   = param.metallic;
 	float dielectricBRDF = (1.0f - param.metallic);
 
-	float specularWeight     = metallicBRDF;
+	float specularWeight     = (metallicBRDF + dielectricBRDF);
 	float diffuseWeight      = dielectricBRDF;
 
 	float norm = 1.0f / (specularWeight + diffuseWeight);
@@ -313,7 +313,7 @@ static void SampleDisneyBsdf(const SurfaceData & surface, const DisneyBRDFParam 
 	float pdf = G1 * d / (4.0 * dotNV);
 	g = G2;
 
-	auto specular = d * F * G2 / (4.0f * dotNL * dotNV + 1e-6f);
+	auto specular = d * F * G2 / (4.0f * dotNL * dotNV);
 	
-	bsdfSample.reflectance = diffuse * (1.0f - param.metallic) + specular /pdf;// *pdf;// specular;
+	bsdfSample.reflectance = dotNL * (diffuse * (1.0f - param.metallic) + specular /pdf);// *pdf;// specular;
 }
