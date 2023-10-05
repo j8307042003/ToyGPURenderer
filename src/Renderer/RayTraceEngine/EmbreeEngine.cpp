@@ -2,6 +2,7 @@
 #include "../Scene.h"
 #include <glm/glm.hpp>
 //#include <glm/geometric.hpp>
+#include <functional>
 
 EmbreeEngine* EmbreeEngine::BuildEmgreeEngine(SceneData * sceneData)
 {
@@ -41,6 +42,9 @@ EmbreeEngine* EmbreeEngine::BuildEmgreeEngine(SceneData * sceneData)
 		embree_positions[i * 9 + 8] = (float)sceneData->shapesData.positions[tri[2]][2];
 	}
 	//memcpy(embree_positions, shape.positions.data(), shape.positions.size() * 12);
+
+	EmbreeEngine::s_sceneData = sceneData;
+	rtcSetGeometryIntersectFilterFunction(triGeo, EmbreeEngine::IntersectFilter);
 	rtcCommitGeometry(triGeo);
 	rtcAttachGeometryByID(instance->scene, triGeo, 0);
 	rtcReleaseGeometry(triGeo);
@@ -97,4 +101,46 @@ bool EmbreeEngine::Raycast(SceneData* sceneData, const Ray3f& ray, float t_min, 
 	rtcOccluded1(scene, &context, &rtcray);
 
 	return rtcray.tfar == -INFINITY;
+}
+
+SceneData* EmbreeEngine::s_sceneData;
+
+void EmbreeEngine::IntersectFilter(const RTCFilterFunctionNArguments* args)
+{
+	if (args->context == nullptr) return;
+
+	assert(args->N == 1);
+
+	int* valid = args->valid;
+	const RTCIntersectContext* context = (const RTCIntersectContext*) args->context;
+	Ray* ray = (Ray*)args->ray;
+	RTCHit* rayhit = (RTCHit*)args->hit;
+
+	/* ignore inactive rays */
+	if (valid[0] != -1) return;
+
+	/* calculate transparency */
+	auto shapeIdx = rayhit->primID;
+	auto& triangleData = s_sceneData->shapesData.triangles[rayhit->primID];
+	auto materialIdx = s_sceneData->shapes[shapeIdx].matIdx;
+	auto uv = (double)rayhit->u * s_sceneData->shapesData.texcoords[triangleData.y] + (double)rayhit->v * s_sceneData->shapesData.texcoords[triangleData.z] + (double)(1 - rayhit->u - rayhit->v) * s_sceneData->shapesData.texcoords[triangleData.x];
+
+	auto mat = GetMaterial(*s_sceneData, materialIdx);
+	SurfaceData surfaceData =
+	{
+		{0.0, 1.0, 0.0},
+		{0.0, 1.0, 0.0},
+		{0.0, 1.0, 0.0},
+		{0.0, 1.0, 0.0},
+		glm::mat3(),
+		uv
+	};
+	bool bHit = mat->hit(surfaceData);
+	/* ignore hit if completely transparent */
+	if (!bHit)
+		valid[0] = 0;
+	/* otherwise accept hit and remember transparency */
+	else
+	{
+	}	 
 }

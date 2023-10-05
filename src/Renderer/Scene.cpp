@@ -304,8 +304,8 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		}		
 	}
 	std::cout << std::endl;
-	//pbr_mat->roughness = 0.3f;
-	//pbr_mat->metallic = 0.5f;
+	//pbr_mat->roughness = 0.0f;
+	//pbr_mat->metallic = 0.0f;
 
     
     for(int texType = aiTextureType_NONE; texType <= AI_TEXTURE_TYPE_MAX; ++texType)
