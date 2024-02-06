@@ -3,7 +3,8 @@
 #include <fstream>      // std::ifstream
 #include <memory>
 #include <Renderer/Material/PBMaterial.h>
-
+#include <chrono>
+#include <iostream>
 void SceneLoader::Load(const std::string & path, Scene & scene)
 {
 	// Open File
@@ -95,6 +96,9 @@ void SceneLoader::LoadMeshData(const json11::Json& sceneJson, Scene* scene)
 	auto meshInstanceJson = sceneJson["models"];
 	auto meshInstanceDatas = meshInstanceJson.array_items();
 
+	using std::chrono::high_resolution_clock;
+	auto t1 = high_resolution_clock::now();
+
 	for (int i = 0; i < meshInstanceDatas.size(); ++i)
 	{
 		auto meshInstanceDataJson = meshInstanceDatas[i];
@@ -112,6 +116,18 @@ void SceneLoader::LoadMeshData(const json11::Json& sceneJson, Scene* scene)
 
 		scene->AddModel(modelPath, material, posData, rotData, scale);
 	}
+	auto t2 = high_resolution_clock::now();
+
+	using std::chrono::duration_cast;
+	using std::chrono::duration;
+	using std::chrono::milliseconds;
+	duration<double, std::milli> ms_double = t2 - t1;
+	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
+	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
+	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
+	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
+	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
+
 }
 
 void SceneLoader::LoadMaterial(const json11::Json& materialJson, Scene* scene)

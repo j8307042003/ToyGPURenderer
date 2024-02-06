@@ -14,6 +14,7 @@
 #include "RayTraceEngine/RayTraceEngine.h"
 #include "RayTraceEngine/EmbreeEngine.h"
 #include <stack>
+#include <oneapi/tbb/parallel_for.h>
 
 void Scene::AddShape(Shape * s) {
 	shapes.push_back(s);
@@ -91,6 +92,229 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
 		std::stack<NodeTraversalData> nodeStack = {};
 		nodeStack.push({aiMatrix4x4(), scene->mRootNode});
+
+		std::vector<NodeTraversalData> nodes = {};
+		while (nodeStack.size() > 0)
+		{
+			auto nodeData = nodeStack.top();
+			nodeStack.pop();
+
+			for (int c = 0; c < nodeData.node->mNumChildren; ++c)
+			{
+				auto child = nodeData.node->mChildren[c];
+				auto transform = nodeData.transform * child->mTransformation;
+				nodeStack.push({ transform , child });
+				nodes.push_back({ transform , child });
+			}
+		}
+
+		// Collect used texture
+		std::map<std::string, std::string> texId_to_path = {};
+		std::map<std::string, TextureWrapping> texId_to_wrapping = {};
+		for (int i = 0; i < scene->mNumMaterials; ++i)
+		{
+			auto p_material = scene->mMaterials[i];
+			DumpMaterialTextures(p_material, directory, texId_to_path, texId_to_wrapping);
+		}
+
+
+		// Load texture at once
+		std::vector<Texture*> textures = std::vector<Texture*>(texId_to_path.size());
+		tbb::parallel_for(size_t(0), texId_to_path.size(), [&](size_t index)
+		{
+			auto it = texId_to_path.begin();
+			std::advance(it, index);
+
+			Texture* tex = new Texture();
+			if (!LoadTexture(it->second, *tex)) {
+				delete tex;
+				return;
+			}
+
+			tex->wrapping = texId_to_wrapping[it->first];
+
+			textures[index] = tex;
+		}
+		);
+
+		for (int i = 0; i < textures.size(); ++i)
+		{
+			auto it = texId_to_path.begin();
+			std::advance(it, i);
+			AddTexture(it->first, it->second, textures[i]);
+		}
+
+
+		for (int i = 0; i < scene->mNumMaterials; ++i)
+		{
+			auto p_material = scene->mMaterials[i];
+			materialIndex = CreateMaterial(p_material, directory);
+			materialMap.emplace(i, materialIndex);
+		}
+
+
+		std::vector<std::vector<Mesh>> out_meshes = std::vector<std::vector<Mesh>>(nodes.size());
+		std::vector<std::vector<int>> out_materialList = std::vector<std::vector<int>>(nodes.size());
+
+		tbb::parallel_for(size_t(0), nodes.size(), [&](size_t index)
+		{
+
+			auto nodeData = nodes[index];
+
+			std::vector<Mesh> & meshes = out_meshes[index];
+			std::vector<int> & materials = out_materialList[index];
+
+			auto transform = nodeData.transform;
+
+			for (unsigned int i = 0; i < nodeData.node->mNumMeshes; ++i) {
+				aiMesh* mesh = scene->mMeshes[nodeData.node->mMeshes[i]];
+				auto materialIdx = mesh->mMaterialIndex;
+				int materialIndex = -1;
+				if (materialIdx >= 0)
+				{
+					auto materialPair = materialMap.find(materialIdx);
+					if (materialPair != materialMap.end())
+					{
+						materialIndex = materialPair->second;
+					}
+					else
+					{
+						std::cout << "No material" << std::endl;
+					}
+				}
+
+				materials.emplace_back();
+				materials[materials.size() - 1] = materialIndex;
+
+				meshes.emplace_back();
+				auto& meshData = meshes[meshes.size() - 1];
+				meshData.triangles.reserve(mesh->mNumFaces);
+
+
+				int faceIndexNum = 0;
+
+				for (unsigned int j = 0; j < mesh->mNumFaces; j++)
+				{
+					aiFace face = mesh->mFaces[j];
+					faceIndexNum += face.mNumIndices;
+					Vec3 vertex[3];
+					Vec3 Normal[3];
+					Vec3 Tangent[3];
+					Vec3 uv[3];
+					bool bHaveTangent = mesh->mTangents != nullptr;
+
+					for (unsigned int k = 0; k < face.mNumIndices; k++) {
+						auto vertexId = face.mIndices[k];
+						aiVector3D& v = transform * mesh->mVertices[vertexId];
+						auto n = mesh->mNormals[vertexId];
+						aiVector3D t;
+						if (bHaveTangent)
+						{
+							t = mesh->mTangents[vertexId];
+						}
+						else
+						{
+							glm::vec3 glm_t, bt;
+							MakeOrthogonalCoordinateSystem({ n.x, n.y, n.z }, &glm_t, &bt);
+							t = { glm_t.x, glm_t.y, glm_t.z };
+						}
+
+						// TODO : Check normal 
+						t = transform * t;
+						t = t.NormalizeSafe();
+
+						n = transform * n;
+						n = n.NormalizeSafe();
+
+						auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
+						auto tangent = model * glm::vec4(t.x, t.y, t.z, 0.0);
+						auto m = model * glm::vec4(v.x, v.y, v.z, 1.0);
+
+
+
+						auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][vertexId]) : aiVector3D();
+						//std::vector<aiVector3D> uvDatas = std::vector<aiVector3D>(mesh->mNumVertices);
+						//memcpy(uvDatas.data(), mesh->mTextureCoords[0], sizeof(mesh->mTextureCoords[0][0]) * mesh->mNumVertices);
+						uv[k] = Vec3(abs(uvData.x), abs(uvData.y), 0.0f);
+
+						vertex[k] = { m.x, m.y, m.z };
+						Normal[k] = { normal.x, normal.y, normal.z };
+						Tangent[k] = { tangent.x, tangent.y, tangent.z };
+					}
+
+					meshData.triangles.emplace_back();
+
+					Triangle& triangle = meshData.triangles[meshData.triangles.size() - 1];
+					triangle.Vertices[0] = vertex[0];
+					triangle.Vertices[1] = vertex[1];
+					triangle.Vertices[2] = vertex[2];
+					triangle.normal[0] = Normal[0];
+					triangle.normal[1] = Normal[1];
+					triangle.normal[2] = Normal[2];
+					triangle.tangent[0] = Tangent[0];
+					triangle.tangent[1] = Tangent[1];
+					triangle.tangent[2] = Tangent[2];
+					triangle.uv[0] = uv[0]; triangle.uv[1] = uv[1]; triangle.uv[2] = uv[2];
+					//triangle.uv[0] = {0.0f, 1.0f, 0.0f}; triangle.uv[1] = {1.0f, 0.0f, 0.0f}; triangle.uv[2] = {0.5f, 0.5f, 0.0f};
+				}
+			}
+		}
+		);
+
+
+		
+		int totalMesheNum = 0;
+		for (int i = 0; i < out_meshes.size(); ++i){ totalMesheNum += out_meshes[i].size(); }
+
+		int meshes_startIndex = meshes.size();
+		meshes.resize(meshes.size() + totalMesheNum);
+
+		std::vector<int> materialIndexs = std::vector<int>(totalMesheNum);
+
+		totalMesheNum = 0;
+		for (int i = 0; i < out_meshes.size(); ++i) 
+		{
+			auto & new_meshs = out_meshes[i];
+			auto& new_mats = out_materialList[i];
+			for (int j = 0; j < new_meshs.size(); ++j)
+			{
+				meshes[j + meshes_startIndex + totalMesheNum] = new_meshs[j];
+				materialIndexs[totalMesheNum + j] = new_mats[j];
+			}		
+
+			totalMesheNum += new_meshs.size();
+		}
+
+		out_meshes.clear();
+
+		int shapeNum = 0;
+
+		std::vector<int> shapeStartIndexMap = std::vector<int>(totalMesheNum);
+		for (int i = 0; i < totalMesheNum; ++i)
+		{
+			auto & mesh = meshes[meshes_startIndex + i];
+			shapeStartIndexMap[i] = shapes.size() + shapeNum;
+			shapeNum += mesh.triangles.size();
+		}
+
+		shapes.resize(shapes.size() + shapeNum);
+
+		int prevShapeSize = shapes.size();
+
+		for (int index = 0; index < totalMesheNum; ++index)
+		{
+			auto & mesh = meshes[meshes_startIndex + index];
+			int startIndex = shapeStartIndexMap[index];
+			for (int i = 0; i < mesh.triangles.size(); ++i)
+			{
+				auto pTriangle = &mesh.triangles[i];
+				shapes[startIndex + i] = pTriangle;
+
+				shapeMaterialMap[pTriangle] = materialIndexs[index];
+			}
+		}
+
+		/*
 		while (nodeStack.size() > 0)
 		{
 			auto nodeData = nodeStack.top();
@@ -204,11 +428,10 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 					shapeMaterialMap[pTriangle] = materialIndex;
 				}
 
-
 				//std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
-
 			}
 		}
+		*/
 	}
 
     std::cout << "Model : " << modelFile  << " Loaded ? : " << (scene != nullptr) << std::endl;
@@ -264,7 +487,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 	PBMaterial* pbr_mat = new PBMaterial();
 	pbr_mat->metallic = 0.0f;
 	pbr_mat->roughness = 0.0f;
-	std::cout << p_material->GetName().C_Str() << std::endl;
+	//std::cout << p_material->GetName().C_Str() << std::endl;
 	for (int i = 0; i < p_material->mNumProperties; ++i)
 	{
 		auto property = p_material->mProperties[i];
@@ -279,7 +502,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		}
 		auto proKey = property->mKey.C_Str();
 		float* value = reinterpret_cast <float*>(property->mData);
-		std::cout << "Property " << proKey << " " << *value << std::endl;
+		//std::cout << "Property " << proKey << " " << *value << std::endl;
 		if (strcmp(proKey, "$clr.diffuse") == 0)
 		{
 			float* diffuse = reinterpret_cast <float*>(property->mData);
@@ -303,7 +526,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 			pbr_mat->roughness = roughness[0];
 		}		
 	}
-	std::cout << std::endl;
+	//std::cout << std::endl;
 	//pbr_mat->roughness = 0.0f;
 	//pbr_mat->metallic = 0.0f;
 
@@ -319,7 +542,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
         {
             aiString path;
             p_material->GetTexture(t, texindex, &path);
-            std::cout << "Type " << typeStr << " : " << path.C_Str() << std::endl;
+            //std::cout << "Type " << typeStr << " : " << path.C_Str() << std::endl;
         }
     }
     
@@ -329,7 +552,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		aiString path;
 		aiTextureMapMode mapmodes[2];
 		p_material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr, nullptr, nullptr, mapmodes);
-		printf("Diffuse Texture: %s\n", path.C_Str());
+		//printf("Diffuse Texture: %s\n", path.C_Str());
 		auto wrappingMode = AssimpTexModeToTransform(mapmodes[0]);
 		auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()), wrappingMode);
 		pbr_mat->albedo_texture = tex;
@@ -339,14 +562,14 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 	{
 		aiString path;
 		p_material->GetTexture(aiTextureType_SPECULAR, 0, &path);
-		printf("SPECULAR Texture: %s\n", path.C_Str());
+		//printf("SPECULAR Texture: %s\n", path.C_Str());
 	}
 
 	if (p_material->GetTextureCount(aiTextureType_REFLECTION) > 0)
 	{
 		aiString path;
 		p_material->GetTexture(aiTextureType_REFLECTION, 0, &path);
-		printf("REFLECTION Texture: %s\n", path.C_Str());
+		//printf("REFLECTION Texture: %s\n", path.C_Str());
 	}
 
 	if (p_material->GetTextureCount(aiTextureType_METALNESS) > 0)
@@ -355,7 +578,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		p_material->GetTexture(aiTextureType_METALNESS, 0, &path);
 		auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()));
 		pbr_mat->metallic_texture = tex;
-		printf("METALNESS Texture: %s\n", path.C_Str());
+		//printf("METALNESS Texture: %s\n", path.C_Str());
 	}
     
     if (p_material->GetTextureCount(aiTextureType_UNKNOWN) > 0)
@@ -367,7 +590,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
         pbr_mat->metallic_channel = 2;
         pbr_mat->roughness_texture = tex;
         pbr_mat->roughness_channel = 1;
-        printf("Unknown Texture: %s\n", path.C_Str());
+        //printf("Unknown Texture: %s\n", path.C_Str());
     }
     
 
@@ -375,11 +598,51 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 	{
 		aiString path;
 		p_material->GetTexture(aiTextureType_BASE_COLOR, 0, &path);
-		printf("Base Color Texture: %s\n", path.C_Str());
+		//printf("Base Color Texture: %s\n", path.C_Str());
 	}
 
 	AddMaterial(std::string(p_material->GetName().C_Str()), pbr_mat);
 	return Materials.size() - 1;
+}
+
+
+void Scene::DumpMaterialTextures(aiMaterial* p_material, const std::string& filePath, std::map<std::string, std::string>& map, std::map<std::string, TextureWrapping>& wrappingMap)
+{
+	if (p_material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+	{
+		aiString path;
+		aiTextureMapMode mapmodes[2];
+		p_material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr, nullptr, nullptr, mapmodes);
+		//printf("Diffuse Texture: %s\n", path.C_Str());
+		auto wrappingMode = AssimpTexModeToTransform(mapmodes[0]);
+		//auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()), wrappingMode);
+		std::string texId = std::string(p_material->GetName().C_Str()) + std::string(path.C_Str());
+		std::string texPath = filePath + "/" + std::string(path.C_Str());
+		map[texId] = texPath;
+		wrappingMap[texId] = wrappingMode;
+	}
+
+	if (p_material->GetTextureCount(aiTextureType_METALNESS) > 0)
+	{
+		aiString path;
+		p_material->GetTexture(aiTextureType_METALNESS, 0, &path);
+		//auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()));
+		std::string texId = std::string(p_material->GetName().C_Str()) + std::string(path.C_Str());
+		std::string texPath = filePath + "/" + std::string(path.C_Str());
+		map[texId] = texPath;
+		wrappingMap[texId] = TextureWrapping();
+	}
+
+	if (p_material->GetTextureCount(aiTextureType_UNKNOWN) > 0)
+	{
+		aiString path;
+		p_material->GetTexture(aiTextureType_UNKNOWN, 0, &path);
+		//auto tex = AddTexture(std::string(p_material->GetName().C_Str()) + std::string(path.C_Str()), filePath + "/" + std::string(path.C_Str()));
+		std::string texId = std::string(p_material->GetName().C_Str()) + std::string(path.C_Str());
+		std::string texPath = filePath + "/" + std::string(path.C_Str());
+		map[texId] = texPath;
+		wrappingMap[texId] = TextureWrapping();
+	}
 }
 
 
@@ -459,6 +722,14 @@ Texture* Scene::AddTexture(std::string texId, const Texture & texture)
 	textures.push_back(tex);
 	textureMap[texId] = textures.size()-1;	
 	return tex;
+}
+
+Texture* Scene::AddTexture(std::string texId, std::string path, Texture* texture)
+{
+	textures.push_back(texture);
+	textureMap[texId] = textures.size() - 1;
+	textureFileMap[path] = textures.size() - 1;
+	return texture;
 }
 
 Texture* Scene::AddExrTexture(const std::string & texId, const std::string & path)

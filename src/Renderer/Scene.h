@@ -2,7 +2,7 @@
 #define SCENE_H
 
 #pragma once
-
+#include <set>
 #include "assimp/scene.h"
 #include "math/Vec3.h"
 #include "shape/Shape.h"
@@ -60,7 +60,8 @@ public:
 	void AddEnvSource(const std::string & path, float scale = 1.0f);
 	Texture* AddTexture(std::string texId, std::string path);
 	Texture* AddTexture(std::string texId, std::string path, TextureWrapping wrapping);
-	Texture* AddTexture(std::string texId, const Texture & texture);
+	Texture* AddTexture(std::string texId, const Texture& texture);
+	Texture* AddTexture(std::string texId, std::string path, Texture * texture);
 	Texture* AddExrTexture(const std::string & texId, const std::string & path);
 
 	int GetShapeMaterialIdx(Shape * s) const;
@@ -70,6 +71,7 @@ public:
 
 private:
 	int CreateMaterial(aiMaterial * p_material, const std::string & filePath);
+	void DumpMaterialTextures(aiMaterial* p_material, const std::string& filePath, std::map<std::string, std::string>& map, std::map<std::string, TextureWrapping>& wrappingMap);
 };
 
 
