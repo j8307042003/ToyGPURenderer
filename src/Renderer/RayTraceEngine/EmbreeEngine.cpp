@@ -45,6 +45,7 @@ EmbreeEngine* EmbreeEngine::BuildEmgreeEngine(SceneData * sceneData)
 
 	EmbreeEngine::s_sceneData = sceneData;
 	rtcSetGeometryIntersectFilterFunction(triGeo, EmbreeEngine::IntersectFilter);
+	rtcSetGeometryOccludedFilterFunction(triGeo, EmbreeEngine::IntersectFilter);
 	rtcCommitGeometry(triGeo);
 	rtcAttachGeometryByID(instance->scene, triGeo, 0);
 	rtcReleaseGeometry(triGeo);

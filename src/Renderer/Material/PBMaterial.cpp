@@ -246,3 +246,7 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
 }
 
  
+bool PBMaterial::hit(const SurfaceData & surface) const 
+{
+	return albedo_texture == nullptr ? true : (SampleTex(*albedo_texture, surface.uv).w > 0.01f);
+}

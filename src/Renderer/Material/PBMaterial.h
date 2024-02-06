@@ -24,6 +24,7 @@ public:
     virtual bool scatter(const Ray3f & ray, const glm::dvec3& wi, const SurfaceData & surface, /*HitInfo & hitInfo,*/ Color & attenuation/*, Ray3f& scattered*/) const override;
 	virtual glm::vec3 Albedo(const SurfaceData & surface) const override;
 	virtual bool sampleBsdf(const SurfaceData & surface, const Ray3f & ray, BsdfSample & bsdfSample) const override;
+	virtual bool hit(const SurfaceData & surface) const override;
 
 private:
 	DisneyBRDFParam MakeParam(const SurfaceData & surface) const;
