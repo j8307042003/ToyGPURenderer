@@ -197,6 +197,7 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
  	float p = SysRandom::Random();
 
  	glm::dvec3 wi;
+ 	glm::vec3 wm;
  	if (p <= pDiffuse)
  	{
 		glm::dvec2 polarSet = random_polar(1.0f);
@@ -214,7 +215,7 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
 
 		float r1 = SysRandom::Random();
 		float r2 = SysRandom::Random();
-		glm::vec3 wm = SampleGgxVndfAnisotropic(wo, param.roughness, param.roughness, r1, r2);
+		wm = SampleGgxVndfAnisotropic(wo, std::max(0.01f, param.roughness), std::max(0.01f, param.roughness), r1, r2);
 		wi = glm::normalize(glm::reflect(-wo, wm));
 		wi.y = std::abs(wi.y);
 		//glm::dvec2 polarSet = random_polar(std::max(0.05f, param.roughness));
@@ -229,7 +230,8 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
 
 	if (wi.x != wi.x)
 	{
-		std::cout << "wi error " << std::endl;
+		//std::cout << "wi error diffuse ? " << (wi.x) << " " << (wi.y) << std::endl;
+		//std::cout << (wo.x) << " " << (wo.y) << " : " << (wm.x) << " " << (wm.y) << std::endl;
 		wi = surface.normal;
 	}
 

@@ -311,7 +311,7 @@ static void SampleDisneyBsdf(const SurfaceData & surface, const DisneyBRDFParam 
 	float G2 = G1 * SmithGAniso(dotNL, wi.x, wi.z, 1.0f, 1.0f);
 
 	float pdf = G1 * d / (4.0 * dotNV);
-	g = G2;
+	//g = G2;
 
 	auto specular = d * F * G2 / (4.0f * dotNL * dotNV);
 	static float MaxSpecular = -1.0f;
@@ -319,6 +319,13 @@ static void SampleDisneyBsdf(const SurfaceData & surface, const DisneyBRDFParam 
 	{
 		MaxSpecular = specular.x / pdf;
 		std::cout << "specular error " << specular.x / pdf << std::endl;
+
 	}
+
+	if (dotNL * dotNV <= 1e-8)
+	{
+		specular = { 0.0, 0.0, 0.0 };
+	}
+
 	bsdfSample.reflectance =  (diffuse * (1.0f - param.metallic) + specular /pdf);// *pdf;// specular;
 }
