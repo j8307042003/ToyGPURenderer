@@ -69,11 +69,7 @@ inline void wavelengthToRGB(float wavelength, float& r, float& g, float& b) {
 }
 
 
-
-
-
-
-Ray3f petzval_kodak_camera_data::SampleCamRay(const CameraData & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool SimCam)
+Ray3f petzval_kodak_camera_data::SampleCamRay(const petzval_kodak_camera_model & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool SimCam)
 {
 	auto r1 = SysRandom::Random();
 	auto r2 = SysRandom::Random();

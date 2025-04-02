@@ -14,6 +14,7 @@
 #include <fstream>       //���Jfstream���Y��
 #include <ctime>
 #include <sstream>
+#include "Renderer/Camera/petzval/petzval.h"
 #ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #endif // !STB_IMAGE_WRITE_IMPLEMENTATION
 #include "Common/stb_image_write.h"
@@ -25,6 +26,15 @@ InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), 
 	const int kWidth = 1440; //1920 / 1;// 1920 / 1;//720;
 	const int kHeight = 1440;//1080 / 1;// 1080 / 1;//512;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
+
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable docking
+	ImGui::StyleColorsDark();
+
+
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
 	m_appWindow->SetEventCallback(f);
 	// m_renderer = new VulkanRenderer();
@@ -62,7 +72,7 @@ InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), 
     
     const char* glsl_version = "#version 150";
     ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)m_appWindow->GetWindowHandle(), true);
-    ImGui_ImplOpenGL3_Init(nullptr);
+    ImGui_ImplOpenGL3_Init("#version 330");
 
 	m_testGUI = {};
 	m_testGUI.renderer = m_renderer;
@@ -317,9 +327,15 @@ void TestGUI::CameraGUI()
 	auto pCamData = &pRenderData->camData;
 
 	bool bAnyChange = false;
-	bAnyChange |= ImGui::InputFloat("Film", &pCamData->film, 0.01f, 1.0f, "%.3f");
-	bAnyChange |= ImGui::InputFloat("Lens", &pCamData->lens, 0.01f, 1.0f, "%.3f");
-	bAnyChange |= ImGui::InputFloat("Focal", &pCamData->focal, 0.001f, 2.0f, "%.3f");
+	//bAnyChange |= ImGui::InputFloat("Film", &pCamData->film, 0.01f, 1.0f, "%.3f");
+	//bAnyChange |= ImGui::InputFloat("Lens", &pCamData->lens, 0.01f, 1.0f, "%.3f");
+	//bAnyChange |= ImGui::InputFloat("Focal", &pCamData->focal, 0.001f, 2.0f, "%.3f");
+
+	if (pCamData->dataType == std::type_index(typeid(PetzvalCamData)))
+	{
+		PetzvalCamData* petzvalCamData = (PetzvalCamData*)pCamData->camData.get();
+		bAnyChange |= ImGui::InputFloat("Film", &petzvalCamData->film, 0.01f, 1.0f, "%.3f");
+	}
 
 	if (bAnyChange)
 	{
@@ -494,6 +510,10 @@ void InteractiveApp::Run()
         CameraUpdate(deltaTime);
 
 		m_renderer->UpdateFrame();
+
+
+
+
 		void* pBuffer = m_renderer->GetImage();
 		if (pBuffer != nullptr) m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)pBuffer, ColorFormat::RGBByte);
 		m_appWindow->Update();
@@ -502,6 +522,8 @@ void InteractiveApp::Run()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+		ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
         
         for(int i = 0; i < m_imguiUIs.size(); ++i)
         {

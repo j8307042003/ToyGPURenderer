@@ -5,6 +5,8 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
+#include <typeindex>
+#include <typeinfo>
 
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -70,10 +72,20 @@ inline void wavelengthToRGB(float wavelength, float& r, float& g, float& b) {
 
 
 
+CameraData petzval_camera_data::MakeCamData()
+{
+    PetzvalCamData * data = new PetzvalCamData();
+    data->film = 0.036f;
+    return {
+        std::type_index(typeid(PetzvalCamData)),
+        std::shared_ptr<PetzvalCamData>(data),
+        [=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool staticRay) {
+            return petzval_camera_data::SampleCamRay(*data, pos, direction, filmRes, pixelPos, transmittance, staticRay);
+        }
+    };
+}
 
-
-
-Ray3f petzval_camera_data::SampleCamRay(const CameraData & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool staticRay)
+Ray3f petzval_camera_data::SampleCamRay(const PetzvalCamData& cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool staticRay)
 {
 	auto r1 = SysRandom::Random();
 	auto r2 = SysRandom::Random();

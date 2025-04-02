@@ -5,26 +5,34 @@
 #include <math/Ray.h>
 #include <glm/gtc/quaternion.hpp>
 #include "../Random/SysRandom.h"
+#include <memory>
+#include <functional>
+#include <typeindex>
+#include <typeinfo>
 
 using vec2 = glm::vec2;
 using vec3 = glm::vec3;
 
+using CameraSampleRayFunc = std::function<Ray3f(const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool SimCam)>;
+
 // Standard Camera Data Model
 struct CameraData
+{
+	std::type_index dataType = std::type_index(typeid(int));
+	std::shared_ptr<void> camData;
+	CameraSampleRayFunc sampleRay;
+};
+
+struct DefaultCameraDataMode
 {
 	float film;
 	float lens;
 	float focal;
 };
 
-inline CameraData DefaultCameraData()
+inline Ray3f SampleCamRay(const DefaultCameraDataMode& cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool SimCam = false)
 {
-		return { 0.036f, 0.05f, 0.0f };
-}
-
-inline Ray3f SampleCamRay(const CameraData & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, bool SimCam = false)
-{
-
+	transmittance = glm::vec3(1.0f);
 	auto w = direction;
 	vec3 u = glm::normalize(glm::cross(glm::vec3(0.0, 1.0f, 0.0f), w));
 	vec3 v = glm::normalize(glm::cross(w, u));
@@ -56,4 +64,19 @@ inline Ray3f SampleCamRay(const CameraData & cam, const vec3 & pos, const vec3 &
 	d = glm::quatLookAt(direction, glm::vec3(0.0, 1.0, 0.0)) * d;
 	auto ray = Ray3f{pos+offset, (d)};
 	return ray;
+}
+
+inline CameraData DefaultCameraData()
+{
+	DefaultCameraDataMode* data = new DefaultCameraDataMode();
+	data->film = 0.036f;
+	data->lens = 0.05f;
+	data->focal = 0.0f;
+
+	return {
+		std::type_index(typeid(DefaultCameraDataMode)),
+		std::shared_ptr<DefaultCameraDataMode>(data),
+		[=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool SimCam) {
+			return SampleCamRay(*data, pos, direction, filmRes, pixelPos, transmittance, SimCam);
+		} };
 }

@@ -14,8 +14,9 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 {
 	glm::vec3 transmittance = glm::vec3(1.0f);
 	auto start = std::chrono::high_resolution_clock::now(); // Start time
-	const auto cam_ray = petzval_camera_data::SampleCamRay(rdrData.camData, rdrData.camPosition, rdrData.camDirection, filmRes, glm::vec2(x, y), transmittance, true);
-	
+	//const auto cam_ray = petzval_camera_data::SampleCamRay(rdrData.camData, rdrData.camPosition, rdrData.camDirection, filmRes, glm::vec2(x, y), transmittance, true);
+	const auto cam_ray = rdrData.camData.sampleRay(rdrData.camPosition, rdrData.camDirection, filmRes, glm::vec2(x, y), transmittance, true);
+
 	auto end = std::chrono::high_resolution_clock::now(); // End time
 	std::chrono::duration<double> elapsed = end - start; // Calculate duration
 

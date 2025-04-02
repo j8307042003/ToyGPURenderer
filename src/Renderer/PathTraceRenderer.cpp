@@ -49,9 +49,7 @@ void PathTraceRenderer::StartRender()
 	MakeSceneData(*s, m_sceneData, true);
 	//bvh_buildTree1(&m_sceneData, m_bvh);
 
-
-	auto camData = DefaultCameraData();
-	m_renderData.camData = camData;
+	m_renderData.camData = petzval_camera_data::MakeCamData();
 	//m_renderData.camDirection = glm::dvec3(0, 0, -1);
 	//m_renderData.camPosition = glm::dvec3(0, 0, 10);
 	m_renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
@@ -359,7 +357,8 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			glm::vec3 transmittance = glm::vec3(1.0f);
 
 			auto filmRes = glm::vec2(filmWidth, filmHeight);
-			const auto cam_ray = petzval_camera_data::SampleCamRay(m_renderData.camData, m_renderData.camPosition, m_renderData.camDirection, filmRes, glm::vec2(nowX, nowY), transmittance, true);
+			//const auto cam_ray = petzval_camera_data::SampleCamRay(m_renderData.camData, m_renderData.camPosition, m_renderData.camDirection, filmRes, glm::vec2(nowX, nowY), transmittance, true);
+			const auto cam_ray = m_renderData.camData.sampleRay(m_renderData.camPosition, m_renderData.camDirection, filmRes, glm::vec2(nowX, nowY), transmittance, true);
 			Ray3f ray = cam_ray;
 			HitInfo hitInfo;
 			glm::dvec3 rayHitPosition = {};
@@ -420,7 +419,7 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 void PathTraceRenderer::Trace(int x, int y, int width, int height)
 {
 	//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-	auto camData = DefaultCameraData();
+	auto& camData = GetRenderData()->camData;
 	glm::dvec3 camPos = glm::dvec3(0.0f, 0.0f, 0.0f);
 
 	/*
@@ -488,13 +487,15 @@ void PathTraceRenderer::ClearImage()
 
 bool PathTraceRenderer::IntersectTest(int posX, int posY, Material* & pMaterial)
 {
-	auto camData = DefaultCameraData();
+	auto& camData = GetRenderData()->camData;
 	int filmWidth = cam->GetWidth();
 	int filmHeight = cam->GetHeight();
 	auto filmRes = glm::vec2(filmWidth, filmHeight);
 	auto camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
 	glm::vec3 transmittance = glm::vec3(1.0f);
-	const auto cam_ray = petzval_camera_data::SampleCamRay(camData, cam->pos, camDirection, filmRes, glm::vec2(posX, posY), transmittance);
+	//const auto cam_ray = petzval_camera_data::SampleCamRay(camData, cam->pos, camDirection, filmRes, glm::vec2(posX, posY), transmittance);
+	const auto cam_ray = camData.sampleRay(cam->pos, camDirection, filmRes, glm::vec2(posX, posY), transmittance, false);
+
 	SceneIntersectData intersect;
 	if (!IntersectScene(&m_sceneData, cam_ray, 0.1f, 10000.0f, intersect)) return false;
 
@@ -504,13 +505,14 @@ bool PathTraceRenderer::IntersectTest(int posX, int posY, Material* & pMaterial)
 
 bool PathTraceRenderer::Raycast(int posX, int posY, glm::dvec3* hitPos)
 {
-	auto camData = DefaultCameraData();
+	auto& camData = GetRenderData()->camData;
 	int filmWidth = cam->GetWidth();
 	int filmHeight = cam->GetHeight();
 	auto filmRes = glm::vec2(filmWidth, filmHeight);
 	auto camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
 	glm::vec3 transmittance = glm::vec3(1.0f);
-	const auto cam_ray = petzval_camera_data::SampleCamRay(camData, cam->pos, camDirection, filmRes, glm::vec2(posX, posY), transmittance);
+	//const auto cam_ray = petzval_camera_data::SampleCamRay(camData, cam->pos, camDirection, filmRes, glm::vec2(posX, posY), transmittance);
+	const auto cam_ray = camData.sampleRay(cam->pos, camDirection, filmRes, glm::vec2(posX, posY), transmittance, false);
 	SceneIntersectData intersect;
 	if (!IntersectScene(&m_sceneData, cam_ray, 0.1f, 10000.0f, intersect)) return false;
 
