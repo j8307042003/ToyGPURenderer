@@ -57,7 +57,7 @@ public:
 
 	void AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius = 0);
 	void AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance);
-	void AddEnvSource(const std::string & path, float scale = 1.0f);
+	void AddEnvSource(const std::string & path, float scale = 1.0f, float sampleScale = 1.0f);
 	Texture* AddTexture(std::string texId, std::string path);
 	Texture* AddTexture(std::string texId, std::string path, TextureWrapping wrapping);
 	Texture* AddTexture(std::string texId, const Texture& texture);

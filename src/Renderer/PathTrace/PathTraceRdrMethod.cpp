@@ -7,10 +7,19 @@
 #include "../Texture/Texture.h"
 #include <algorithm>
 #include <Renderer/Accelerate/BVHStruct.h>
-
+//#include "Renderer/Camera/petzval-kodak/petzval-kodak.h"
+#include "Renderer/Camera/petzval/petzval.h"
+#include <chrono>
 glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, glm::vec2 filmRes)
 {
-	const auto cam_ray = SampleCamRay(rdrData.camData, rdrData.camPosition, rdrData.camDirection, filmRes, glm::vec2(x, y), true);
+	glm::vec3 transmittance = glm::vec3(1.0f);
+	auto start = std::chrono::high_resolution_clock::now(); // Start time
+	const auto cam_ray = petzval_camera_data::SampleCamRay(rdrData.camData, rdrData.camPosition, rdrData.camDirection, filmRes, glm::vec2(x, y), transmittance, true);
+	
+	auto end = std::chrono::high_resolution_clock::now(); // End time
+	std::chrono::duration<double> elapsed = end - start; // Calculate duration
+
+	//std::cout << "Execution time: " << elapsed.count() << " seconds" << std::endl;
 	Ray3f ray = cam_ray;
 	HitInfo hitInfo = {};
 	int shapeIndex = -1;
@@ -64,11 +73,18 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 			//glm::vec3 r = (1.0f-t)*glm::vec3(1.0, 1.0, 1.0) + t*glm::vec3(0.5, 0.7, 1.0);
 			glm::vec3 r = (1.0f-t)*glm::vec3(1.0, 1.0, 1.0) + t*glm::vec3(0.188, 0.513, 1.0);			
 			sampleResults[i] = {r * 0.5f, glm::vec3(0.0f)};
+			//sampleResults[i] = { glm::vec3(0.0f), r * 0.5f };
 
 			if (rdrData.sceneData->envSources.size() > 0)
 			{
-				glm::vec3 r = rdrData.sceneData->envSources[0]->Sample(unit_direction, i == 0);
-				sampleResults[i] = {r, glm::vec3(0.0f)};
+				if (unit_direction.x == unit_direction.x) {
+					glm::vec3 r = rdrData.sceneData->envSources[0]->Sample(unit_direction, i == 0);
+					sampleResults[i] = { r, glm::vec3(0.0f) };
+				}
+				else {
+					sampleResults[i] = { {}, glm::vec3(0.0f) };
+				}
+				//sampleResults[i] = {glm::vec3(0.0f), r };
 			}
 
 			break;
@@ -103,6 +119,7 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 					EvalMaterialScatter(*mat, ray, lightSampleRay.direction, intersect, lightScatter);
 
 					sampleResults[i].emission += lightScatter.value * sample;
+					//sampleResults[i].radiance += lightScatter.value * sample;
 				}
 			}
 		}
@@ -116,7 +133,14 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 	for(int i = depth ; i >= 0; --i)
 	{
 		radiance = sampleResults[i].radiance * radiance + sampleResults[i].emission;
-	}
+		//auto engery = i == depth ? glm::vec3(0.0f) : sampleResults[i + 1].emission;
+		//radiance = sampleResults[i].radiance * radiance + sampleResults[i].radiance * engery;
 
-	return radiance;
+		//auto engery = i == depth ? glm::vec3(0.0f) : sampleResults[i + 1].emission;
+		//engery * sampleResults[i].radiance + sampleResults[i].radiance;
+		//radiance = (sampleResults[i].radiance + sampleResults[i].emission) * radiance;
+	}
+	//radiance = sampleResults[0].emission;
+
+	return radiance * transmittance;
 }

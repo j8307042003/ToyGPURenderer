@@ -89,6 +89,7 @@ public:
 	int GetHeight() { return cam->GetHeight(); }
 
 	bool IntersectTest(int posX, int posY, Material* & pMaterial);
+	bool Raycast(int posX, int posY, glm::dvec3* hitPos);
 
 private:
 	int iteration;

@@ -4,6 +4,7 @@
 #include <Renderer/Renderer.h>
 #include <Renderer/Camera.h>
 #include <vector>
+#include <unordered_map>
 
 class InteractiveApp;
 class PBMaterial;
@@ -14,6 +15,7 @@ class TestGUI : public ImguiUI
 
 private:
 	void MaterialPickGUI();
+	void RayTestGUI();
 	void CameraGUI();
 private:
 	float myColor[4];
@@ -24,8 +26,17 @@ public:
 	Camera* cam;
 
 	PBMaterial* pMaterial = nullptr;
+
+	glm::vec3 rayTestPose;
 };
 
+
+enum class AppEventType
+{
+	MouseClick
+};
+
+using EventCallback = std::function<void(int, int)>;
 
 class InteractiveApp : public Application
 {
@@ -42,6 +53,9 @@ public:
 
 	bool GetControlLock() { return m_controlLock; }
 	void SetControlLock(bool v) { m_controlLock = v;}
+	void RegisterEvent(AppEventType eventType, EventCallback callback);
+
+	Renderer* GetRenderer() { return m_renderer; }
 
 private:
 	void OnEvent(WindowEvent & event);
@@ -68,6 +82,8 @@ private:
 	float m_timeStart;
 	float m_timePass;
 	bool m_controlLock = false;
+
+	std::unordered_map<AppEventType, std::vector<EventCallback>> m_listeners;
 
 private:
 	bool m_running;

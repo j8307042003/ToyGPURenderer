@@ -303,17 +303,17 @@ static void SampleDisneyBsdf(const SurfaceData & surface, const DisneyBRDFParam 
 	//auto d = DisneySpecularD(param, dotNH);
 	//auto d = D_GGX(param.roughness * param.roughness, dotNH);
 	//auto d = microfacet_distribution(param.roughness, up, glm::vec3(wm));
-	//auto g = GeometrySmith(dotNV, dotNL, param.roughness);
-	auto g = V_SmithGGXCorrelatedFast(dotNV, dotNL, param.roughness);
+	auto g = GeometrySmith(dotNV, dotNL, param.roughness);
+	//auto g = V_SmithGGXCorrelatedFast(dotNV, dotNL, param.roughness);
 
 	auto d = GTR2Aniso(wm.y, wm.x, wm.z, 1.0f, 1.0f);
 	float G1 = SmithGAniso(dotNV, wo.x, wo.z, 1.0f, 1.0f);
 	float G2 = G1 * SmithGAniso(dotNL, wi.x, wi.z, 1.0f, 1.0f);
 
-	float pdf = G1 * d / (4.0 * dotNV);
+	float pdf = G1 * d / std::max(4.0 * dotNV, 1e-8);
 	//g = G2;
 
-	auto specular = d * F * G2 / (4.0f * dotNL * dotNV);
+	auto specular = d * F * G2 / std::max(4.0f * dotNL * dotNV, 1e-8f);
 	static float MaxSpecular = -1.0f;
 	if (specular.x / pdf > MaxSpecular)
 	{
@@ -327,5 +327,5 @@ static void SampleDisneyBsdf(const SurfaceData & surface, const DisneyBRDFParam 
 		specular = { 0.0, 0.0, 0.0 };
 	}
 
-	bsdfSample.reflectance =  (diffuse * (1.0f - param.metallic) + specular /pdf);// *pdf;// specular;
+	bsdfSample.reflectance =  (diffuse * (1.0f - param.metallic) + specular / std::max(1e-8f, pdf));// *pdf;// specular;
 }

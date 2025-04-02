@@ -22,7 +22,7 @@
 
 InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), m_mouse_table(), m_imguiUIs()
 {
-	const int kWidth = 2560; //1920 / 1;// 1920 / 1;//720;
+	const int kWidth = 1440; //1920 / 1;// 1920 / 1;//720;
 	const int kHeight = 1440;//1080 / 1;// 1080 / 1;//512;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 	auto f = std::bind(&InteractiveApp::OnEvent, this, std::placeholders::_1);
@@ -69,6 +69,9 @@ InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), 
 	m_testGUI.app = this;
 	m_testGUI.cam = m_cam;
 	AddUI(&m_testGUI);
+
+
+	m_listeners[AppEventType::MouseClick] = {};
 }
 
 InteractiveApp::~InteractiveApp()
@@ -80,8 +83,19 @@ InteractiveApp::~InteractiveApp()
 }
 
 
+void InteractiveApp::RegisterEvent(AppEventType eventType, EventCallback callback)
+{
+	m_listeners[eventType].push_back(callback);
+}
+
+
+
 void InteractiveApp::OnEvent(WindowEvent & event)
 {
+
+	if (ImGui::GetIO().WantCaptureMouse)
+		return; // Ignore input when interacting with ImGui
+
 	auto event_type = event.GetEventType();
 
 	if (event_type == EWindowEvent::KeyPressed)
@@ -245,6 +259,7 @@ void TestGUI::OnGUI()
 
 	RenderUI_Camera(cam);
 	MaterialPickGUI();
+	RayTestGUI();
 
 	ImGui::End();
 
@@ -270,6 +285,28 @@ void TestGUI::MaterialPickGUI()
 	{
 		renderer->ClearImage();
 	}
+}
+
+void TestGUI::RayTestGUI()
+{
+	if (ImGui::Button("Mouse RayCast"))
+	{
+		std::cout << "register mouse raycast" << std::endl;
+		app->RegisterEvent(AppEventType::MouseClick, [&](int mouseX, int mouseY) {
+			
+			PathTraceRenderer* renderer = (PathTraceRenderer*)app->GetRenderer();
+			glm::dvec3 pos = {};
+			bool hitAny = renderer->Raycast(mouseX, mouseY, &pos);
+			if (hitAny)
+			{
+				rayTestPose.x = (float)pos.x;
+				rayTestPose.y = (float)pos.y;
+				rayTestPose.z = (float)pos.z;
+			}
+		});
+	}
+
+	ImGui::Text("x=%.2f, y=%.2f, z=%.2f", rayTestPose.x, rayTestPose.y, rayTestPose.z);
 }
 
 void TestGUI::CameraGUI()
@@ -356,6 +393,21 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 			{
 				m_testGUI.pMaterial = (PBMaterial*)pMat;
 			}
+		}
+
+
+		auto& callbacks = m_listeners[AppEventType::MouseClick];
+
+		m_appWindow->GetMousePos(m_mousePosX, m_mousePosY);
+
+		for (int i = 0; i < callbacks.size(); ++i)
+		{
+			callbacks[i]((int)m_mousePosX, (int)m_mousePosY);
+		}
+
+		if (callbacks.size() > 0)
+		{
+			callbacks.erase(callbacks.begin());
 		}
 
 

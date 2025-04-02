@@ -10,6 +10,8 @@
 #include <oneapi/tbb/parallel_for.h>
 #include "Texture/Texture.h"
 #include <glm/geometric.hpp>
+// #include "Renderer/Camera/petzval-kodak/petzval-kodak.h"
+#include "Renderer/Camera/petzval/petzval.h"
 
 
 
@@ -354,9 +356,10 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 
 			int currentPixPos = (nowX + nowY * filmWidth) * 3;
 			int sampleCountIndex = nowX + nowY * filmWidth;
+			glm::vec3 transmittance = glm::vec3(1.0f);
 
 			auto filmRes = glm::vec2(filmWidth, filmHeight);
-			const auto cam_ray = SampleCamRay(m_renderData.camData, m_renderData.camPosition, m_renderData.camDirection, filmRes, glm::vec2(nowX, nowY));
+			const auto cam_ray = petzval_camera_data::SampleCamRay(m_renderData.camData, m_renderData.camPosition, m_renderData.camDirection, filmRes, glm::vec2(nowX, nowY), transmittance, true);
 			Ray3f ray = cam_ray;
 			HitInfo hitInfo;
 			glm::dvec3 rayHitPosition = {};
@@ -490,10 +493,32 @@ bool PathTraceRenderer::IntersectTest(int posX, int posY, Material* & pMaterial)
 	int filmHeight = cam->GetHeight();
 	auto filmRes = glm::vec2(filmWidth, filmHeight);
 	auto camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
-	const auto cam_ray = SampleCamRay(camData, cam->pos, camDirection, filmRes, glm::vec2(posX, posY));
+	glm::vec3 transmittance = glm::vec3(1.0f);
+	const auto cam_ray = petzval_camera_data::SampleCamRay(camData, cam->pos, camDirection, filmRes, glm::vec2(posX, posY), transmittance);
 	SceneIntersectData intersect;
 	if (!IntersectScene(&m_sceneData, cam_ray, 0.1f, 10000.0f, intersect)) return false;
 
 	pMaterial = GetMaterial(m_sceneData, intersect.materialIdx);
+	return true;
+}
+
+bool PathTraceRenderer::Raycast(int posX, int posY, glm::dvec3* hitPos)
+{
+	auto camData = DefaultCameraData();
+	int filmWidth = cam->GetWidth();
+	int filmHeight = cam->GetHeight();
+	auto filmRes = glm::vec2(filmWidth, filmHeight);
+	auto camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+	glm::vec3 transmittance = glm::vec3(1.0f);
+	const auto cam_ray = petzval_camera_data::SampleCamRay(camData, cam->pos, camDirection, filmRes, glm::vec2(posX, posY), transmittance);
+	SceneIntersectData intersect;
+	if (!IntersectScene(&m_sceneData, cam_ray, 0.1f, 10000.0f, intersect)) return false;
+
+
+	if (hitPos != nullptr)
+	{
+		*hitPos = intersect.point;
+	}
+
 	return true;
 }

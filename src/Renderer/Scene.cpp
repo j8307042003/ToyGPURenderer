@@ -76,7 +76,8 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 	int saveByMaterialInstanced = 0;
 
 	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
-	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcessPreset_TargetRealtime_Fast | aiProcess_FlipWindingOrder | aiProcess_FlipUVs, NULL, props);
+	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_FlipUVs, NULL, props);
+	//aiProcessPreset_TargetRealtime_Fast
 	if (scene) {
 		std::string directory = modelFile.substr(0, modelFile.find_last_of('/'));
 
@@ -94,6 +95,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 		nodeStack.push({aiMatrix4x4(), scene->mRootNode});
 
 		std::vector<NodeTraversalData> nodes = {};
+		nodes.push_back({ scene->mRootNode->mTransformation, scene->mRootNode });
 		while (nodeStack.size() > 0)
 		{
 			auto nodeData = nodeStack.top();
@@ -156,9 +158,9 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 		std::vector<std::vector<Mesh>> out_meshes = std::vector<std::vector<Mesh>>(nodes.size());
 		std::vector<std::vector<int>> out_materialList = std::vector<std::vector<int>>(nodes.size());
 
-		tbb::parallel_for(size_t(0), nodes.size(), [&](size_t index)
+		//tbb::parallel_for(size_t(0), size_t(10)/*nodes.size() - 1 */, [&](size_t index)
+		for(int index = 0; index < nodes.size() ; ++index)
 		{
-
 			auto nodeData = nodes[index];
 
 			std::vector<Mesh> & meshes = out_meshes[index];
@@ -205,7 +207,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 
 					for (unsigned int k = 0; k < face.mNumIndices; k++) {
 						auto vertexId = face.mIndices[k];
-						aiVector3D& v = transform * mesh->mVertices[vertexId];
+						aiVector3D v = transform * mesh->mVertices[vertexId];
 						auto n = mesh->mNormals[vertexId];
 						aiVector3D t;
 						if (bHaveTangent)
@@ -219,11 +221,12 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 							t = { glm_t.x, glm_t.y, glm_t.z };
 						}
 
+						aiMatrix3x3 transformMat3 = aiMatrix3x3(transform);
 						// TODO : Check normal 
-						t = transform * t;
+						t = transformMat3 * t;
 						t = t.NormalizeSafe();
 
-						n = transform * n;
+						n = transformMat3 * n;
 						n = n.NormalizeSafe();
 
 						auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
@@ -259,7 +262,7 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 				}
 			}
 		}
-		);
+		//);
 
 
 		
@@ -675,12 +678,13 @@ void Scene::AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance)
 	lights.push_back(directionalLight);
 }
 
-void Scene::AddEnvSource(const std::string & path, float scale)
+void Scene::AddEnvSource(const std::string & path, float scale, float sampleScale)
 {
 	auto texptr = AddExrTexture(path, path);
 	auto envMapSource = new EnvMapSource();
 	envMapSource->envTexture = texptr;
 	envMapSource->scale = scale;
+	envMapSource->sampleScale = sampleScale;
 
 	envSources.push_back(envMapSource);
 }

@@ -57,7 +57,7 @@ void SceneLoader::LoadEnvData(const json11::Json& envJsonData, Scene* scene)
 			auto mapFilePath = envJson["file"].string_value();
 			auto scale = envJson["scale"].number_value();
 			auto sampleScale = envJson["sampleScale"].number_value();
-			scene->AddEnvSource(mapFilePath, scale);
+			scene->AddEnvSource(mapFilePath, scale, sampleScale);
 		}
 	}
 

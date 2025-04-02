@@ -84,7 +84,8 @@ bool EmbreeEngine::IntersectScene(SceneData * sceneData, const Ray3f & ray, floa
 									(double)rayhit.hit.u * sceneData->shapesData.tangents[triangleData.y]
 									+ (double)rayhit.hit.v * sceneData->shapesData.tangents[triangleData.z]
 									+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.tangents[triangleData.x]);
-	intersect->normal = glm::dot(intersect->normal, ray.direction) <= 0.0f ? intersect->normal : -intersect->normal;
+	//intersect->normal = glm::dot(intersect->normal, ray.direction) <= 0.0f ? intersect->normal : -intersect->normal;
+	intersect->normal = intersect->normal;
 
 	return true;
 }
