@@ -29,17 +29,18 @@ find_package(OpenImageDenoise REQUIRED)
 
 if (APPLE)
 	#define Molten sdk path here!
-	Set(MacVulkanSDK /Users/pine/lib/vulkansdk-macos-1.1.130.0)
+	Set(MacVulkanSDK /Users/pine/VulkanSDK/1.3.243.0)
 
 	Set(VULKAN_SDK ${MacVulkanSDK}/macOS)
 	Set(VK_LAYER_PATH ${MacVulkanSDK}/macOS/share/vulkan/explicit_layer.d)
-	Set(VK_ICD_FILENAMES ${MacVulkanSDK}/MoltenVK/dylib/macOS/MoltenVK_icd.json)
+	Set(VK_ICD_FILENAMES ${MacVulkanSDK}/macOS/dylib/macOS/MoltenVK_icd.json)
 	Set(Vulkan_LIBRARY ${MacVulkanSDK}/MoltenVK/dylib/macOS/libMoltenVK.dylib)
 	Set(Vulkan_INCLUDE_DIR ${MacVulkanSDK}/MoltenVK/include)
 	Set(DYLD_LIBRARY_PATH ${MacVulkanSDK}/macOS/lib)
 	Set(VK_SDK_PATH ${MacVulkanSDK}/MoltenVK/)
-	Set(PATH ${MacVulkanSDK}/macOS/bin:$PATH)	
+	Set(PATH ${MacVulkanSDK}/macOS/bin:$PATH)
 endif()
+
 
 # Add third party libraries
 add_subdirectory(${ThirdPartyFolder})

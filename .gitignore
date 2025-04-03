@@ -19,5 +19,6 @@ src/GLFW/src/*.pc
 third-party/oidnlib
 third-party/tbb
 working/*
+third-party/embree
 
 
