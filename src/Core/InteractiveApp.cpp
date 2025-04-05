@@ -353,15 +353,15 @@ void TestGUI::CameraGUI()
 		PetzvalCamData* petzvalCamData = (PetzvalCamData*)pCamData->camData.get();
 		ImGui::Text("camera model : petzval");
 		bAnyChange |= ImGui::InputFloat("Film", &petzvalCamData->film, 0.01f, 1.0f, "%.3f");
-		bAnyChange |= ImGui::SliderFloat("dist", &petzvalCamData->dist, 0.01f, 3.0f);
-		bAnyChange |= ImGui::SliderFloat("aperture", &petzvalCamData->aperture, 0.1f, 1.2f);
+		bAnyChange |= ImGui::SliderFloat("dist", &petzvalCamData->dist, 0.0f, -10.0f);
+		bAnyChange |= ImGui::SliderFloat("aperture", &petzvalCamData->aperture, 0.1f, 3.0f);
 	}
 	else if (pCamData->dataType == std::type_index(typeid(Petzval_Kodak_CamData)))
 	{
 		Petzval_Kodak_CamData* petzvalCamData = (Petzval_Kodak_CamData*)pCamData->camData.get();
 		ImGui::Text("camera model : petzval kodak");
 		bAnyChange |= ImGui::InputFloat("Film", &petzvalCamData->film, 0.01f, 1.0f, "%.3f");
-		bAnyChange |= ImGui::SliderFloat("dist", &petzvalCamData->dist, 0.01f, 3.0f);
+		bAnyChange |= ImGui::SliderFloat("dist", &petzvalCamData->dist, 0.0f, -10.0f);
 		bAnyChange |= ImGui::SliderFloat("aperture", &petzvalCamData->aperture, 0.1f, 1.2f);
 	}
 	else if (pCamData->dataType == std::type_index(typeid(DefaultCameraDataMode)))

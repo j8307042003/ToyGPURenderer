@@ -73,8 +73,8 @@ CameraData petzval_kodak_camera_data::MakeCamData()
 {
     std::shared_ptr<Petzval_Kodak_CamData> data = std::make_shared<Petzval_Kodak_CamData>();
     data->film = 0.036f;
-    data->aperture = 7.5f;
-    data->dist = 10.0f;
+    data->aperture = 1.0f;
+    data->dist = 0.0f;
     CameraData camdata = {};
     
     camdata.dataType = std::type_index(typeid(Petzval_Kodak_CamData));
@@ -86,11 +86,11 @@ CameraData petzval_kodak_camera_data::MakeCamData()
     return camdata;
 }
 
-Ray3f petzval_kodak_camera_data::SampleCamRay(const Petzval_Kodak_CamData & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool SimCam)
+Ray3f petzval_kodak_camera_data::SampleCamRay(const Petzval_Kodak_CamData & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool staticRay)
 {
-	auto r1 = SysRandom::Random();
-	auto r2 = SysRandom::Random();
-	auto r3 = SysRandom::Random();
+    auto r1 = SysRandom::Random();
+    auto r2 = SysRandom::Random();
+    auto r3 = SysRandom::Random();
 
 
     const float blue_lambda = 0.440f;
@@ -100,51 +100,57 @@ Ray3f petzval_kodak_camera_data::SampleCamRay(const Petzval_Kodak_CamData & cam,
     const int rndLambdaIdx = int(r3 * 3.0f) % 3;
     std::array<float, 3> rgb_lambdas = {blue_lambda, green_lambda, red_lambda};
     wavelengthToRGB(rgb_lambdas[rndLambdaIdx], transmittance.x, transmittance.y, transmittance.z);
-    transmittance *= 3.0f;
+    //transmittance *= 3.0f;
     //transmittance.x = transmittance.y = transmittance.z = 1.0f;
 
     //const float lambda = 0.4f + 0.3f * r3; //0.550f; // wavelength in um
-    const float lambda = rgb_lambdas[rndLambdaIdx]; //0.550f; // wavelength in um
-	const float dist = 10.0f;
+    const float lambda = staticRay ? 0.550f : rgb_lambdas[rndLambdaIdx]; //0.550f; // wavelength in um
+    const float dist = 10.0f;
 
-	vec2 uv(pixelPos.x / filmRes.x, pixelPos.y / filmRes.y);
-	uv -= 0.5f;
+    vec2 uv(pixelPos.x / filmRes.x, pixelPos.y / filmRes.y);
+    uv -= 0.5f;
 
-	vec2 filmPos_mm = uv * cam.film * 1000.0f;
+    vec2 filmPos_mm = uv * cam.film * 1000.0f;
 
-	vec2 filmD_mm = -filmPos_mm / (lens_length - lens_aperture_pos + dist);
+    vec2 filmD_mm = -filmPos_mm / (lens_length - lens_aperture_pos + cam.dist);
 
-	float x = 0.0;
-	float y = 0.0;
-	lens_sample_aperture(&x, &y, r1, r2, 11.0, 5);
+    float apertureX = 0.0;
+    float apertureY = 0.0;
+    lens_sample_aperture(&apertureX, &apertureY, r1, r2, lens_aperture_housing_radius * cam.aperture, 5);
 
-	std::array<float, 5> in = { {filmPos_mm.x, filmPos_mm.y, filmD_mm.x, filmD_mm.y, lambda} };
-	glm::vec4 out = {0.0, 0.0, 0.0, 0.0};
-	out.x = x;
-	out.y = y;
-	
-	auto start = std::chrono::high_resolution_clock::now(); // End time
+    //std::array<float, 5> in = { {filmPos_mm.x, filmPos_mm.y, filmD_mm.x, filmD_mm.y, lambda} };
+    std::array<float, 5> sensor = { {filmPos_mm.x, filmPos_mm.y, 0.0f, 0.0f, lambda} };
+    glm::vec4 aperture = {0.0, 0.0, 0.0, 0.0};
+    aperture.x = apertureX;
+    aperture.y = apertureY;
+    
+    auto start = std::chrono::high_resolution_clock::now(); // End time
 
-	lens_pt_sample_aperture(&in[0], &out[0], dist);
-	auto end = std::chrono::high_resolution_clock::now(); // End time
-	std::chrono::duration<double> elapsed = end - start; // Calculate duration
+    lens_pt_sample_aperture(&sensor[0], &aperture[0], cam.dist);
+    auto end = std::chrono::high_resolution_clock::now(); // End time
+    std::chrono::duration<double> elapsed = end - start; // Calculate duration
 
-	glm::vec4 outer ={0.0, 0.0, 0.0, 0.0};
+    sensor[0] += sensor[2] * cam.dist;
+    sensor[1] += sensor[3] * cam.dist;
 
-	glm::vec3 p = {};
-	glm::vec3 d = {};
-	auto start_1 = std::chrono::high_resolution_clock::now(); // End time
-    float t = lens_evaluate(&in[0], &outer[0]);
-    lens_sphereToCs(&outer[0], &outer[2], &p[0], &d.x, 0, 35.485001);
-	auto end_1 = std::chrono::high_resolution_clock::now(); // End time
-	std::chrono::duration<double> elapsed_1 = end_1 - start_1; // Calculate duration
+    glm::vec4 outer ={0.0, 0.0, 0.0, 0.0};
 
-	//std::cout << "sample aperture" << elapsed.count() << ". eval " << elapsed_1.count() << std::endl;
+    glm::vec3 p = {};
+    glm::vec3 d = {};
+    auto start_1 = std::chrono::high_resolution_clock::now(); // End time
+    float t = lens_evaluate(&sensor[0], &outer[0]);
+    lens_sphereToCs(&outer[0], &outer[2], &p[0], &d.x, -lens_outer_pupil_curvature_radius, lens_outer_pupil_curvature_radius);
+    transmittance *= 3.0f * t;
+    
+    auto end_1 = std::chrono::high_resolution_clock::now(); // End time
+    std::chrono::duration<double> elapsed_1 = end_1 - start_1; // Calculate duration
+
+    //std::cout << "sample aperture" << elapsed.count() << ". eval " << elapsed_1.count() << std::endl;
 
     d = glm::quatLookAt(direction, glm::vec3(0.0, 1.0, 0.0)) * -d;
-
+    p = pos + glm::quatLookAt(direction, glm::vec3(0.0, 1.0, 0.0)) * (p * 0.001f);
     
     //wavelengthToRGB(lambda, transmittance.x, transmittance.y, transmittance.z);
 
-	return Ray3f{ pos, d };
+    return Ray3f{ p, d };
 }

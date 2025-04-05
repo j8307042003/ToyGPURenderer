@@ -13,80 +13,80 @@
 
 // Clamp value to the [0, 1] range
 inline float clamp(float value, float mi, float ma) {
-    return max(mi, min(ma, value));
+	return max(mi, min(ma, value));
 }
 
 // Convert wavelength (in nm) to RGB values
 inline void wavelengthToRGB(float wavelength, float& r, float& g, float& b) {
-    r = g = b = 0.0f; // Initialize RGB values
+	r = g = b = 0.0f; // Initialize RGB values
 
-    wavelength = wavelength * 1000.0f;
-    if (wavelength >= 380.0f && wavelength <= 440.0f) {
-        r = -(wavelength - 440.0f) / (440.0f - 380.0f);
-        g = 0.0f;
-        b = 1.0f;
-    }
-    else if (wavelength > 440.0f && wavelength <= 490.0f) {
-        r = 0.0f;
-        g = (wavelength - 440.0f) / (490.0f - 440.0f);
-        b = 1.0f;
-    }
-    else if (wavelength > 490.0f && wavelength <= 510.0f) {
-        r = 0.0f;
-        g = 1.0f;
-        b = -(wavelength - 510.0f) / (510.0f - 490.0f);
-    }
-    else if (wavelength > 510.0f && wavelength <= 580.0f) {
-        r = (wavelength - 510.0f) / (580.0f - 510.0f);
-        g = 1.0f;
-        b = 0.0f;
-    }
-    else if (wavelength > 580.0f && wavelength <= 645.0f) {
-        r = 1.0f;
-        g = -(wavelength - 645.0f) / (645.0f - 580.0f);
-        b = 0.0f;
-    }
-    else if (wavelength > 645.0f && wavelength <= 780.0f) {
-        r = 1.0f;
-        g = 0.0f;
-        b = 0.0f;
-    }
+	wavelength = wavelength * 1000.0f;
+	if (wavelength >= 380.0f && wavelength <= 440.0f) {
+		r = -(wavelength - 440.0f) / (440.0f - 380.0f);
+		g = 0.0f;
+		b = 1.0f;
+	}
+	else if (wavelength > 440.0f && wavelength <= 490.0f) {
+		r = 0.0f;
+		g = (wavelength - 440.0f) / (490.0f - 440.0f);
+		b = 1.0f;
+	}
+	else if (wavelength > 490.0f && wavelength <= 510.0f) {
+		r = 0.0f;
+		g = 1.0f;
+		b = -(wavelength - 510.0f) / (510.0f - 490.0f);
+	}
+	else if (wavelength > 510.0f && wavelength <= 580.0f) {
+		r = (wavelength - 510.0f) / (580.0f - 510.0f);
+		g = 1.0f;
+		b = 0.0f;
+	}
+	else if (wavelength > 580.0f && wavelength <= 645.0f) {
+		r = 1.0f;
+		g = -(wavelength - 645.0f) / (645.0f - 580.0f);
+		b = 0.0f;
+	}
+	else if (wavelength > 645.0f && wavelength <= 780.0f) {
+		r = 1.0f;
+		g = 0.0f;
+		b = 0.0f;
+	}
 
-    // Adjust intensity for wavelength-dependent sensitivity
-    float intensity = 1.0f;
-    if (wavelength >= 380.0f && wavelength < 420.0f) {
-        intensity = 0.3f + 0.7f * (wavelength - 380.0f) / (420.0f - 380.0f);
-    }
-    else if (wavelength >= 645.0f && wavelength <= 780.0f) {
-        intensity = 0.3f + 0.7f * (780.0f - wavelength) / (780.0f - 645.0f);
-    }
-    else if (wavelength < 380.0f || wavelength > 780.0f) {
-        intensity = 0.0f;
-    }
+	// Adjust intensity for wavelength-dependent sensitivity
+	float intensity = 1.0f;
+	if (wavelength >= 380.0f && wavelength < 420.0f) {
+		intensity = 0.3f + 0.7f * (wavelength - 380.0f) / (420.0f - 380.0f);
+	}
+	else if (wavelength >= 645.0f && wavelength <= 780.0f) {
+		intensity = 0.3f + 0.7f * (780.0f - wavelength) / (780.0f - 645.0f);
+	}
+	else if (wavelength < 380.0f || wavelength > 780.0f) {
+		intensity = 0.0f;
+	}
 
-    // Apply intensity scaling and clamp to [0, 1]
-    r = clamp(r * intensity, 0.0f, 1.0f);
-    g = clamp(g * intensity, 0.0f, 1.0f);
-    b = clamp(b * intensity, 0.0f, 1.0f);
+	// Apply intensity scaling and clamp to [0, 1]
+	r = clamp(r * intensity, 0.0f, 1.0f);
+	g = clamp(g * intensity, 0.0f, 1.0f);
+	b = clamp(b * intensity, 0.0f, 1.0f);
 }
 
 
 
 CameraData petzval_camera_data::MakeCamData()
 {
-    std::shared_ptr<PetzvalCamData> data = std::make_shared<PetzvalCamData>();
-    data->film = 0.036f;
-    data->aperture = 7.5f;
-    data->dist = 10.0f;
-    CameraData camdata = {};
-    
-    camdata.dataType = std::type_index(typeid(PetzvalCamData));
-    camdata.camData = data;
-    camdata.sampleRay = [=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool staticRay) {
-            return petzval_camera_data::SampleCamRay(*data, pos, direction, filmRes, pixelPos, transmittance, staticRay);
-    };
-    
-    return camdata;
+	std::shared_ptr<PetzvalCamData> data = std::make_shared<PetzvalCamData>();
+	data->film = 0.036f;
+	data->aperture = 1.0f;
+	data->dist = 0.0f;
+	CameraData camdata = {};
+	
+	camdata.dataType = std::type_index(typeid(PetzvalCamData));
+	camdata.camData = data;
+	camdata.sampleRay = [=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool staticRay) {
+			return petzval_camera_data::SampleCamRay(*data, pos, direction, filmRes, pixelPos, transmittance, staticRay);
+	};
+	
+	return camdata;
 }
 
 Ray3f petzval_camera_data::SampleCamRay(const PetzvalCamData& cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool staticRay)
@@ -96,18 +96,18 @@ Ray3f petzval_camera_data::SampleCamRay(const PetzvalCamData& cam, const vec3 & 
 	auto r3 = SysRandom::Random();
 
 
-    const float blue_lambda = 0.440f;
-    const float green_lambda = 0.510f;
-    const float red_lambda = 0.650f;
+	const float blue_lambda = 0.440f;
+	const float green_lambda = 0.510f;
+	const float red_lambda = 0.650f;
 
-    const int rndLambdaIdx = int(r3 * 3.0f) % 3;
-    std::array<float, 3> rgb_lambdas = {blue_lambda, green_lambda, red_lambda};
-    wavelengthToRGB(rgb_lambdas[rndLambdaIdx], transmittance.x, transmittance.y, transmittance.z);
-    transmittance *= 3.0f;
-    //transmittance.x = transmittance.y = transmittance.z = 1.0f;
+	const int rndLambdaIdx = int(r3 * 3.0f) % 3;
+	std::array<float, 3> rgb_lambdas = {blue_lambda, green_lambda, red_lambda};
+	wavelengthToRGB(rgb_lambdas[rndLambdaIdx], transmittance.x, transmittance.y, transmittance.z);
+	//transmittance *= 3.0f;
+	//transmittance.x = transmittance.y = transmittance.z = 1.0f;
 
-    //const float lambda = 0.4f + 0.3f * r3; //0.550f; // wavelength in um
-    const float lambda = staticRay ? 0.550f : rgb_lambdas[rndLambdaIdx]; //0.550f; // wavelength in um
+	//const float lambda = 0.4f + 0.3f * r3; //0.550f; // wavelength in um
+	const float lambda = staticRay ? 0.550f : rgb_lambdas[rndLambdaIdx]; //0.550f; // wavelength in um
 	const float dist = 10.0f;
 
 	vec2 uv(pixelPos.x / filmRes.x, pixelPos.y / filmRes.y);
@@ -117,41 +117,53 @@ Ray3f petzval_camera_data::SampleCamRay(const PetzvalCamData& cam, const vec3 & 
 
 	vec2 filmD_mm = -filmPos_mm / (lens_length - lens_aperture_pos + cam.dist);
 
-	float x = 0.0;
-	float y = 0.0;
-	lens_sample_aperture(&x, &y, r1, r2, lens_aperture_housing_radius * cam.aperture, 5);
+	float apertureX = 0.0;
+	float apertureY = 0.0;
+	lens_sample_aperture(&apertureX, &apertureY, r1, r2, lens_aperture_housing_radius * cam.aperture, 5);
 
-    //std::array<float, 5> in = { {filmPos_mm.x, filmPos_mm.y, filmD_mm.x, filmD_mm.y, lambda} };
-	std::array<float, 5> in = { {filmPos_mm.x, filmPos_mm.y, 0.0f, 0.0f, lambda} };
-	glm::vec4 out = {0.0, 0.0, 0.0, 0.0};
-	out.x = x;
-	out.y = y;
+	//std::array<float, 5> in = { {filmPos_mm.x, filmPos_mm.y, filmD_mm.x, filmD_mm.y, lambda} };
+	std::array<float, 5> sensor = { {filmPos_mm.x, filmPos_mm.y, 0.0f, 0.0f, lambda} };
+	glm::vec4 aperture = {0.0, 0.0, 0.0, 0.0};
+	aperture.x = apertureX;
+	aperture.y = apertureY;
 	
 	auto start = std::chrono::high_resolution_clock::now(); // End time
 
-	lens_pt_sample_aperture(&in[0], &out[0], cam.dist);
+	lens_pt_sample_aperture(&sensor[0], &aperture[0], cam.dist);
 	auto end = std::chrono::high_resolution_clock::now(); // End time
 	std::chrono::duration<double> elapsed = end - start; // Calculate duration
 
-    in[0] += in[2] * cam.dist;
-    in[1] += in[3] * cam.dist;
+	sensor[0] += sensor[2] * cam.dist;
+	sensor[1] += sensor[3] * cam.dist;
 
 	glm::vec4 outer ={0.0, 0.0, 0.0, 0.0};
 
 	glm::vec3 p = {};
 	glm::vec3 d = {};
 	auto start_1 = std::chrono::high_resolution_clock::now(); // End time
-    float t = lens_evaluate(&in[0], &outer[0]);
-    lens_sphereToCs(&outer[0], &outer[2], &p[0], &d.x, 0, 39.675003);
+	float t = lens_evaluate(&sensor[0], &outer[0]);
+	lens_sphereToCs(&outer[0], &outer[2], &p[0], &d.x, -lens_outer_pupil_curvature_radius, lens_outer_pupil_curvature_radius);
+	transmittance *= 3.0f * t;
+	
 	auto end_1 = std::chrono::high_resolution_clock::now(); // End time
 	std::chrono::duration<double> elapsed_1 = end_1 - start_1; // Calculate duration
 
 	//std::cout << "sample aperture" << elapsed.count() << ". eval " << elapsed_1.count() << std::endl;
 
-    d = glm::quatLookAt(direction, glm::vec3(0.0, 1.0, 0.0)) * -d;
+	d = glm::quatLookAt(direction, glm::vec3(0.0, 1.0, 0.0)) * -d;
+	p = pos + glm::quatLookAt(direction, glm::vec3(0.0, 1.0, 0.0)) * (p * 0.001f);
+	
+	//wavelengthToRGB(lambda, transmittance.x, transmittance.y, transmittance.z);
 
-    
-    //wavelengthToRGB(lambda, transmittance.x, transmittance.y, transmittance.z);
-
-	return Ray3f{ pos, d };
+	return Ray3f{ p, d };
 }
+
+/*
+{
+	// abuse pixel filter sampling for direction, scale by pupil radius / distance to sensor
+	const float dx = ddx * 5.f / 30.f − x / 30.f , dy = ddy * 5.f / 30.f − y / 30.f; 
+
+	x += 0.355f * dx , y += 0.355f * dy ; // need −0.355mm sensor offset to focus at 210dm world space
+	const float out_x = 39.2597 * dx + −15.14
+}
+*/
