@@ -15,6 +15,9 @@
 #include "RayTraceEngine/EmbreeEngine.h"
 #include <stack>
 #include <oneapi/tbb/parallel_for.h>
+#include "Camera/petzval/petzval.h"
+#include "Camera/petzval-kodak/petzval-kodak.h"
+#include "Camera/Camera.h"
 
 void Scene::AddShape(Shape * s) {
 	shapes.push_back(s);
@@ -848,6 +851,20 @@ bool Scene::RayCastTest(const Ray & ray, Vec3 & hitPos, Vec3 & direction, int & 
 
 void MakeSceneData(const Scene & scene, SceneData & sceneData, bool enableEmbree)
 {
+	if (scene.cameraModel.compare("petzval")== 0)
+	{
+        sceneData.cameraData = petzval_camera_data::MakeCamData();
+	}
+    else if (scene.cameraModel.compare("petzval-kodak") == 0)
+    {
+        sceneData.cameraData = petzval_kodak_camera_data::MakeCamData();
+    }
+    else
+    {
+        sceneData.cameraData = DefaultCameraData();
+    }
+
+
 	sceneData.materials = scene.Materials;
 	for (int i = 0; i < scene.shapes.size(); ++i)
 	{

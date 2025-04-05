@@ -74,15 +74,19 @@ inline void wavelengthToRGB(float wavelength, float& r, float& g, float& b) {
 
 CameraData petzval_camera_data::MakeCamData()
 {
-    PetzvalCamData * data = new PetzvalCamData();
+    std::shared_ptr<PetzvalCamData> data = std::make_shared<PetzvalCamData>();
     data->film = 0.036f;
-    return {
-        std::type_index(typeid(PetzvalCamData)),
-        std::shared_ptr<PetzvalCamData>(data),
-        [=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool staticRay) {
+    data->aperture = 7.5f;
+    data->dist = 10.0f;
+    CameraData camdata = {};
+    
+    camdata.dataType = std::type_index(typeid(PetzvalCamData));
+    camdata.camData = data;
+    camdata.sampleRay = [=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool staticRay) {
             return petzval_camera_data::SampleCamRay(*data, pos, direction, filmRes, pixelPos, transmittance, staticRay);
-        }
     };
+    
+    return camdata;
 }
 
 Ray3f petzval_camera_data::SampleCamRay(const PetzvalCamData& cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool staticRay)
@@ -111,22 +115,26 @@ Ray3f petzval_camera_data::SampleCamRay(const PetzvalCamData& cam, const vec3 & 
 
 	vec2 filmPos_mm = uv * cam.film * 1000.0f;
 
-	vec2 filmD_mm = -filmPos_mm / (lens_length - lens_aperture_pos + dist);
+	vec2 filmD_mm = -filmPos_mm / (lens_length - lens_aperture_pos + cam.dist);
 
 	float x = 0.0;
 	float y = 0.0;
-	lens_sample_aperture(&x, &y, r1, r2, staticRay ? 1.0 : 7.5, 5);
+	lens_sample_aperture(&x, &y, r1, r2, lens_aperture_housing_radius * cam.aperture, 5);
 
-	std::array<float, 5> in = { {filmPos_mm.x, filmPos_mm.y, filmD_mm.x, filmD_mm.y, lambda} };
+    //std::array<float, 5> in = { {filmPos_mm.x, filmPos_mm.y, filmD_mm.x, filmD_mm.y, lambda} };
+	std::array<float, 5> in = { {filmPos_mm.x, filmPos_mm.y, 0.0f, 0.0f, lambda} };
 	glm::vec4 out = {0.0, 0.0, 0.0, 0.0};
 	out.x = x;
 	out.y = y;
 	
 	auto start = std::chrono::high_resolution_clock::now(); // End time
 
-	lens_pt_sample_aperture(&in[0], &out[0], dist);
+	lens_pt_sample_aperture(&in[0], &out[0], cam.dist);
 	auto end = std::chrono::high_resolution_clock::now(); // End time
 	std::chrono::duration<double> elapsed = end - start; // Calculate duration
+
+    in[0] += in[2] * cam.dist;
+    in[1] += in[3] * cam.dist;
 
 	glm::vec4 outer ={0.0, 0.0, 0.0, 0.0};
 
@@ -134,7 +142,7 @@ Ray3f petzval_camera_data::SampleCamRay(const PetzvalCamData& cam, const vec3 & 
 	glm::vec3 d = {};
 	auto start_1 = std::chrono::high_resolution_clock::now(); // End time
     float t = lens_evaluate(&in[0], &outer[0]);
-    lens_sphereToCs(&outer[0], &outer[2], &p[0], &d.x, 0, 35.485001);
+    lens_sphereToCs(&outer[0], &outer[2], &p[0], &d.x, 0, 39.675003);
 	auto end_1 = std::chrono::high_resolution_clock::now(); // End time
 	std::chrono::duration<double> elapsed_1 = end_1 - start_1; // Calculate duration
 

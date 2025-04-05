@@ -53,9 +53,9 @@ SET(ASSIMP_BUILD_TESTS CACHE BOOL OFF)
 #                            )
 
 add_subdirectory(assimp)
-LINK_DIRECTORIES (${Assimp_BINARY_DIR} ${AssetImporter_BINARY_DIR}/lib)
-include_directories(assimp/include)
-include_directories(assimp/contrib)
+# LINK_DIRECTORIES (${Assimp_BINARY_DIR} ${AssetImporter_BINARY_DIR}/lib)
+# include_directories(assimp/include)
+# include_directories(assimp/contrib)
 
 
 

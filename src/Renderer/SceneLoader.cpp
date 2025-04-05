@@ -25,6 +25,9 @@ void SceneLoader::Load(const std::string & path, Scene & scene)
 
 	std::string err;
 	auto sceneJsonData = json11::Json::parse(buffer.data(), err);
+    
+    auto cameraJsonData = sceneJsonData["camera"];
+    LoadCameraModel(cameraJsonData, &scene);
 
 	auto materialJsonData = sceneJsonData["materials"];
 	LoadMaterial(materialJsonData, &scene);
@@ -182,3 +185,10 @@ void SceneLoader::LoadLight(const json11::Json& lightJson, Scene* scene)
 		}
 	}
 }
+
+
+void SceneLoader::LoadCameraModel(const json11::Json& cameraJson, Scene* scene)
+{
+	scene->cameraModel = cameraJson["model"].string_value();
+}
+

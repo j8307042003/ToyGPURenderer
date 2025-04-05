@@ -69,7 +69,24 @@ inline void wavelengthToRGB(float wavelength, float& r, float& g, float& b) {
 }
 
 
-Ray3f petzval_kodak_camera_data::SampleCamRay(const petzval_kodak_camera_model & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool SimCam)
+CameraData petzval_kodak_camera_data::MakeCamData()
+{
+    std::shared_ptr<Petzval_Kodak_CamData> data = std::make_shared<Petzval_Kodak_CamData>();
+    data->film = 0.036f;
+    data->aperture = 7.5f;
+    data->dist = 10.0f;
+    CameraData camdata = {};
+    
+    camdata.dataType = std::type_index(typeid(Petzval_Kodak_CamData));
+    camdata.camData = data;
+    camdata.sampleRay = [=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool staticRay) {
+            return petzval_kodak_camera_data::SampleCamRay(*data, pos, direction, filmRes, pixelPos, transmittance, staticRay);
+    };
+    
+    return camdata;
+}
+
+Ray3f petzval_kodak_camera_data::SampleCamRay(const Petzval_Kodak_CamData & cam, const vec3 & pos, const vec3 & direction, const vec2 & filmRes, const vec2 & pixelPos, vec3& transmittance, bool SimCam)
 {
 	auto r1 = SysRandom::Random();
 	auto r2 = SysRandom::Random();

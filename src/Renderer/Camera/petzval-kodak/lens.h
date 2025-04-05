@@ -5,6 +5,7 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+#include <float.h>
 
 static inline float dotproduct(float* u, float* v)
 {

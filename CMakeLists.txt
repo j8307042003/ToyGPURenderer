@@ -6,6 +6,10 @@ SET(ASSIMP_BUILD_TESTS CACHE BOOL OFF)
 
 Set(ThirdPartyFolder third-party)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR
+    CMAKE_CXX_COMPILER_ID STREQUAL AppleClang)
+  string(APPEND CMAKE_CXX_FLAGS " -Wno-c++11-narrowing")
+endif()
 
 #TBB
 set(TBB_DIR ${ThirdPartyFolder}/tbb/lib/cmake/TBB)
@@ -94,6 +98,7 @@ target_include_directories(PineRdr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Core)
 target_include_directories(PineRdr PRIVATE third-party/oidnlib/include)
 target_include_directories(PineRdr PRIVATE third-party/tbb/include)
 target_include_directories(PineRdr PRIVATE ${EMBREE_INCLUDE_DIRS})
+target_include_directories(PineRdr PRIVATE third-party/assimp/include)
 target_link_libraries(PineRdr PRIVATE IMGUI)
 target_link_libraries(PineRdr PRIVATE glad)
 target_link_libraries(PineRdr PRIVATE Renderer)
@@ -105,7 +110,7 @@ target_link_libraries(PineRdr PRIVATE ${OPENIMAGEDENOISE_LIBRARIES})
 target_link_libraries(PineRdr PRIVATE ${glm_LIBRARIES} glm::glm)
 target_link_libraries(PineRdr PRIVATE glfw ${GLFW_LIBRARIES})
 target_link_libraries(PineRdr PRIVATE ${TBB_LIBFILE})
-target_link_libraries(PineRdr PRIVATE Assimp)
+target_link_libraries(PineRdr PRIVATE assimp)
 target_link_libraries(PineRdr PRIVATE miniz)
 target_link_libraries(PineRdr PRIVATE json11)
 target_link_libraries(PineRdr PRIVATE ${EMBREE_LIBRARY})

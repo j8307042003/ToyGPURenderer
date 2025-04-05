@@ -30,6 +30,12 @@ public:
 	glm::vec3 rayTestPose;
 };
 
+struct GLColorFormatResult
+{
+    unsigned int colorChannel;
+    unsigned int format;
+};
+
 
 enum class AppEventType
 {
@@ -61,6 +67,8 @@ private:
 	void OnEvent(WindowEvent & event);
 	void SignalCloseApp();
 	void CameraUpdate(float deltaTime);
+	void ViewportWindow(unsigned int textureId, int textureWidth, int textureHeight, void* frameBuffer, ColorFormat colorFormat, float deltaTime);
+    	void ViewportWindowIO(float deltaTime, float imageUIWidth, float imageUIHeight, float textureWidth, float textureHeight);
 
 
 public:
@@ -82,7 +90,8 @@ private:
 	float m_timeStart;
 	float m_timePass;
 	bool m_controlLock = false;
-
+    unsigned int m_viewportTextureId;
+    
 	std::unordered_map<AppEventType, std::vector<EventCallback>> m_listeners;
 
 private:

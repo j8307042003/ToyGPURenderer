@@ -49,7 +49,7 @@ void PathTraceRenderer::StartRender()
 	MakeSceneData(*s, m_sceneData, true);
 	//bvh_buildTree1(&m_sceneData, m_bvh);
 
-	m_renderData.camData = petzval_camera_data::MakeCamData();
+	m_renderData.camData = m_sceneData.cameraData;
 	//m_renderData.camDirection = glm::dvec3(0, 0, -1);
 	//m_renderData.camPosition = glm::dvec3(0, 0, 10);
 	m_renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
@@ -168,7 +168,7 @@ void PathTraceRenderer::RenderLoop()
 	TileSampleChannelJob sampleChannelWork = TileSampleChannelJob(&tileRenderDatas, this);
 	ApplySampleChannelJob applyChannelWork = ApplySampleChannelJob(&tileRenderDatas, this);
 
-    std::cout << "TBB crash stage 1" << std::endl;
+    // std::cout << "TBB crash stage 1" << std::endl;
 	// Sample Albedo, Normal Buffer for denoiser
 	tbb::parallel_for(size_t(0), tileRenderDatas.size(), sampleChannelWork);
 
@@ -179,7 +179,7 @@ void PathTraceRenderer::RenderLoop()
 		if (m_resetFlag)
 		{
 			m_resetFlag = false;
-            std::cout << "TBB crash stage 2" << std::endl;
+            // std::cout << "TBB crash stage 2" << std::endl;
 			tbb::parallel_for(size_t(0), tileRenderDatas.size(), sampleChannelWork);
 		}
 
@@ -201,7 +201,7 @@ void PathTraceRenderer::RenderLoop()
 
 		if (bIterate)
 		{
-            std::cout << "TBB crash stage 3" << std::endl;
+            // std::cout << "TBB crash stage 3" << std::endl;
 			tbb::parallel_for(size_t(0), tileRenderDatas.size(), renderWork);
 			iteration++;
 		}
@@ -220,7 +220,7 @@ void PathTraceRenderer::RenderLoop()
 		applyChannelWork.bDonoised = bDenoised;
 		applyChannelWork.bNormal = bNormal;
 		applyChannelWork.bSimpleShading = bSimpleShading;
-        std::cout << "TBB crash stage 4" << std::endl;
+        // std::cout << "TBB crash stage 4" << std::endl;
 		tbb::parallel_for(size_t(0), tileRenderDatas.size(), applyChannelWork);
 		//std::cout << "Complete Iteration : " << iteration << std::endl;
 	}

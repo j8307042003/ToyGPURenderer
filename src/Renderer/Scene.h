@@ -21,6 +21,7 @@
 #include "Env/IEnvSource.h"
 #include "Accelerate/BVHStruct.h"
 #include "RayTraceEngine/IRayTraceEngine.h"
+#include "Camera/Camera.h"
 
 struct Mesh
 {
@@ -44,7 +45,7 @@ public:
 	std::vector<IEnvSource*> envSources = {};
 
 	std::vector<Mesh> meshes = {};
-
+	std::string cameraModel = "";
 
 	void AddShape(Shape * s);
 	void AddShape(Shape * s, std::string mat_name);
@@ -91,6 +92,8 @@ struct SceneData
 	std::vector<Texture *> textures;
 
 	BVHTree *bvh_tree;
+    
+    CameraData cameraData;
 
 	IRayTraceEngine* pRayTraceEngine;
 };

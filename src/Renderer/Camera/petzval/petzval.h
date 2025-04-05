@@ -5,7 +5,8 @@
 struct PetzvalCamData
 {
 	float film;
-
+	float aperture = 7.5f;
+	float dist = 10.0f;
 };
 
 class petzval_camera_data {

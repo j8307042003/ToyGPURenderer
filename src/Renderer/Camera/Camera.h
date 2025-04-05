@@ -68,15 +68,17 @@ inline Ray3f SampleCamRay(const DefaultCameraDataMode& cam, const vec3 & pos, co
 
 inline CameraData DefaultCameraData()
 {
-	DefaultCameraDataMode* data = new DefaultCameraDataMode();
+    auto data = std::make_shared<DefaultCameraDataMode>();
 	data->film = 0.036f;
 	data->lens = 0.05f;
 	data->focal = 0.0f;
 
-	return {
-		std::type_index(typeid(DefaultCameraDataMode)),
-		std::shared_ptr<DefaultCameraDataMode>(data),
-		[=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool SimCam) {
+    CameraData camdata = {};
+    camdata.dataType = std::type_index(typeid(DefaultCameraDataMode)),
+    camdata.camData = data;
+    camdata.sampleRay = [=](const vec3& pos, const vec3& direction, const vec2& filmRes, const vec2& pixelPos, vec3& transmittance, bool SimCam) {
 			return SampleCamRay(*data, pos, direction, filmRes, pixelPos, transmittance, SimCam);
-		} };
+        };
+    
+    return camdata;
 }

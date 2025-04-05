@@ -3,6 +3,7 @@
 #include <glad.h>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include "AppWindowGLFW.h"
@@ -15,18 +16,32 @@
 #include <ctime>
 #include <sstream>
 #include "Renderer/Camera/petzval/petzval.h"
+#include "Renderer/Camera/petzval-kodak/petzval-kodak.h"
+#include "Renderer/Camera/Camera.h"
 #ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #endif // !STB_IMAGE_WRITE_IMPLEMENTATION
 #include "Common/stb_image_write.h"
 #include "Renderer/SceneLoader.h"
 #include <embree3/rtcore.h>
 
+
+void setupViewportTexture(GLuint textureId)
+{
+    glGenTextures(1, &textureId);
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}
+
+
+
 InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), m_mouse_table(), m_imguiUIs()
 {
-	const int kWidth = 1440; //1920 / 1;// 1920 / 1;//720;
-	const int kHeight = 1440;//1080 / 1;// 1080 / 1;//512;
+    const int kWidth = 1440; //720; //1920 / 1;// 1920 / 1;//720;
+    const int kHeight = 1440; //720;//1080 / 1;// 1080 / 1;//512;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 
+    setupViewportTexture(m_viewportTextureId);
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -211,6 +226,8 @@ void TestGUI::OnGUI()
 
 	PathTraceRenderer* pathTraceRenderer = (PathTraceRenderer*)renderer;
 
+    ImGui::Text("resolution %d x %d", cam->GetWidth(), cam->GetHeight());
+    
 	int renderItProgress = pathTraceRenderer->Iteration();
 	ImGui::Text("Iteration : %d", renderItProgress);
 
@@ -334,7 +351,22 @@ void TestGUI::CameraGUI()
 	if (pCamData->dataType == std::type_index(typeid(PetzvalCamData)))
 	{
 		PetzvalCamData* petzvalCamData = (PetzvalCamData*)pCamData->camData.get();
+		ImGui::Text("camera model : petzval");
 		bAnyChange |= ImGui::InputFloat("Film", &petzvalCamData->film, 0.01f, 1.0f, "%.3f");
+		bAnyChange |= ImGui::SliderFloat("dist", &petzvalCamData->dist, 0.01f, 3.0f);
+		bAnyChange |= ImGui::SliderFloat("aperture", &petzvalCamData->aperture, 0.1f, 1.2f);
+	}
+	else if (pCamData->dataType == std::type_index(typeid(Petzval_Kodak_CamData)))
+	{
+		Petzval_Kodak_CamData* petzvalCamData = (Petzval_Kodak_CamData*)pCamData->camData.get();
+		ImGui::Text("camera model : petzval kodak");
+		bAnyChange |= ImGui::InputFloat("Film", &petzvalCamData->film, 0.01f, 1.0f, "%.3f");
+		bAnyChange |= ImGui::SliderFloat("dist", &petzvalCamData->dist, 0.01f, 3.0f);
+		bAnyChange |= ImGui::SliderFloat("aperture", &petzvalCamData->aperture, 0.1f, 1.2f);
+	}
+	else if (pCamData->dataType == std::type_index(typeid(DefaultCameraDataMode)))
+	{
+		ImGui::Text("camera model : default");
 	}
 
 	if (bAnyChange)
@@ -443,8 +475,8 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 			float deltaX = mouseX - m_mousePosX;
 			float deltaY = mouseY - m_mousePosY;
 
-        	if( abs(deltaX) > 5 || abs(deltaY) > 5 )
-        	{
+			if( abs(deltaX) > 5 || abs(deltaY) > 5 )
+			{
 
 				const float scale = 0.1f;
 				m_rotX += glm::radians(deltaY * scale);
@@ -453,7 +485,7 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 				auto q = glm::quat(glm::vec3{ m_rotX, -m_rotY, glm::radians(180.0f)});
 				auto adjuestRot = glm::quatLookAt(q * glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-        		m_cam->rotation = glm::normalize(q);
+				m_cam->rotation = glm::normalize(q);
 
 				/*
 				auto rightAxis = m_cam->rotation * glm::vec3(1.0f, 0.0f, 0.0f);
@@ -490,6 +522,234 @@ void InteractiveApp::CameraUpdate(float deltaTime)
 
 
 
+void SetupDockingLayout(ImGuiID dockspace_id)
+{
+    static bool inited = false;
+    
+    if (inited) return;
+    
+    //ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
+    ImGui::DockBuilderRemoveNode(dockspace_id); // Clear previous layout
+    ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+
+    // Split the dock space
+    ImGuiID dock_main = dockspace_id;
+    ImGuiID dock_left, dock_right, dock_left_up, dock_left_down;
+
+    dock_left = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Left, 0.4f, nullptr, &dock_main);
+    //dock_right = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 1.0f, nullptr, &dock_main);
+
+    dock_left_up = ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Up, 0.6, nullptr, &dock_left);
+    dock_left_down = ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.4, nullptr, &dock_left);
+    
+    // Dock windows
+    ImGui::DockBuilderDockWindow("viewport", dock_main);
+    ImGui::DockBuilderDockWindow("Test imgui window", dock_left_up);
+    ImGui::DockBuilderDockWindow("Camera", dock_left_down);
+    ImGui::DockBuilderDockWindow("Main Panel", dock_main);
+
+    ImGui::DockBuilderFinish(dockspace_id);
+    
+    inited = true;
+}
+
+
+GLColorFormatResult getGLFormat(ColorFormat format)
+{
+    GLColorFormatResult result = { GL_RGB };
+
+    switch (format)
+    {
+        case ColorFormat::RGBByte: result.format = GL_UNSIGNED_BYTE; break;
+        case ColorFormat::RGBFloat: result.format = GL_FLOAT; break;
+        default: break;
+    }
+
+    return result;
+}
+
+
+void InteractiveApp::ViewportWindow(unsigned int textureId, int textureWidth, int textureHeight, void* frameBuffer, ColorFormat colorFormat, float deltaTime) {
+    ImGui::Begin("viewport");
+    ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+
+
+
+    // update texture
+    auto imageFormatInfo = getGLFormat(colorFormat);
+
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, textureWidth, textureHeight, 0,
+        imageFormatInfo.colorChannel, imageFormatInfo.format, frameBuffer);
+
+    // Compute aspect ratio
+    float aspectRatio = textureWidth / textureHeight;
+
+    // Compute new width and height while maintaining aspect ratio
+    float newWidth = viewportSize.x;
+    float newHeight = newWidth / aspectRatio;
+
+    if (newHeight > viewportSize.y) {
+        newHeight = viewportSize.y;
+        newWidth = newHeight * aspectRatio;
+    }
+    
+    ImGui::Image((ImTextureID)(intptr_t)textureId, ImVec2(newWidth, newHeight), ImVec2(0, 1), ImVec2(1, 0));
+    
+    ViewportWindowIO(deltaTime, newWidth, newHeight, textureWidth, textureHeight);
+    
+    ImGui::End();
+}
+
+
+void InteractiveApp::ViewportWindowIO(float deltaTime, float imageUIWidth, float imageUIHeight, float textureWidth, float textureHeight)
+{
+    ImVec2 imagePos = ImGui::GetCursorScreenPos();
+    ImVec2 mousePos = ImGui::GetIO().MousePos;
+    if ( ImGui::IsItemHovered()) {
+        
+        
+        float localX = mousePos.x - imagePos.x;
+        float localY = mousePos.y - imagePos.y;
+
+        // Normalize to texture coordinates (0–1 range)
+        float u = localX / imageUIWidth;
+        float v = localY / imageUIHeight;
+
+        // Flip Y axis if needed (OpenGL textures usually have origin at bottom-left)
+        v = -v;
+        
+
+        //ImGui::Text("Clicked UV: (%.3f, %.3f)", u, v);
+
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+        {
+
+			if (!m_prevMouseClicked)
+			{
+				m_mousePosX = mousePos.x;
+				m_mousePosY = mousePos.y;
+			}
+
+			if (m_prevMouseClicked)
+			{
+				float deltaX = mousePos.x - m_mousePosX;
+				float deltaY = mousePos.y - m_mousePosY;
+
+				if( abs(deltaX) > 5 || abs(deltaY) > 5 )
+				{
+
+					const float scale = 0.1f;
+					m_rotX += glm::radians(deltaY * scale);
+					m_rotY += glm::radians(deltaX * scale);
+
+					auto q = glm::quat(glm::vec3{ m_rotX, -m_rotY, glm::radians(180.0f)});
+					auto adjuestRot = glm::quatLookAt(q * glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+					m_cam->rotation = glm::normalize(q);
+
+					m_mousePosX = mousePos.x;
+					m_mousePosY = mousePos.y;
+					m_renderer->ClearImage();
+				}
+			}
+
+
+			m_prevMouseClicked = true;
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+        {
+			m_prevMouseClicked = false;
+
+        }
+
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            
+            int textureX = (int) (u * textureWidth);
+            int textureY = (int) (v * textureHeight);
+            
+            if (bPickObj)
+            {
+                bPickObj = false;
+
+                Material* pMat = nullptr;
+                bool hitAny = ((PathTraceRenderer*)m_renderer)->IntersectTest(textureX, textureY, pMat);
+                if (hitAny)
+                {
+                    m_testGUI.pMaterial = (PBMaterial*)pMat;
+                }
+            }
+
+
+            auto& callbacks = m_listeners[AppEventType::MouseClick];
+
+            for (int i = 0; i < callbacks.size(); ++i)
+            {
+                callbacks[i]((int)textureX, (int)textureY);
+            }
+
+            if (callbacks.size() > 0)
+            {
+                callbacks.erase(callbacks.begin());
+            }
+
+            
+        }
+
+    }
+    
+    // keyboard
+    if (!ImGui::IsWindowFocused())
+    	return;
+
+
+    // camera movement
+	float posX = 0.0f;
+	float posY = 0.0f;
+	float posZ = 0.0f;
+	const float MoveSpeed = 20.0f;
+
+	if (ImGui::IsKeyPressed(ImGuiKey_W))
+	{
+		posZ += MoveSpeed * deltaTime;
+	}
+	else if (ImGui::IsKeyPressed(ImGuiKey_S))
+	{
+		posZ -= MoveSpeed * deltaTime;
+	}
+	else if (ImGui::IsKeyPressed(ImGuiKey_A))
+	{
+		posX -= MoveSpeed * deltaTime;
+	}
+	else if (ImGui::IsKeyPressed(ImGuiKey_D))
+	{
+		posX += MoveSpeed * deltaTime;
+	}
+	else if (ImGui::IsKeyPressed(ImGuiKey_Q))
+	{
+		posY += MoveSpeed * deltaTime;
+	}
+	else if (ImGui::IsKeyPressed(ImGuiKey_E))
+	{
+		posY -= MoveSpeed * deltaTime;
+	}
+
+	if (posX != 0.0f || posY != 0.0f || posZ != 0.0f)
+	{
+		glm::vec3 movement = glm::vec3(posX, posY, posZ);
+		m_cam->pos += m_cam->rotation * movement;
+
+		m_renderer->ClearImage();
+	}
+
+
+}
+
 void InteractiveApp::Run()
 {
 	float time = (float)glfwGetTime();
@@ -507,7 +767,7 @@ void InteractiveApp::Run()
         // bool bShow = true;
         // ImGui::ShowDemoWindow(&bShow);
 
-        CameraUpdate(deltaTime);
+        //CameraUpdate(deltaTime);
 
 		m_renderer->UpdateFrame();
 
@@ -515,25 +775,30 @@ void InteractiveApp::Run()
 
 
 		void* pBuffer = m_renderer->GetImage();
-		if (pBuffer != nullptr) m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)pBuffer, ColorFormat::RGBByte);
-		m_appWindow->Update();
+		//if (pBuffer != nullptr) m_appWindow->SetSourceImage(m_cam->GetWidth(), m_cam->GetHeight(), (char*)pBuffer, ColorFormat::RGBByte);
+		//m_appWindow->Update();
         
         
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-		ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+        
+        // ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
+		auto dockspace_id = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+        SetupDockingLayout(dockspace_id);
         
         for(int i = 0; i < m_imguiUIs.size(); ++i)
         {
         	m_imguiUIs[i]->OnGUI();
-        }        
+        }
+        ViewportWindow(m_viewportTextureId, m_cam->GetWidth(), m_cam->GetHeight(), pBuffer, ColorFormat::RGBByte, deltaTime);
 
 		ImGui::EndFrame();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		
+        glfwPollEvents();
         m_appWindow->SwapBuffer();
 	}
 }
