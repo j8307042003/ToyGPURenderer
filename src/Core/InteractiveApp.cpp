@@ -299,7 +299,7 @@ void TestGUI::MaterialPickGUI()
 {
 	if (ImGui::Button("Pick"))
 	{
-		app->bWaitPickObj = true;
+		app->bPickObj = true;
 	}
 
 	if (pMaterial == nullptr) return;

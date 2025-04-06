@@ -517,7 +517,7 @@ int Scene::CreateMaterial(aiMaterial* p_material, const std::string & filePath)
 		else if (strcmp(proKey, "$mat.shininess") == 0)
 		{
 			float* metallic = reinterpret_cast <float*>(property->mData);
-			pbr_mat->metallic = metallic[0] / 1000.0f;
+			//pbr_mat->metallic = metallic[0] / 1000.0f;
 			pbr_mat->specularScale = metallic[0] / 1000.0f;
 			if (pbr_mat->metallic > 0.9f)pbr_mat->color = glm::vec3(1.0f);
 		}
