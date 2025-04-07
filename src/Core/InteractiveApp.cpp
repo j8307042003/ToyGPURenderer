@@ -25,7 +25,7 @@
 #include <embree3/rtcore.h>
 
 
-void setupViewportTexture(GLuint textureId)
+void setupViewportTexture(GLuint & textureId)
 {
     glGenTextures(1, &textureId);
     glBindTexture(GL_TEXTURE_2D, textureId);
