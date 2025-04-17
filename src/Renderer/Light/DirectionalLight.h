@@ -9,7 +9,7 @@ public:
 	glm::vec3 radiance;
 	glm::dvec3 direction;
 
-	virtual glm::vec3 Eval(glm::dvec3 surfacePosition, glm::dvec3 surfaceNormal, HITEVENT event) const override
+	virtual glm::vec3 Eval(glm::dvec3 surfacePosition, glm::dvec3 surfaceNormal, glm::dvec3 direction, HITEVENT event) const override
 	{
         return (std::max(0.0f, (float)glm::dot(-direction, surfaceNormal))) * radiance;
 	}

@@ -61,17 +61,22 @@ private:
 	unsigned char* m_imageBuffer = nullptr;
 	float* m_integrater;
 	int* sampleCount;
+
+	float* m_albedo_integrator;
+	int* albedo_sampleCount;
+
 	void RenderLoop();
-	void Trace(int x, int y, int width, int height);
 	void SampleDenoiserBaseImage(int x, int y, int width, int height);
 	void ApplyDenoiser(int x, int y, int width, int height);
 	void ApplyAlbedoChannelImage(int x, int y, int width, int height);
 	void ApplyNormalChannelImage(int x, int y, int width, int height);
 	void ApplySimpleShadingImage(int x, int y, int width, int height);
 	void ApplyRawImage(int x, int y, int width, int height);
+	void Trace(int x, int y, int width, int height);
 
 
 public:
+	void SamplePixel(int x, int y);
 	int Iteration() { return iteration; }
 	void SetLimitIteration(bool limit) { bLimitIteration = limit; }
 	void SetMaxLimitIteration(int it) { maxIteration = it; }

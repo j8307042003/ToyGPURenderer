@@ -126,10 +126,6 @@ void SceneLoader::LoadMeshData(const json11::Json& sceneJson, Scene* scene)
 	using std::chrono::milliseconds;
 	duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
-	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
-	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
-	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
-	std::cout << "Load Mesh Time : " << ms_double.count() << "ms\n";
 
 }
 
@@ -165,11 +161,44 @@ void SceneLoader::LoadLight(const json11::Json& lightJson, Scene* scene)
 			auto radius = lightData["radius"].number_value();
 			auto pos = lightData["pos"];
 			auto radiance = lightData["radiance"];
+			auto visible = lightData["visible"].bool_value();
 
 			auto posData = ArrayToVec3(pos);
 			auto radianceData = ArrayToVec3(radiance);
 
-			scene->AddPointLight(glm::dvec3(posData.x, posData.y, posData.z), glm::dvec3(radianceData.x, radianceData.y, radianceData.z), radius);
+			scene->AddPointLight(glm::dvec3(posData.x, posData.y, posData.z), glm::dvec3(radianceData.x, radianceData.y, radianceData.z), radius, visible);
+		}
+		else if (type == "spot")
+		{
+			auto pos = lightData["pos"];
+			auto radiance = lightData["radiance"];
+			auto visible = lightData["visible"].bool_value();
+			auto degree = glm::radians(lightData["degree"].number_value());
+			auto falloff = glm::radians(lightData["falloff"].number_value());
+			auto rot = ArrayToVec3(lightData["rot"]);
+			auto posData = ArrayToVec3(pos);
+
+			auto radRot = glm::radians(glm::vec3(rot.x, rot.y, rot.z));
+			auto radianceData = ArrayToVec3(radiance);
+
+			scene->AddSpotLight(glm::dvec3(posData.x, posData.y, posData.z), glm::quat(glm::vec3(radRot.x, radRot.y, radRot.z)), glm::dvec3(radianceData.x, radianceData.y, radianceData.z), degree, falloff);
+
+		}
+		else if (type == "area")
+		{
+			auto pos = lightData["pos"];
+			auto radiance = lightData["radiance"];
+			auto visible = lightData["visible"].bool_value();
+			auto width = glm::radians(lightData["width"].number_value());
+			auto height = glm::radians(lightData["height"].number_value());
+			auto rot = ArrayToVec3(lightData["rot"]);
+			auto posData = ArrayToVec3(pos);
+
+			auto radRot = glm::radians(glm::vec3(rot.x, rot.y, rot.z));
+			auto radianceData = ArrayToVec3(radiance);
+
+			scene->AddAreaLight(glm::dvec3(posData.x, posData.y, posData.z), glm::quat(glm::vec3(radRot.x, radRot.y, radRot.z)), glm::dvec3(radianceData.x, radianceData.y, radianceData.z), width, height, visible);
+
 		}
 		else if (type == "directional")
 		{

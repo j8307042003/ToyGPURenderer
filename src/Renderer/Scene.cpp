@@ -9,6 +9,7 @@
 #include "assimp/postprocess.h"
 #include "glm/gtx/transform.hpp"
 #include "Material/PBMaterial.h"
+#include "Material/EmissionMaterial.h"
 //#include "Accelerate/BVHStruct.h"
 #include "Env/EnvMapSource.h"
 #include "RayTraceEngine/RayTraceEngine.h"
@@ -17,7 +18,9 @@
 #include <oneapi/tbb/parallel_for.h>
 #include "Camera/petzval/petzval.h"
 #include "Camera/petzval-kodak/petzval-kodak.h"
+#include "Camera/canon-anamorphic/CanonAnamorphic.h"
 #include "Camera/Camera.h"
+#include <array>
 
 void Scene::AddShape(Shape * s) {
 	shapes.push_back(s);
@@ -663,14 +666,287 @@ int Scene::GetShapeMaterialIdx(Shape * s) const {
 }
 
 
-void Scene::AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius)
+
+
+
+
+
+
+
+// Structure for a vertex that holds position, UV, normal, and tangent.
+struct Vertex {
+    float x, y, z;     // Position
+    float u, v;        // UV coordinates
+    float nx, ny, nz;  // Normal
+    float tx, ty, tz;  // Tangent
+};
+
+// Structure to represent a triangle by indices.
+struct InnerTriangle {
+    unsigned int v0, v1, v2;
+};
+
+// Helper function to normalize a 3D vector.
+void normalize(float& x, float& y, float& z) {
+    float length = std::sqrt(x * x + y * y + z * z);
+    if (length > 0.00001f) {
+        x /= length; y /= length; z /= length;
+    }
+}
+
+// Generates vertices for a sphere with normals, tangents, and UVs.
+std::vector<Vertex> generateSphereVertices(float radius, unsigned int rings, unsigned int sectors) {
+    std::vector<Vertex> vertices;
+    vertices.reserve(rings * sectors);
+
+    // Loop over latitude rings.
+    for (unsigned int r = 0; r < rings; ++r) {
+        // phi is the polar angle (0 at the top pole and PI at the bottom).
+        float phi = glm::pi<float>() * static_cast<float>(r) / static_cast<float>(rings - 1);
+        float sinPhi = sin(phi);
+        float cosPhi = cos(phi);
+
+        // Compute vertical texture coordinate.
+        float vCoord = static_cast<float>(r) / static_cast<float>(rings - 1);
+
+        // Loop over longitude sectors.
+        for (unsigned int s = 0; s < sectors; ++s) {
+            // theta is the azimuthal angle (0 to 2PI).
+            float theta = 2 * glm::pi<float>() * static_cast<float>(s) / static_cast<float>(sectors - 1);
+            float sinTheta = sin(theta);
+            float cosTheta = cos(theta);
+
+            // Compute horizontal texture coordinate.
+            float uCoord = static_cast<float>(s) / static_cast<float>(sectors - 1);
+
+            // Compute vertex position using spherical coordinates.
+            Vertex vtx;
+            vtx.x = radius * sinPhi * cosTheta;
+            vtx.y = radius * cosPhi;
+            vtx.z = radius * sinPhi * sinTheta;
+
+            // UV mapping.
+            vtx.u = uCoord;
+            vtx.v = vCoord;
+
+            // Normal is the normalized position vector.
+            vtx.nx = vtx.x;
+            vtx.ny = vtx.y;
+            vtx.nz = vtx.z;
+            normalize(vtx.nx, vtx.ny, vtx.nz);
+
+            // Tangent: derivative with respect to theta.
+            // Note: At the poles (sinPhi ~ 0), we provide a default tangent.
+            if (fabs(sinPhi) < 1e-5f) {
+                // Default tangent (arbitrary) when sinPhi is nearly zero.
+                vtx.tx = 1.0f;
+                vtx.ty = 0.0f;
+                vtx.tz = 0.0f;
+            }
+            else {
+                // Partial derivative of position with respect to theta:
+                // d/dθ (radius * sinPhi * cosTheta) = -radius * sinPhi * sinTheta
+                // d/dθ (radius * sinPhi * sinTheta) = radius * sinPhi * cosTheta
+                // d/dθ (radius * cosPhi) = 0
+                vtx.tx = -radius * sinPhi * sinTheta;
+                vtx.ty = 0.0f;
+                vtx.tz = radius * sinPhi * cosTheta;
+                normalize(vtx.tx, vtx.ty, vtx.tz);
+            }
+
+            vertices.push_back(vtx);
+        }
+    }
+    return vertices;
+}
+
+// Generates triangle indices for the sphere mesh using rings and sectors.
+std::vector<InnerTriangle> generateSphereIndices(unsigned int rings, unsigned int sectors) {
+    std::vector<InnerTriangle> triangles;
+
+    // Each small quad in the grid forms two triangles.
+    for (unsigned int r = 0; r < rings - 1; ++r) {
+        for (unsigned int s = 0; s < sectors - 1; ++s) {
+            unsigned int current = r * sectors + s;
+            unsigned int next = current + sectors;
+
+            // First triangle of the quad.
+            triangles.push_back({ current, next, current + 1 });
+            // Second triangle of the quad.
+            triangles.push_back({ current + 1, next, next + 1 });
+        }
+    }
+    return triangles;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void Scene::AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius, bool visible)
 {
 	PointLight * pointLight = new PointLight();
 	pointLight->position = position;
 	pointLight->radiance = radiance;
 	pointLight->radius = radius;
+	pointLight->visible = visible;
 	lights.push_back(pointLight);
+
+	if (!visible)
+	{
+		return;
+	}
+
+	material * m = new material(Vec3(), Vec3(pointLight->radiance.x, pointLight->radiance.y, pointLight->radiance.z), 0.0);
+	AddMaterial(m);
+
+	EmissionMaterial * mat = new EmissionMaterial();
+	mat->emission = radiance;
+	Materials.push_back(mat);
+
+	const int SPHERE_SEG = 15;
+	std::vector<InnerTriangle> sphereMesh = generateSphereIndices(SPHERE_SEG, SPHERE_SEG);
+	std::vector<Vertex> sphereVertices = generateSphereVertices(radius * 0.8f, SPHERE_SEG, SPHERE_SEG);
+	meshes.resize(meshes.size() + 1);
+
+	auto & mesh = meshes[meshes.size() - 1];
+	mesh.triangles.resize(sphereMesh.size() * 3);
+
+
+	int startIndex = shapes.size();
+	shapes.resize(shapes.size() + sphereMesh.size());
+
+	for (unsigned int i = 0; i < sphereMesh.size(); ++i)
+	{
+		auto & innerTri = sphereMesh[i];
+
+		std::array<unsigned int, 3> tri = {innerTri.v0, innerTri.v1, innerTri.v2};
+		auto pTriangle = &mesh.triangles[i * 3];
+		shapes[startIndex + i] = pTriangle;
+
+		for (int j = 0; j < tri.size(); ++j)
+		{
+			auto & v = sphereVertices[tri[j]];
+
+			pTriangle->Vertices[j] = Vec3(v.x + position.x, v.y + position.y, v.z + position.z);
+			pTriangle->uv[j] = Vec3(v.u, v.y, 0.0f);
+			pTriangle->normal[j] = Vec3(v.nx, v.ny, v.nz);
+			pTriangle->tangent[j] = Vec3(v.tx, v.ty, v.tz);
+
+			shapeMaterialMap[pTriangle] = Materials.size() - 1;			
+		}
+	}
+
+	std::cout << std::endl;
 }
+
+
+void Scene::AddSpotLight(glm::dvec3 position, glm::quat rotation, glm::vec3 radiance, float degree, float falloff)
+{
+	SpotLight * spotLight = new SpotLight();
+	spotLight->position = position;
+	spotLight->rotation = rotation;
+	spotLight->radiance = radiance;
+	spotLight->degree = degree;
+	spotLight->falloff = std::min(degree, falloff);
+	lights.push_back(spotLight);
+}
+
+
+void Scene::AddAreaLight(glm::dvec3 position, glm::quat rotation, glm::vec3 radiance, float width, float height, bool visible)
+{
+	AreaLight * areaLight = new AreaLight();
+	areaLight->position = position;
+	areaLight->rotation = rotation;
+	areaLight->radiance = radiance;
+	areaLight->width = width;
+	areaLight->height = height;
+	areaLight->visible = visible;
+	lights.push_back(areaLight);
+
+	if (!visible)
+	{
+		return;
+	}
+
+
+
+
+	material * m = new material(Vec3(), Vec3(areaLight->radiance.x, areaLight->radiance.y, areaLight->radiance.z), 0.0);
+	AddMaterial(m);
+
+	EmissionMaterial * mat = new EmissionMaterial();
+	mat->emission = radiance;
+	Materials.push_back(mat);
+
+	std::array<glm::vec3, 4> glm_vertices = {
+		glm::vec3(position) + rotation * glm::vec3( width,  height, -0.1),
+		glm::vec3(position) + rotation * glm::vec3(-width,  height, -0.1),
+		glm::vec3(position) + rotation * glm::vec3( width, -height, -0.1),
+		glm::vec3(position) + rotation * glm::vec3(-width, -height, -0.1),
+	};
+
+	std::array<Vec3, 4> vertices = {
+		Vec3(glm_vertices[0].x, glm_vertices[0].y, glm_vertices[0].z),
+		Vec3(glm_vertices[1].x, glm_vertices[1].y, glm_vertices[1].z),
+		Vec3(glm_vertices[2].x, glm_vertices[2].y, glm_vertices[2].z),
+		Vec3(glm_vertices[3].x, glm_vertices[3].y, glm_vertices[3].z),
+	};
+
+
+	std::array<int, 3> tri_0_indics = {0, 1, 2};
+	std::array<int, 3> tri_1_indics = {1, 2, 3};
+
+
+	glm::vec3 forward = rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+	glm::vec3 tangent = rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+
+
+	meshes.resize(meshes.size() + 1);
+
+	auto & mesh = meshes[meshes.size() - 1];
+	mesh.triangles.resize(2);
+
+
+	int startIndex = shapes.size();
+	shapes.resize(shapes.size() + 2);
+
+	auto tri_0 = &mesh.triangles[0];
+	auto tri_1 = &mesh.triangles[1];
+	shapeMaterialMap[tri_0] = Materials.size() - 1;	
+	shapeMaterialMap[tri_1] = Materials.size() - 1;	
+
+
+	shapes[startIndex + 0] = tri_0;
+	for (int i = 0; i < 3; ++i)
+	{
+		tri_0->Vertices[i] = vertices[tri_0_indics[i]];
+		tri_0->uv[i] = Vec3(0.0f, 0.0f, 0.0f); // lazy uv. TODO fix it
+		tri_0->normal[i] = Vec3(forward.x, forward.y, forward.z);
+		tri_0->tangent[i] = Vec3(tangent.x, tangent.y, tangent.z);
+	}
+
+	shapes[startIndex + 1] = tri_1;
+	for (int i = 0; i < 3; ++i)
+	{
+		tri_1->Vertices[i] = vertices[tri_1_indics[i]];
+		tri_1->uv[i] = Vec3(0.0f, 0.0f, 0.0f); // lazy uv. TODO fix it
+		tri_1->normal[i] = Vec3(forward.x, forward.y, forward.z);
+		tri_1->tangent[i] = Vec3(tangent.x, tangent.y, tangent.z);
+	}
+
+}
+
+
 
 void Scene::AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance)
 {
@@ -859,6 +1135,10 @@ void MakeSceneData(const Scene & scene, SceneData & sceneData, bool enableEmbree
     {
         sceneData.cameraData = petzval_kodak_camera_data::MakeCamData();
     }
+    else if (scene.cameraModel.compare("Canon-Anamorphic") == 0)
+    {
+		sceneData.cameraData = CanonAnamorphic_camera_data::MakeCamData();
+    }
     else
     {
         sceneData.cameraData = DefaultCameraData();
@@ -969,7 +1249,7 @@ bool OccuScene(SceneData* sceneData, const Ray3f& ray, float t_min, float t_max)
 
 
 
-bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const glm::vec3 & wi, const SceneIntersectData & intersect, /*HitInfo & hitInfo,*/ Color & attenuation/*, Ray3f & scattered*/)
+bool EvalMaterialScatter(const Material & mat, const glm::vec3& view, const glm::vec3 & wi, const SceneIntersectData & intersect, /*HitInfo & hitInfo,*/ Color & attenuation/*, Ray3f & scattered*/)
 {
 	auto bitangent = glm::cross(intersect.normal, intersect.tangent);
 	glm::mat3 tangentToWorld = glm::mat3(intersect.tangent, intersect.normal, bitangent);
@@ -982,7 +1262,7 @@ bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const glm::vec
 	surface.worldToTangent = glm::transpose(tangentToWorld);
 	surface.uv = intersect.uv;
 
-	return mat.scatter(ray, wi, surface, /*hitInfo,*/ attenuation/*, scattered*/);
+	return mat.scatter(view, wi, surface, /*hitInfo,*/ attenuation/*, scattered*/);
 }
 
 bool EvalMaterialBRDF(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, BsdfSample & bsdfSample)
@@ -998,6 +1278,21 @@ bool EvalMaterialBRDF(const Material & mat, const Ray3f & ray, const SceneInters
 	surface.worldToTangent = glm::transpose(tangentToWorld);
 	surface.uv = intersect.uv;
 	return mat.sampleBsdf(surface, ray, bsdfSample);
+}
+
+glm::vec3 EvalMaterialEmission(const Material& mat, const SceneIntersectData& intersect)
+{
+	auto bitangent = glm::cross(intersect.normal, intersect.tangent);
+	glm::mat3 tangentToWorld = glm::mat3(intersect.tangent, intersect.normal, bitangent);
+
+	SurfaceData surface;
+	surface.position = intersect.point;
+	surface.normal = intersect.normal;
+	surface.tangent = intersect.tangent;
+	surface.bitangent = bitangent;
+	surface.worldToTangent = glm::transpose(tangentToWorld);
+	surface.uv = intersect.uv;
+	return mat.Emission(surface);
 }
 
 

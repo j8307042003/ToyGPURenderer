@@ -27,7 +27,8 @@ void PathTraceRenderer::StartRender()
 	m_imageBuffer = new unsigned char[rgbBufferSize]();
 	m_integrater = new float[rgbBufferSize]();
 	sampleCount = new int[whSize]();
-
+	m_albedo_integrator = new float[rgbBufferSize]();
+	albedo_sampleCount = new int[whSize]();
 
 	// setup denoiser buffers
 	m_oidnDevice = oidn::newDevice();
@@ -368,7 +369,7 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 			//bool bHitAny = RayTrace(*m_renderData.sceneData, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, shapeIndex);
 			//bool bHitAny = BHV_Raycast(m_renderData.sceneData, m_bvh, ray, 0.1f, 10000.0f, rayHitPosition, rayHitNormal, uv, shapeIndex, BVH_Stack_Num / 2, &bvh_stack[0]);
 			SceneIntersectData intersect;
-			bool bHitAny = IntersectScene(m_renderData.sceneData, ray, 0.1f, 10000.0f, intersect);
+			bool bHitAny = IntersectScene(m_renderData.sceneData, ray, 0.2f, 10000.0f, intersect);
 			rayHitPosition = intersect.point;
 			rayHitNormal = intersect.normal;
 			shapeIndex = intersect.shapeIdx;
@@ -382,7 +383,7 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 				surface.position = rayHitPosition;
 				surface.normal = rayHitNormal;
 				surface.uv = uv;
-				albedo = mat->Albedo(surface);
+				albedo = mat->Albedo(surface) + EvalMaterialEmission(*mat, intersect);
 
 				/*
 				auto shapePtr = GetShapeData(*m_renderData.sceneData, shapeIndex);
@@ -393,7 +394,7 @@ void PathTraceRenderer::SampleDenoiserBaseImage(int x, int y, int width, int hei
 					m_renderData.sceneData.shapesData.positions[triangleData.x]
 				}
 				*/
-			}
+			}		
 
 			m_albedoBuffer[currentPixPos] = albedo.x;
 			m_albedoBuffer[currentPixPos + 1] = albedo.y;
@@ -462,7 +463,67 @@ void PathTraceRenderer::Trace(int x, int y, int width, int height)
 			m_colorBuffer[currentPixPos] = color_float.x;
 			m_colorBuffer[currentPixPos + 1] = color_float.y;
 			m_colorBuffer[currentPixPos + 2] = color_float.z;
+
+
+
+
+
+			glm::vec3 transmittance;
+			const auto cam_ray = m_renderData.camData.sampleRay(m_renderData.camPosition, m_renderData.camDirection, glm::vec2(filmWidth, filmHeight), glm::vec2(nowX, nowY), transmittance, true);
+			Ray3f ray = cam_ray;
+			HitInfo hitInfo;
+			glm::dvec3 rayHitPosition = {};
+			glm::dvec3 rayHitNormal = {};
+			glm::vec2 uv = {};
+			int shapeIndex = -1;
+			SceneIntersectData intersect;
+			bool bHitAny = IntersectScene(m_renderData.sceneData, ray, 0.1f, 10000.0f, intersect);
+			rayHitPosition = intersect.point;
+			rayHitNormal = intersect.normal;
+			shapeIndex = intersect.shapeIdx;
+			uv = intersect.uv;
+
+			glm::vec3 albedo = {};
+			if (bHitAny)
+			{
+				auto mat = GetShapeMaterial(*m_renderData.sceneData, shapeIndex);
+				SurfaceData surface = {};
+				surface.position = rayHitPosition;
+				surface.normal = rayHitNormal;
+				surface.uv = uv;
+				albedo = mat->Albedo(surface) + EvalMaterialEmission(*mat, intersect);
+			}
+
+			m_albedo_integrator[currentPixPos] += albedo.x;
+			m_albedo_integrator[currentPixPos + 1] += albedo.y;
+			m_albedo_integrator[currentPixPos + 2] += albedo.z;
+			albedo_sampleCount[sampleCountIndex]++;	
+
+			m_albedoBuffer[currentPixPos] = m_albedo_integrator[currentPixPos] / albedo_sampleCount[sampleCountIndex];
+			m_albedoBuffer[currentPixPos + 1] = m_albedo_integrator[currentPixPos + 1] / albedo_sampleCount[sampleCountIndex];
+			m_albedoBuffer[currentPixPos + 2] = m_albedo_integrator[currentPixPos + 2] / albedo_sampleCount[sampleCountIndex];			
 		}
+}
+
+
+void PathTraceRenderer::SamplePixel(int x, int y)
+{
+	auto& camData = GetRenderData()->camData;
+	glm::dvec3 camPos = glm::dvec3(0.0f, 0.0f, 0.0f);
+
+	m_renderData.camDirection = cam->rotation * glm::vec3(0.0f, 0.0f, 1.0f);
+	m_renderData.camPosition = cam->pos;
+
+	PathTraceRdrMethod renderMethod = {};
+	renderMethod.bvh_tree = &m_bvh;
+
+	int filmWidth = cam->GetWidth();
+	int filmHeight = cam->GetHeight();
+
+	int nowX = x;
+	int nowY = y;
+
+	auto result = renderMethod.Sample(m_renderData, nowX, nowY, glm::vec2(filmWidth + (SysRandom::Random() - 0.5f) * 2.0f, filmHeight + (SysRandom::Random() - 0.5f) * 2.0f));
 }
 
 
@@ -481,6 +542,8 @@ void PathTraceRenderer::ClearImage()
 	memset(m_imageBuffer, 0, rgbBufferSize);
 	memset(m_integrater, 0, rgbBufferSize * sizeof(float));
 	memset(sampleCount, 0, whRes * sizeof(int));
+	memset(m_albedo_integrator, 0, rgbBufferSize * sizeof(float));
+	memset(albedo_sampleCount, 0, whRes * sizeof(int));
 	iteration = 0;
 	m_resetFlag = true;
 }

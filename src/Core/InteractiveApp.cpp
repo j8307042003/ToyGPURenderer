@@ -17,6 +17,7 @@
 #include <sstream>
 #include "Renderer/Camera/petzval/petzval.h"
 #include "Renderer/Camera/petzval-kodak/petzval-kodak.h"
+#include "Renderer/Camera/canon-anamorphic/CanonAnamorphic.h"
 #include "Renderer/Camera/Camera.h"
 #ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #endif // !STB_IMAGE_WRITE_IMPLEMENTATION
@@ -284,10 +285,12 @@ void TestGUI::OnGUI()
 		stbi_write_png(fileName.data(), width, height, 3, ptr_image, 0);
 	}
 
+	ImGui::SliderFloat("move speed", &app->m_moveSpeed, 1.0f, 100.0f);
+
 	RenderUI_Camera(cam);
 	MaterialPickGUI();
 	RayTestGUI();
-
+	SampleTestGUI();
 	ImGui::End();
 
 	ImGui::Begin("Camera");
@@ -336,6 +339,20 @@ void TestGUI::RayTestGUI()
 	ImGui::Text("x=%.2f, y=%.2f, z=%.2f", rayTestPose.x, rayTestPose.y, rayTestPose.z);
 }
 
+void TestGUI::SampleTestGUI()
+{
+	if (ImGui::Button("Sample Test"))
+	{
+		app->RegisterEvent(AppEventType::MouseClick, [&](int mouseX, int mouseY) {
+			PathTraceRenderer* renderer = (PathTraceRenderer*)app->GetRenderer();
+			int filmWidth = cam->GetWidth();
+			int filmHeight = cam->GetHeight();
+			renderer->SamplePixel(mouseX, mouseY);
+			std::cout << "sample test" << std::endl;
+		});
+	}
+}
+
 void TestGUI::CameraGUI()
 {
 	auto pRenderData = renderer->GetRenderData();
@@ -364,6 +381,14 @@ void TestGUI::CameraGUI()
 		bAnyChange |= ImGui::SliderFloat("dist", &petzvalCamData->dist, 0.0f, -10.0f);
 		bAnyChange |= ImGui::SliderFloat("aperture", &petzvalCamData->aperture, 0.1f, 1.2f);
 	}
+	else if (pCamData->dataType == std::type_index(typeid(CanonAnamorphicCamData)))
+	{
+		CanonAnamorphicCamData* canonCamData = (CanonAnamorphicCamData*)pCamData->camData.get();
+		ImGui::Text("camera model : Canon Anamorphic");
+		bAnyChange |= ImGui::InputFloat("Film", &canonCamData->film, 0.01f, 1.0f, "%.3f");
+		bAnyChange |= ImGui::SliderFloat("dist", &canonCamData->dist, 0.0f, -30.0f);
+		bAnyChange |= ImGui::SliderFloat("aperture", &canonCamData->aperture, 0.1f, 1.2f);
+	}	
 	else if (pCamData->dataType == std::type_index(typeid(DefaultCameraDataMode)))
 	{
 		ImGui::Text("camera model : default");
@@ -712,7 +737,7 @@ void InteractiveApp::ViewportWindowIO(float deltaTime, float imageUIWidth, float
 	float posX = 0.0f;
 	float posY = 0.0f;
 	float posZ = 0.0f;
-	const float MoveSpeed = 20.0f;
+	const float MoveSpeed = m_moveSpeed;
 
 	if (ImGui::IsKeyPressed(ImGuiKey_W))
 	{

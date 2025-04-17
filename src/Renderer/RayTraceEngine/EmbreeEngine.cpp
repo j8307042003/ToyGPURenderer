@@ -72,6 +72,9 @@ bool EmbreeEngine::IntersectScene(SceneData * sceneData, const Ray3f & ray, floa
 
 	auto& triangleData = sceneData->shapesData.triangles[rayhit.hit.primID];
 
+
+	glm::dvec3 dir = glm::dot(ray.direction, sceneData->shapesData.normals[triangleData.y]) >= 0.0 ? glm::dvec3(-1.0) : glm::dvec3(1.0);
+
 	intersect->shapeIdx = rayhit.hit.primID;
 	intersect->point = ray.origin + (double)rayhit.ray.tfar * ray.direction;
 	intersect->materialIdx = sceneData->shapes[intersect->shapeIdx].matIdx;
@@ -79,13 +82,13 @@ bool EmbreeEngine::IntersectScene(SceneData * sceneData, const Ray3f & ray, floa
 	intersect->normal = glm::normalize(
 									(double)rayhit.hit.u * sceneData->shapesData.normals[triangleData.y] 
 									+ (double)rayhit.hit.v * sceneData->shapesData.normals[triangleData.z]
-									+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.normals[triangleData.x]);
+									+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.normals[triangleData.x]) * dir;
 	intersect->tangent = glm::normalize(
 									(double)rayhit.hit.u * sceneData->shapesData.tangents[triangleData.y]
 									+ (double)rayhit.hit.v * sceneData->shapesData.tangents[triangleData.z]
-									+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.tangents[triangleData.x]);
+									+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.tangents[triangleData.x]) * dir;
 	//intersect->normal = glm::dot(intersect->normal, ray.direction) <= 0.0f ? intersect->normal : -intersect->normal;
-	intersect->normal = intersect->normal;
+	intersect->normal = intersect->normal * dir;
 
 	return true;
 }

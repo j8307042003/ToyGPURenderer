@@ -11,6 +11,8 @@
 #include "Texture/Texture.h"
 #include "BVH/BVH.h"
 #include "Light/PointLight.h"
+#include "Light/SpotLight.h"
+#include "Light/AreaLight.h"
 #include "Light/DirectionalLight.h"
 #include "Light/ILight.h"
 #include <vector>
@@ -56,7 +58,9 @@ public:
 
 	void AddMaterial(std::string name, Material * m);
 
-	void AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius = 0);
+	void AddPointLight(glm::dvec3 position, glm::vec3 radiance, float radius = 0, bool visible = false);
+	void AddSpotLight(glm::dvec3 position, glm::quat rotation, glm::vec3 radiance, float degree, float falloff);
+	void AddAreaLight(glm::dvec3 position, glm::quat rotation, glm::vec3 radiance, float width, float height, bool visible = false);
 	void AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance);
 	void AddEnvSource(const std::string & path, float scale = 1.0f, float sampleScale = 1.0f);
 	Texture* AddTexture(std::string texId, std::string path);
@@ -118,10 +122,17 @@ inline Material* GetShapeMaterial(const SceneData & sceneData, int shapeIdx)
 	return GetMaterial(sceneData, GetShapeMatIdx(sceneData, shapeIdx));
 }
 
-inline ILight* SampleLight(const SceneData & sceneData)
+inline void SampleLight(const SceneData & sceneData, const glm::dvec3 & surfacePosition, const glm::dvec3 & surfaceNormal, ILight * light, glm::dvec3 & direction, glm::vec3 & lightPower)
 {
     int lightIdx = std::min((int)sceneData.lights.size() - 1, (int)(SysRandom::Random() * sceneData.lights.size()));
-	return lightIdx < 0 ? nullptr : sceneData.lights[lightIdx];
+	light = lightIdx < 0 ? nullptr : sceneData.lights[lightIdx];
+
+	if (light == nullptr) return;
+
+
+	HITEVENT hitevent = {}; // todo. actually handle this.
+	direction = light->SampleRay(surfacePosition);
+	lightPower = light->Eval(surfacePosition, surfaceNormal, direction, hitevent);
 }
 
 void MakeSceneData(const Scene & scene, SceneData & sceneData, bool enableEmbree);
@@ -141,7 +152,9 @@ bool IntersectScene(SceneData * sceneData, const Ray3f & ray, float t_min, float
 bool IntersectScene(SceneData * sceneData, const Ray3f & ray, float t_min, float t_max, int* stackBuffer, int stackSize, SceneIntersectData & intersect);
 bool OccuScene(SceneData* sceneData, const Ray3f& ray, float t_min, float t_max);
 
-bool EvalMaterialScatter(const Material & mat, const Ray3f & ray, const glm::vec3& wi, const SceneIntersectData & intersect, Color & attenuation);
+bool EvalMaterialScatter(const Material & mat, const glm::vec3 & view, const glm::vec3& wi, const SceneIntersectData & intersect, Color & attenuation);
 bool EvalMaterialBRDF(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, BsdfSample & bsdfSample);
+glm::vec3 EvalMaterialEmission(const Material& mat, const SceneIntersectData& intersect);
+
 
 #endif

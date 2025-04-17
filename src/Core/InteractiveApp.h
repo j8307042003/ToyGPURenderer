@@ -16,6 +16,7 @@ class TestGUI : public ImguiUI
 private:
 	void MaterialPickGUI();
 	void RayTestGUI();
+	void SampleTestGUI();
 	void CameraGUI();
 private:
 	float myColor[4];
@@ -91,9 +92,12 @@ private:
 	float m_timePass;
 	bool m_controlLock = false;
     unsigned int m_viewportTextureId;
+    float m_moveSpeed = 20.0f;
     
 	std::unordered_map<AppEventType, std::vector<EventCallback>> m_listeners;
 
 private:
 	bool m_running;
+
+friend class TestGUI;
 };

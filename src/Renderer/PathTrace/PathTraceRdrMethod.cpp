@@ -41,15 +41,15 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 
 	std::array<SampleResult, bounce_depth> sampleResults = {};
 	int depth = 0;
+	radiance = glm::vec3(0.0f);
 	for (int i = 0; i < bounce_depth; ++i)
 	{
 		SceneIntersectData intersect;
-		bool bHitAny = IntersectScene(rdrData.sceneData, ray, 0.001f, 10000.0f, intersect);
+		bool bHitAny = IntersectScene(rdrData.sceneData, ray, 0.01f, 10000.0f, intersect);
 		//bool bHitAny = IntersectScene(rdrData.sceneData, *bvh_tree, ray, 0.1f, 10000.0f, intersect);
 		
+		glm::dvec3 view = -ray.direction;
 
-		depth = i;
-		if (i == bounce_depth - 1) {break;};
 		if (bHitAny)
 		{
 			auto mat = GetShapeMaterial(*rdrData.sceneData, intersect.shapeIdx);
@@ -59,8 +59,8 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 
 
 			ray.direction = bsdfSample.wi;
-			ray.origin = intersect.point;
-			sampleResults[i] = {bsdfSample.reflectance, hitInfo.emission};
+			ray.origin = intersect.point + ray.direction * 1e-3;
+			sampleResults[i] = {bsdfSample.reflectance, EvalMaterialEmission(*mat, intersect)};
 
 			if (glm::length2(hitInfo.emission) > 0.0f)
 			{
@@ -81,6 +81,7 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 				if (unit_direction.x == unit_direction.x) {
 					glm::vec3 r = rdrData.sceneData->envSources[0]->Sample(unit_direction, i == 0);
 					sampleResults[i] = { r, glm::vec3(0.0f) };
+					radiance = r;
 				}
 				else {
 					sampleResults[i] = { {}, glm::vec3(0.0f) };
@@ -91,20 +92,24 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 			break;
 		}
 
+		depth = i;
+		if (i == bounce_depth - 1) { break; };
 
-		auto pLight = SampleLight(*rdrData.sceneData);
+		ILight* pLight = nullptr;
+		glm::dvec3 lightDirection = {};
+		glm::vec3 lightPower = {};
+		SampleLight(*rdrData.sceneData, ray.origin, intersect.normal, pLight, lightDirection, lightPower);
 		if (pLight)
 		{
 			auto lightDelta = pLight->Position() - ray.origin;
 			auto lightRayLength = glm::length(lightDelta);
 			Ray3f lightSampleRay = {};
 			lightSampleRay.origin = ray.origin;
-			lightSampleRay.direction = lightDelta / lightRayLength;
-			lightSampleRay.direction = pLight->SampleRay(ray.origin);			
+			lightSampleRay.direction = lightDirection;			
 
-			auto sample = pLight->Eval(intersect.point, intersect.normal, hitInfo.nextEvent) * ((float)rdrData.sceneData->lights.size());
+			// auto sample = pLight->Eval(intersect.point, intersect.normal, hitInfo.nextEvent) * ((float)rdrData.sceneData->lights.size());
 
-			if(glm::dot(sample, glm::vec3(1.0f)) > 0.0f)
+			if(glm::dot(lightPower, glm::vec3(1.0f)) > 0.0f)
 			{
 				glm::dvec3 lightTestPosition;
 				glm::dvec3 lightTestNormal;
@@ -117,9 +122,9 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 
 					auto mat = GetShapeMaterial(*rdrData.sceneData, intersect.shapeIdx);
 					Color lightScatter;			
-					EvalMaterialScatter(*mat, ray, lightSampleRay.direction, intersect, lightScatter);
+					EvalMaterialScatter(*mat, view, lightSampleRay.direction, intersect, lightScatter);
 
-					sampleResults[i].emission += lightScatter.value * sample;
+					sampleResults[i].emission += lightScatter.value * lightPower;
 					//sampleResults[i].radiance += lightScatter.value * sample;
 				}
 			}
@@ -127,10 +132,9 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 
 
 
-
 	}
 
-	radiance = glm::vec3(1.0f);
+	//radiance = glm::vec3(1.0f);
 	for(int i = depth ; i >= 0; --i)
 	{
 		radiance = sampleResults[i].radiance * radiance + sampleResults[i].emission;

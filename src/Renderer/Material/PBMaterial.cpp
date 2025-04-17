@@ -134,7 +134,7 @@ glm::vec3 PBMaterial::Albedo(const SurfaceData & surface) const
 }
 
 
-bool PBMaterial::scatter(const Ray3f & ray, const glm::dvec3 & wi, const SurfaceData & surface, /*HitInfo & hitInfo,*/ Color & attenuation/*, Ray3f & scattered*/) const
+bool PBMaterial::scatter(const glm::dvec3& view, const glm::dvec3 & wi, const SurfaceData & surface, /*HitInfo & hitInfo,*/ Color & attenuation/*, Ray3f & scattered*/) const
 {
     DisneyBRDFParam param;
     {
@@ -150,7 +150,7 @@ bool PBMaterial::scatter(const Ray3f & ray, const glm::dvec3 & wi, const Surface
     Color c;
     //attenuation.value = color;
 
-	auto wo = glm::normalize(surface.worldToTangent * ray.direction);
+	auto wo = glm::normalize(surface.worldToTangent * view);
 	auto tan_wi = glm::normalize(surface.worldToTangent * wi);
 
 	if (wo.y <= 0.0f)
@@ -217,7 +217,7 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
 		float r2 = SysRandom::Random();
 		wm = SampleGgxVndfAnisotropic(wo, std::max(0.01f, param.roughness), std::max(0.01f, param.roughness), r1, r2);
 		wi = glm::normalize(glm::reflect(-wo, wm));
-		wi.y = std::abs(wi.y);
+		//wi.y = std::abs(wi.y);
 		//glm::dvec2 polarSet = random_polar(std::max(0.05f, param.roughness));
 		//glm::dvec3 reflected = glm::reflect(ray.direction, surface.normal);
 		//glm::dvec3 result = glm::dvec3(make_GGXRandom(reflected, polarSet));
@@ -235,7 +235,7 @@ bool PBMaterial::sampleBsdf(const SurfaceData & surface, const Ray3f & ray, Bsdf
 		wi = surface.normal;
 	}
 
-	bsdfSample.reflectance = bsdfSample.reflectance * (float)abs(glm::dot(surface.normal, wi));
+	//bsdfSample.reflectance = bsdfSample.reflectance * (float)abs(glm::dot(surface.normal, wi));
 	bsdfSample.wi = wi; //bIsSpecular ? outDirection : surface.normal;
 
     // scattered = {surface.position, outDirection};
