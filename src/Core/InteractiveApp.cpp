@@ -11,6 +11,7 @@
 #include "Renderer/ParallelRenderer.h"
 #include "Renderer/TestScene1.h"
 #include "Renderer/PathTraceRenderer.h"
+#include "Renderer/Env/EnvMapSource.h"
 #include <glm/ext/quaternion_common.hpp>
 #include <fstream>       //���Jfstream���Y��
 #include <ctime>
@@ -38,8 +39,8 @@ void setupViewportTexture(GLuint & textureId)
 
 InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), m_mouse_table(), m_imguiUIs()
 {
-    const int kWidth = 1440; //720; //1920 / 1;// 1920 / 1;//720;
-    const int kHeight = 1440; //720;//1080 / 1;// 1080 / 1;//512;
+    const int kWidth = 1440; //1920 / 1;// 1920 / 1;//720;
+    const int kHeight = 1080;//1080 / 1;// 1080 / 1;//512;
 	m_appWindow = new AppWindowGLFW(kWidth, kHeight);
 
     setupViewportTexture(m_viewportTextureId);
@@ -64,7 +65,7 @@ InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), 
 
 
 	//m_scene->BuildTree();
-	m_cam = new Camera(kWidth, kHeight, Vec3(200.0f, 0.0f, -200.0f));
+    m_cam = new Camera(m_scene->imageWidth, m_scene->imageHeight, Vec3(200.0f, 0.0f, -200.0f));
 	//m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.4f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	m_cam->rotation = glm::quatLookAt(glm::vec3(0.0f, 0.3f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	m_cam->rotation = glm::quat(glm::vec3(2.82,-0.10,0.00));
@@ -221,77 +222,98 @@ std::string CurrentDate()
 	return std::string(buf);
 }
 
+
 void TestGUI::OnGUI()
 {
 	ImGui::Begin("Test imgui window");
 
-	PathTraceRenderer* pathTraceRenderer = (PathTraceRenderer*)renderer;
+    if (ImGui::BeginTabBar("MyTabBar"))
+    {
+        if (ImGui::BeginTabItem("General"))
+        {
 
-    ImGui::Text("resolution %d x %d", cam->GetWidth(), cam->GetHeight());
-    
-	int renderItProgress = pathTraceRenderer->Iteration();
-	ImGui::Text("Iteration : %d", renderItProgress);
+			PathTraceRenderer* pathTraceRenderer = (PathTraceRenderer*)renderer;
 
-	float timeStart = app->TimeStart();
-	float timePass = app->TimePass();
-	ImGui::Text("TimePass : %f", timePass);
-	ImGui::Text("iterate per second: %f", renderItProgress / timePass);
+		    ImGui::Text("resolution %d x %d", cam->GetWidth(), cam->GetHeight());
+		    
+			int renderItProgress = pathTraceRenderer->Iteration();
+			ImGui::Text("Iteration : %d", renderItProgress);
 
-	bool controlLock = app->GetControlLock();
-	ImGui::Checkbox("Move Lock", &controlLock);
-	app->SetControlLock(controlLock);
+			float timeStart = app->TimeStart();
+			float timePass = app->TimePass();
+			ImGui::Text("TimePass : %f", timePass);
+			ImGui::Text("iterate per second: %f", renderItProgress / timePass);
 
-	auto displayKind = pathTraceRenderer->GetShowDisplayChannel();
+			bool controlLock = app->GetControlLock();
+			ImGui::Checkbox("Move Lock", &controlLock);
+			app->SetControlLock(controlLock);
 
-	const char* DisplayLabelText[] = {
-		"RawImage",
-		"Denoised",
-		"Albedo",
-		"Normal",
-		"SimpleShading"
-	};
+			auto displayKind = pathTraceRenderer->GetShowDisplayChannel();
 
-	int idx =  PathTraceRenderer::DisplayChannelToInt(displayKind);
-	static const char* current_item = DisplayLabelText[idx];
-	if (ImGui::BeginCombo("Display Channel", current_item))
-	{
-		for (int n = 0; n < IM_ARRAYSIZE(DisplayLabelText); n++)
-		{
-			bool is_selected = (current_item == DisplayLabelText[n]); // You can store your selection however you want, outside or inside your objects
-			if (ImGui::Selectable(DisplayLabelText[n], is_selected))
+			const char* DisplayLabelText[] = {
+				"RawImage",
+				"Denoised",
+				"Albedo",
+				"Normal",
+				"SimpleShading"
+			};
+
+			int idx =  PathTraceRenderer::DisplayChannelToInt(displayKind);
+			static const char* current_item = DisplayLabelText[idx];
+			if (ImGui::BeginCombo("Display Channel", current_item))
 			{
-				current_item = DisplayLabelText[n];
-				idx = n;
-				pathTraceRenderer->SetShowDisplayChannel(PathTraceRenderer::IntToDisplayChannel(idx));
-			}
-			if (is_selected)
+				for (int n = 0; n < IM_ARRAYSIZE(DisplayLabelText); n++)
+				{
+					bool is_selected = (current_item == DisplayLabelText[n]); // You can store your selection however you want, outside or inside your objects
+					if (ImGui::Selectable(DisplayLabelText[n], is_selected))
+					{
+						current_item = DisplayLabelText[n];
+						idx = n;
+						pathTraceRenderer->SetShowDisplayChannel(PathTraceRenderer::IntToDisplayChannel(idx));
+					}
+					if (is_selected)
+					{
+						ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+					}
+				}
+				ImGui::EndCombo();
+			}	
+
+			ImGui::InputText("Save Pic Name", saveFileBuffer, 128);
+
+			if (ImGui::Button("Save Image"))
 			{
-				ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+				unsigned char *  ptr_image = (unsigned char*)pathTraceRenderer->GetImage();
+				auto height = pathTraceRenderer->GetHeight();
+				auto width = pathTraceRenderer->GetWidth();
+				stbi_flip_vertically_on_write(1);
+
+				std::string fileName = std::string(saveFileBuffer) + ".png";
+				stbi_write_png(fileName.data(), width, height, 3, ptr_image, 0);
 			}
-		}
-		ImGui::EndCombo();
-	}	
 
-	ImGui::InputText("Save Pic Name", saveFileBuffer, 128);
+			ImGui::SliderFloat("move speed", &app->m_moveSpeed, 1.0f, 100.0f);
 
-	if (ImGui::Button("Save Image"))
-	{
-		unsigned char *  ptr_image = (unsigned char*)pathTraceRenderer->GetImage();
-		auto height = pathTraceRenderer->GetHeight();
-		auto width = pathTraceRenderer->GetWidth();
-		stbi_flip_vertically_on_write(1);
+			RenderUI_Camera(cam);
+			MaterialPickGUI();
+			RayTestGUI();
+			SampleTestGUI();
+			EnvirmonentGUI();
 
-		std::string fileName = std::string(saveFileBuffer) + ".png";
-		stbi_write_png(fileName.data(), width, height, 3, ptr_image, 0);
-	}
 
-	ImGui::SliderFloat("move speed", &app->m_moveSpeed, 1.0f, 100.0f);
+            ImGui::EndTabItem();
+        }
 
-	RenderUI_Camera(cam);
-	MaterialPickGUI();
-	RayTestGUI();
-	SampleTestGUI();
+        if (ImGui::BeginTabItem("Object"))
+        {
+           	ObjectEditGUI();
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
+    }
 	ImGui::End();
+
 
 	ImGui::Begin("Camera");
 	CameraGUI();
@@ -400,6 +422,64 @@ void TestGUI::CameraGUI()
 	}
 
 }
+
+void TestGUI::EnvirmonentGUI()
+{
+	PathTraceRenderer* renderer = (PathTraceRenderer*)app->GetRenderer();
+
+
+	SceneData* pScene = renderer->GetSceneData();
+    unsigned int idx = pScene->envIdx;
+    
+    if (pScene->envSourceNames.size() == 0) return;
+	
+	static const char* current_item = pScene->envSourceNames[idx].c_str();
+    
+    bool bAnyChange = false;
+	if (ImGui::BeginCombo("Environment", current_item))
+	{
+		for (int n = 0; n < pScene->envSourceNames.size(); n++)
+		{
+			bool is_selected = (current_item == pScene->envSourceNames[n].c_str()); // You can store your selection however you want, outside or inside your objects
+			if (ImGui::Selectable(pScene->envSourceNames[n].c_str(), is_selected))
+			{
+				current_item = pScene->envSourceNames[n].c_str();
+				idx = n;
+                
+                pScene->envIdx = n;
+                bAnyChange = true;
+			}
+			if (is_selected)
+			{
+				ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+			}
+		}
+		ImGui::EndCombo();
+	}
+
+
+    if (auto envMap = dynamic_cast<EnvMapSource*>(pScene->envSources[idx]))
+    {
+        bAnyChange |= ImGui::SliderFloat("scale", &envMap->scale, 0.0f, 5.0f);
+        bAnyChange |= ImGui::SliderFloat("sample scale", &envMap->sampleScale, 0.0f, 5.0f);
+    }
+
+    
+    if (bAnyChange) renderer->ClearImage();
+}
+
+void TestGUI::ObjectEditGUI()
+{
+	PathTraceRenderer* renderer = (PathTraceRenderer*)app->GetRenderer();
+
+
+	SceneData* pScene = renderer->GetSceneData();
+    unsigned int idx = pScene->envIdx;
+	
+	static const char* current_item = pScene->envSourceNames[idx].c_str();	
+}
+
+
 
 void InteractiveApp::CameraUpdate(float deltaTime)
 {

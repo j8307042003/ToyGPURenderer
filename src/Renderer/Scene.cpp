@@ -65,6 +65,218 @@ inline void MakeOrthogonalCoordinateSystem(const glm::vec3 & v1, glm::vec3* v2, 
 
 }
 
+bool Scene::LoadMeshResources(const std::string & path, ModelResource * & modelResource)
+{
+    aiPropertyStore* props = aiCreatePropertyStore();
+    std::cout << "Loading Model : " << path << std::endl;
+
+
+	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
+	auto scene = aiImportFileExWithProperties(path.c_str(), aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_FlipUVs, NULL, props);
+	//aiProcessPreset_TargetRealtime_Fast
+	if (scene == nullptr)
+		return false;
+
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    
+	std::string directory = path.substr(0, path.find_last_of('/'));
+    
+	struct NodeTraversalData
+	{
+		aiMatrix4x4 transform;
+		aiNode* node;
+	};
+
+	std::stack<NodeTraversalData> nodeStack = {};
+	nodeStack.push({aiMatrix4x4(), scene->mRootNode});
+
+	std::vector<NodeTraversalData> nodes = {};
+	nodes.push_back({ scene->mRootNode->mTransformation, scene->mRootNode });
+	while (nodeStack.size() > 0)
+	{
+		auto nodeData = nodeStack.top();
+		nodeStack.pop();
+
+		for (int c = 0; c < nodeData.node->mNumChildren; ++c)
+		{
+			auto child = nodeData.node->mChildren[c];
+			auto transform = nodeData.transform * child->mTransformation;
+			nodeStack.push({ transform , child });
+			nodes.push_back({ transform , child });
+		}
+	}
+
+	// Collect used texture
+	std::map<std::string, std::string> texId_to_path = {};
+	std::map<std::string, TextureWrapping> texId_to_wrapping = {};
+	for (int i = 0; i < scene->mNumMaterials; ++i)
+	{
+		auto p_material = scene->mMaterials[i];
+		DumpMaterialTextures(p_material, directory, texId_to_path, texId_to_wrapping);
+	}
+
+
+	// Load texture at once
+	std::vector<Texture*> textures = std::vector<Texture*>(texId_to_path.size());
+	tbb::parallel_for(size_t(0), texId_to_path.size(), [&](size_t index)
+	{
+		auto it = texId_to_path.begin();
+		std::advance(it, index);
+
+		Texture* tex = new Texture();
+		if (!LoadTexture(it->second, *tex)) {
+			delete tex;
+			return;
+		}
+
+		tex->wrapping = texId_to_wrapping[it->first];
+
+		textures[index] = tex;
+	}
+	);
+
+	for (int i = 0; i < textures.size(); ++i)
+	{
+		auto it = texId_to_path.begin();
+		std::advance(it, i);
+		AddTexture(it->first, it->second, textures[i]);
+	}
+
+
+    std::map<int, int> materialMap = {};
+	for (int i = 0; i < scene->mNumMaterials; ++i)
+	{
+        auto p_material = scene->mMaterials[i];
+	 	auto materialIndex = CreateMaterial(p_material, directory);
+	 	materialMap.emplace(i, materialIndex);
+	}
+
+
+
+	modelResources.emplace_back();
+	auto & resource = modelResources[modelResources.size() - 1];
+    modelResource = &modelResources[modelResources.size() - 1];
+    modelRecourcesMap[path] = modelResources.size() - 1;
+
+
+	unsigned int vertexNum = 0;
+    unsigned int indicsNum = 0;
+    
+    std::unordered_map<aiNode*, int> meshVertexStartIdxMap = {};
+    std::unordered_map<aiNode*, int> meshIndicsStartIdxMap = {};
+    
+    for(int index = 0; index < nodes.size() ; ++index)
+    {
+        auto nodeData = nodes[index];
+        
+        meshVertexStartIdxMap[nodeData.node] = vertexNum;
+        meshIndicsStartIdxMap[nodeData.node] = indicsNum;
+        
+        for (unsigned int i = 0; i < nodeData.node->mNumMeshes; ++i) {
+            auto meshIdx = nodeData.node->mMeshes[i];
+            aiMesh * pMesh = scene->mMeshes[meshIdx];
+        
+            vertexNum += pMesh->mNumVertices;
+            indicsNum += pMesh->mNumFaces;
+        }
+    }
+    
+    
+    resource.positions.resize(vertexNum);
+    resource.normals.resize(vertexNum);
+    resource.tangents.resize(vertexNum);
+    resource.bitangents.resize(vertexNum);
+    resource.uvs.resize(vertexNum);
+    resource.materialIdx.resize(vertexNum);
+    resource.triangles.resize(indicsNum);
+
+    
+	for(int index = 0; index < nodes.size() ; ++index)
+	{
+		auto nodeData = nodes[index];
+
+		auto transform = nodeData.transform;
+        
+        auto vertexStart = meshVertexStartIdxMap[nodeData.node];
+        auto indicsStart = meshIndicsStartIdxMap[nodeData.node];
+
+        // set mesh data
+		for (unsigned int i = 0; i < nodeData.node->mNumMeshes; ++i) {
+            auto meshIdx = nodeData.node->mMeshes[i];
+			aiMesh* mesh = scene->mMeshes[nodeData.node->mMeshes[i]];
+            bool bHaveTangent = mesh->mTangents != nullptr;
+            
+            
+            auto materialIdx = mesh->mMaterialIndex;
+            int materialIndex = -1;
+            if (mesh->mMaterialIndex >= 0)
+            {
+                auto materialPair = materialMap.find(mesh->mMaterialIndex);
+                if (materialPair != materialMap.end())
+                {
+                    materialIndex = materialPair->second;
+                }
+            }
+          
+            // vertex data
+            for (unsigned int j = 0; j < mesh->mNumVertices; ++j)
+            {
+                aiVector3D world_pos = transform * mesh->mVertices[j];
+                
+                auto n = mesh->mNormals[j];
+                aiVector3D t;
+                if (bHaveTangent)
+                {
+                    t = mesh->mTangents[j];
+                }
+                else
+                {
+                    glm::vec3 glm_t, bt;
+                    MakeOrthogonalCoordinateSystem({ n.x, n.y, n.z }, &glm_t, &bt);
+                    t = { glm_t.x, glm_t.y, glm_t.z };
+                }
+                
+                aiMatrix3x3 transformMat3 = aiMatrix3x3(transform);
+                // TODO : Check normal
+                t = transformMat3 * t;
+                t = t.NormalizeSafe();
+
+                n = transformMat3 * n;
+                n = n.NormalizeSafe();
+
+                auto normal = glm::vec4(n.x, n.y, n.z, 0.0);
+                auto tangent = glm::vec4(t.x, t.y, t.z, 0.0);
+                auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][j]) : aiVector3D();
+                
+                resource.normals[vertexStart + j] = normal;
+                resource.tangents[vertexStart + j] = tangent;
+                resource.positions[vertexStart + j] = glm::vec3(world_pos.x, world_pos.y, world_pos.z);
+                resource.uvs[vertexStart + j] = glm::vec2(uvData.x, uvData.y);
+                resource.materialIdx[vertexStart + j] = materialIndex;
+            }
+
+            // indics
+			for (unsigned int j = 0; j < mesh->mNumFaces; j++)
+            {
+                aiFace face = mesh->mFaces[j];
+                
+                resource.triangles[indicsStart + j] = glm::ivec3(vertexStart + face.mIndices[0], vertexStart + face.mIndices[1], vertexStart + face.mIndices[2]);
+            }
+
+            vertexStart += mesh->mNumVertices;
+            indicsStart += mesh->mNumFaces;
+		}
+	}
+
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double, std::milli>(end - start);
+    std::cout << path << " resource load time " << duration.count() << std::endl;
+	return true;
+}
+
+
 
 void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position, glm::quat rotation, float scale) {
 	std::map<std::string,int>::iterator it = materialMap.find(mat_name);
@@ -73,379 +285,57 @@ void Scene::AddModel(std::string modelFile, std::string mat_name, Vec3 position,
 		return;
 	}
 
+	ModelResource* resource = nullptr;
+    bool bLoaded = LoadMeshResources(modelFile, resource);
+
+    if (!bLoaded) return;
+    
+    auto start = std::chrono::high_resolution_clock::now();
 	int materialIndex = it->second;
 
-    aiPropertyStore* props = aiCreatePropertyStore();
-    std::cout << "Loading Model : " << modelFile << std::endl;
 
-	std::map<int, int> materialMap = {};
-	int saveByMaterialInstanced = 0;
-
-	//auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate, NULL, props);
-	auto scene = aiImportFileExWithProperties(modelFile.c_str(), aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_FlipUVs, NULL, props);
-	//aiProcessPreset_TargetRealtime_Fast
-	if (scene) {
-		std::string directory = modelFile.substr(0, modelFile.find_last_of('/'));
-
-		glm::mat4 model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(position.x, position.y, position.z));
-		model = glm::scale(model * toMat4(rotation), glm::vec3(scale));
-
-		struct NodeTraversalData
-		{
-			aiMatrix4x4 transform;
-			aiNode* node;
-		};
-
-		std::stack<NodeTraversalData> nodeStack = {};
-		nodeStack.push({aiMatrix4x4(), scene->mRootNode});
-
-		std::vector<NodeTraversalData> nodes = {};
-		nodes.push_back({ scene->mRootNode->mTransformation, scene->mRootNode });
-		while (nodeStack.size() > 0)
-		{
-			auto nodeData = nodeStack.top();
-			nodeStack.pop();
-
-			for (int c = 0; c < nodeData.node->mNumChildren; ++c)
-			{
-				auto child = nodeData.node->mChildren[c];
-				auto transform = nodeData.transform * child->mTransformation;
-				nodeStack.push({ transform , child });
-				nodes.push_back({ transform , child });
-			}
-		}
-
-		// Collect used texture
-		std::map<std::string, std::string> texId_to_path = {};
-		std::map<std::string, TextureWrapping> texId_to_wrapping = {};
-		for (int i = 0; i < scene->mNumMaterials; ++i)
-		{
-			auto p_material = scene->mMaterials[i];
-			DumpMaterialTextures(p_material, directory, texId_to_path, texId_to_wrapping);
-		}
-
-
-		// Load texture at once
-		std::vector<Texture*> textures = std::vector<Texture*>(texId_to_path.size());
-		tbb::parallel_for(size_t(0), texId_to_path.size(), [&](size_t index)
-		{
-			auto it = texId_to_path.begin();
-			std::advance(it, index);
-
-			Texture* tex = new Texture();
-			if (!LoadTexture(it->second, *tex)) {
-				delete tex;
-				return;
-			}
-
-			tex->wrapping = texId_to_wrapping[it->first];
-
-			textures[index] = tex;
-		}
-		);
-
-		for (int i = 0; i < textures.size(); ++i)
-		{
-			auto it = texId_to_path.begin();
-			std::advance(it, i);
-			AddTexture(it->first, it->second, textures[i]);
-		}
-
-
-		for (int i = 0; i < scene->mNumMaterials; ++i)
-		{
-			auto p_material = scene->mMaterials[i];
-			materialIndex = CreateMaterial(p_material, directory);
-			materialMap.emplace(i, materialIndex);
-		}
-
-
-		std::vector<std::vector<Mesh>> out_meshes = std::vector<std::vector<Mesh>>(nodes.size());
-		std::vector<std::vector<int>> out_materialList = std::vector<std::vector<int>>(nodes.size());
-
-		//tbb::parallel_for(size_t(0), size_t(10)/*nodes.size() - 1 */, [&](size_t index)
-		for(int index = 0; index < nodes.size() ; ++index)
-		{
-			auto nodeData = nodes[index];
-
-			std::vector<Mesh> & meshes = out_meshes[index];
-			std::vector<int> & materials = out_materialList[index];
-
-			auto transform = nodeData.transform;
-
-			for (unsigned int i = 0; i < nodeData.node->mNumMeshes; ++i) {
-				aiMesh* mesh = scene->mMeshes[nodeData.node->mMeshes[i]];
-				auto materialIdx = mesh->mMaterialIndex;
-				int materialIndex = -1;
-				if (materialIdx >= 0)
-				{
-					auto materialPair = materialMap.find(materialIdx);
-					if (materialPair != materialMap.end())
-					{
-						materialIndex = materialPair->second;
-					}
-					else
-					{
-						std::cout << "No material" << std::endl;
-					}
-				}
-
-				materials.emplace_back();
-				materials[materials.size() - 1] = materialIndex;
-
-				meshes.emplace_back();
-				auto& meshData = meshes[meshes.size() - 1];
-				meshData.triangles.reserve(mesh->mNumFaces);
-
-
-				int faceIndexNum = 0;
-
-				for (unsigned int j = 0; j < mesh->mNumFaces; j++)
-				{
-					aiFace face = mesh->mFaces[j];
-					faceIndexNum += face.mNumIndices;
-					Vec3 vertex[3];
-					Vec3 Normal[3];
-					Vec3 Tangent[3];
-					Vec3 uv[3];
-					bool bHaveTangent = mesh->mTangents != nullptr;
-
-					for (unsigned int k = 0; k < face.mNumIndices; k++) {
-						auto vertexId = face.mIndices[k];
-						aiVector3D v = transform * mesh->mVertices[vertexId];
-						auto n = mesh->mNormals[vertexId];
-						aiVector3D t;
-						if (bHaveTangent)
-						{
-							t = mesh->mTangents[vertexId];
-						}
-						else
-						{
-							glm::vec3 glm_t, bt;
-							MakeOrthogonalCoordinateSystem({ n.x, n.y, n.z }, &glm_t, &bt);
-							t = { glm_t.x, glm_t.y, glm_t.z };
-						}
-
-						aiMatrix3x3 transformMat3 = aiMatrix3x3(transform);
-						// TODO : Check normal 
-						t = transformMat3 * t;
-						t = t.NormalizeSafe();
-
-						n = transformMat3 * n;
-						n = n.NormalizeSafe();
-
-						auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
-						auto tangent = model * glm::vec4(t.x, t.y, t.z, 0.0);
-						auto m = model * glm::vec4(v.x, v.y, v.z, 1.0);
-
-
-
-						auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][vertexId]) : aiVector3D();
-						//std::vector<aiVector3D> uvDatas = std::vector<aiVector3D>(mesh->mNumVertices);
-						//memcpy(uvDatas.data(), mesh->mTextureCoords[0], sizeof(mesh->mTextureCoords[0][0]) * mesh->mNumVertices);
-						uv[k] = Vec3(abs(uvData.x), abs(uvData.y), 0.0f);
-
-						vertex[k] = { m.x, m.y, m.z };
-						Normal[k] = { normal.x, normal.y, normal.z };
-						Tangent[k] = { tangent.x, tangent.y, tangent.z };
-					}
-
-					meshData.triangles.emplace_back();
-
-					Triangle& triangle = meshData.triangles[meshData.triangles.size() - 1];
-					triangle.Vertices[0] = vertex[0];
-					triangle.Vertices[1] = vertex[1];
-					triangle.Vertices[2] = vertex[2];
-					triangle.normal[0] = Normal[0];
-					triangle.normal[1] = Normal[1];
-					triangle.normal[2] = Normal[2];
-					triangle.tangent[0] = Tangent[0];
-					triangle.tangent[1] = Tangent[1];
-					triangle.tangent[2] = Tangent[2];
-					triangle.uv[0] = uv[0]; triangle.uv[1] = uv[1]; triangle.uv[2] = uv[2];
-					//triangle.uv[0] = {0.0f, 1.0f, 0.0f}; triangle.uv[1] = {1.0f, 0.0f, 0.0f}; triangle.uv[2] = {0.5f, 0.5f, 0.0f};
-				}
-			}
-		}
-		//);
-
-
-		
-		int totalMesheNum = 0;
-		for (int i = 0; i < out_meshes.size(); ++i){ totalMesheNum += out_meshes[i].size(); }
-
-		int meshes_startIndex = meshes.size();
-		meshes.resize(meshes.size() + totalMesheNum);
-
-		std::vector<int> materialIndexs = std::vector<int>(totalMesheNum);
-
-		totalMesheNum = 0;
-		for (int i = 0; i < out_meshes.size(); ++i) 
-		{
-			auto & new_meshs = out_meshes[i];
-			auto& new_mats = out_materialList[i];
-			for (int j = 0; j < new_meshs.size(); ++j)
-			{
-				meshes[j + meshes_startIndex + totalMesheNum] = new_meshs[j];
-				materialIndexs[totalMesheNum + j] = new_mats[j];
-			}		
-
-			totalMesheNum += new_meshs.size();
-		}
-
-		out_meshes.clear();
-
-		int shapeNum = 0;
-
-		std::vector<int> shapeStartIndexMap = std::vector<int>(totalMesheNum);
-		for (int i = 0; i < totalMesheNum; ++i)
-		{
-			auto & mesh = meshes[meshes_startIndex + i];
-			shapeStartIndexMap[i] = shapes.size() + shapeNum;
-			shapeNum += mesh.triangles.size();
-		}
-
-		shapes.resize(shapes.size() + shapeNum);
-
-		int prevShapeSize = shapes.size();
-
-		for (int index = 0; index < totalMesheNum; ++index)
-		{
-			auto & mesh = meshes[meshes_startIndex + index];
-			int startIndex = shapeStartIndexMap[index];
-			for (int i = 0; i < mesh.triangles.size(); ++i)
-			{
-				auto pTriangle = &mesh.triangles[i];
-				shapes[startIndex + i] = pTriangle;
-
-				shapeMaterialMap[pTriangle] = materialIndexs[index];
-			}
-		}
-
-		/*
-		while (nodeStack.size() > 0)
-		{
-			auto nodeData = nodeStack.top();
-			nodeStack.pop();
-			auto transform = nodeData.transform * nodeData.node->mTransformation;
-			aiVector3D node_translation, node_scale;
-			aiQuaternion node_rotation;
-			transform.Decompose(node_translation, node_rotation, node_scale);
-			for (int c = 0; c < nodeData.node->mNumChildren; ++c)
-			{
-				auto child = nodeData.node->mChildren[c];
-				nodeStack.push({ transform , child });
-			}
-
-
-			for (unsigned int i = 0; i < nodeData.node->mNumMeshes; ++i) {
-				aiMesh* mesh = scene->mMeshes[nodeData.node->mMeshes[i]];
-				auto materialIdx = mesh->mMaterialIndex;
-				if (materialIdx >= 0)
-				{
-					auto materialPair = materialMap.find(materialIdx);
-					if (materialPair != materialMap.end())
-					{
-						materialIndex = materialPair->second;
-						saveByMaterialInstanced++;
-					}
-					else
-					{
-						auto* p_material = scene->mMaterials[materialIdx];
-						materialIndex = CreateMaterial(p_material, directory);
-						materialMap.emplace(materialIdx, materialIndex);
-					}
-				}
-
-				meshes.emplace_back();
-				auto& meshData = meshes[meshes.size() - 1];
-				meshData.triangles.reserve(mesh->mNumFaces);
-
-				int faceIndexNum = 0;
-
-				for (unsigned int j = 0; j < mesh->mNumFaces; j++)
-				{
-					aiFace face = mesh->mFaces[j];
-					faceIndexNum += face.mNumIndices;
-					Vec3 vertex[3];
-					Vec3 Normal[3];
-					Vec3 Tangent[3];
-					Vec3 uv[3];
-					bool bHaveTangent = mesh->mTangents != nullptr;
-
-					for (unsigned int k = 0; k < face.mNumIndices; k++) {
-						auto vertexId = face.mIndices[k];
-						aiVector3D& v = transform * mesh->mVertices[vertexId];
-						auto n = mesh->mNormals[vertexId];
-						aiVector3D t;
-						if (bHaveTangent)
-						{
-							t = mesh->mTangents[vertexId];
-						}
-						else
-						{
-							glm::vec3 glm_t, bt;
-							MakeOrthogonalCoordinateSystem({ n.x, n.y, n.z }, &glm_t, &bt);
-							t = { glm_t.x, glm_t.y, glm_t.z };
-						}
-
-						// TODO : Check normal 
-						t = transform * t;
-						t = t.NormalizeSafe();
-
-						n = transform * n;
-						n = n.NormalizeSafe();
-
-						auto normal = model * glm::vec4(n.x, n.y, n.z, 0.0);
-						auto tangent = model * glm::vec4(t.x, t.y, t.z, 0.0);
-						auto m = model * glm::vec4(v.x, v.y, v.z, 1.0);
-
-
-
-						auto uvData = mesh->mTextureCoords[0] != nullptr ? (mesh->mTextureCoords[0][vertexId]) : aiVector3D();
-						//std::vector<aiVector3D> uvDatas = std::vector<aiVector3D>(mesh->mNumVertices);
-						//memcpy(uvDatas.data(), mesh->mTextureCoords[0], sizeof(mesh->mTextureCoords[0][0]) * mesh->mNumVertices);
-						uv[k] = Vec3(abs(uvData.x), abs(uvData.y), 0.0f);
-
-						vertex[k] = { m.x, m.y, m.z };
-						Normal[k] = { normal.x, normal.y, normal.z };
-						Tangent[k] = { tangent.x, tangent.y, tangent.z };
-					}
-
-					meshData.triangles.emplace_back();
-
-					Triangle& triangle = meshData.triangles[meshData.triangles.size() - 1];
-					triangle.Vertices[0] = vertex[0];
-					triangle.Vertices[1] = vertex[1];
-					triangle.Vertices[2] = vertex[2];
-					triangle.normal[0] = Normal[0];
-					triangle.normal[1] = Normal[1];
-					triangle.normal[2] = Normal[2];
-					triangle.tangent[0] = Tangent[0];
-					triangle.tangent[1] = Tangent[1];
-					triangle.tangent[2] = Tangent[2];
-					triangle.uv[0] = uv[0]; triangle.uv[1] = uv[1]; triangle.uv[2] = uv[2];
-					//triangle.uv[0] = {0.0f, 1.0f, 0.0f}; triangle.uv[1] = {1.0f, 0.0f, 0.0f}; triangle.uv[2] = {0.5f, 0.5f, 0.0f};
-				}
-
-				shapes.reserve(shapes.size() + faceIndexNum);
-				for (int i = 0; i < meshData.triangles.size(); ++i)
-				{
-					auto pTriangle = &meshData.triangles[i];
-					shapes.push_back(pTriangle);
-					shapeMaterialMap[pTriangle] = materialIndex;
-				}
-
-				//std::cout << "there's a mesh not triangle : " << mesh->mNumVertices << std::endl;
-			}
-		}
-		*/
-	}
-
-    std::cout << "Model : " << modelFile  << " Loaded ? : " << (scene != nullptr) << std::endl;
-	std::cout << "Save By material instanced " << saveByMaterialInstanced << std::endl;
-    if (scene != nullptr) aiReleaseImport(scene);
+	glm::mat4 model = glm::mat4(1.0);
+	model = glm::translate(model, glm::vec3(position.x, position.y, position.z));
+	model = glm::scale(model * toMat4(rotation), glm::vec3(scale));
+
+    
+    unsigned int shapeStartIdx = shapes.size();
+    meshes.emplace_back();
+    shapes.resize(shapes.size() + resource->triangles.size());
+    auto & mesh = meshes[meshes.size() - 1];
+
+    mesh.triangles.resize(resource->triangles.size());
+    
+    for (int i = 0; i < resource->triangles.size(); ++i)
+    {
+        auto & triangle = mesh.triangles[i];
+        auto & resTri = resource->triangles[i];
+        
+        
+        for (int j = 0; j < 3; ++j)
+        {
+            auto idx = resTri[j];
+            auto & position = resource->positions[idx];
+            auto & normal = resource->normals[idx];
+            auto & tangent = resource->tangents[idx];
+            auto & uv = resource->uvs[idx];
+            
+            glm::vec3 p = model * glm::vec4(position.x, position.y, position.z, 1.0f);
+            glm::vec3 n = model * glm::vec4(normal.x, normal.y, normal.z, 0.0f);
+            glm::vec3 t = model * glm::vec4(tangent.x, tangent.y, tangent.z, 0.0f);
+            triangle.Vertices[j] = Vec3(p.x, p.y, p.z);
+            triangle.normal[j] = Vec3(n.x, n.y, n.z);
+            triangle.tangent[j] = Vec3(t.x, t.y, t.z);
+            triangle.uv[j] = Vec3(uv.x, uv.y, 0.0f);
+        }
+        
+        shapes[shapeStartIdx + i] = &mesh.triangles[i];
+        shapeMaterialMap[&mesh.triangles[i]] = resource->materialIdx[resTri[0]];
+    }
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double, std::milli>(end - start);
+    std::cout << "add model instance Elapsed: " << duration.count() << " ms\n";
 }
 
 
@@ -966,7 +856,14 @@ void Scene::AddEnvSource(const std::string & path, float scale, float sampleScal
 	envMapSource->sampleScale = sampleScale;
 
 	envSources.push_back(envMapSource);
+	envSourceNames.push_back(path);
 }
+
+void Scene::AddEnvResource(const std::string & path)
+{
+	auto texptr = AddExrTexture(path, path);
+}
+
 
 Texture* Scene::AddTexture(std::string texId, std::string path)
 {
@@ -975,7 +872,7 @@ Texture* Scene::AddTexture(std::string texId, std::string path)
 
 Texture* Scene::AddTexture(std::string texId, std::string path, TextureWrapping wrapping)
 {
-	std::cout << "Loading Texture : " << path << std::endl;
+	// std::cout << "Loading Texture : " << path << std::endl;
 
 	// search if texture already loaded
 	auto search = textureFileMap.find(path);
@@ -1207,6 +1104,7 @@ void MakeSceneData(const Scene & scene, SceneData & sceneData, bool enableEmbree
 	sceneData.lights = scene.lights;
 
 	sceneData.envSources = scene.envSources;
+	sceneData.envSourceNames = scene.envSourceNames;
 
 	sceneData.textures = scene.textures;
 

@@ -79,7 +79,8 @@ glm::vec3 PathTraceRdrMethod::Sample(const RenderData & rdrData, int x, int y, g
 			if (rdrData.sceneData->envSources.size() > 0)
 			{
 				if (unit_direction.x == unit_direction.x) {
-					glm::vec3 r = rdrData.sceneData->envSources[0]->Sample(unit_direction, i == 0);
+                    unsigned int envIdx = rdrData.sceneData->envIdx;
+					glm::vec3 r = rdrData.sceneData->envSources[envIdx]->Sample(unit_direction, i == 0);
 					sampleResults[i] = { r, glm::vec3(0.0f) };
 					radiance = r;
 				}

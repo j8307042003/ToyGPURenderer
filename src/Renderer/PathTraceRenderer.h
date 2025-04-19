@@ -96,6 +96,8 @@ public:
 	bool IntersectTest(int posX, int posY, Material* & pMaterial);
 	bool Raycast(int posX, int posY, glm::dvec3* hitPos);
 
+	SceneData* GetSceneData() {return &m_sceneData;}
+
 private:
 	int iteration;
 	bool bLimitIteration = false;

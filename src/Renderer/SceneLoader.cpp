@@ -5,6 +5,7 @@
 #include <Renderer/Material/PBMaterial.h>
 #include <chrono>
 #include <iostream>
+
 void SceneLoader::Load(const std::string & path, Scene & scene)
 {
 	// Open File
@@ -32,6 +33,9 @@ void SceneLoader::Load(const std::string & path, Scene & scene)
 	auto materialJsonData = sceneJsonData["materials"];
 	LoadMaterial(materialJsonData, &scene);
 
+	// auto envResourceJsonData = sceneJsonData["env_textures"];
+	// LoadEnvResources(envResourceJsonData, &scene);
+
 	auto envJsonData = sceneJsonData["Env"];
 	LoadEnvData(envJsonData, &scene);
 
@@ -41,6 +45,24 @@ void SceneLoader::Load(const std::string & path, Scene & scene)
 	LoadMeshData(sceneJsonData, &scene);
 }
 
+/*
+void SceneLoader::LoadEnvResources(const json11::Json& envResourceData, Scene* scene)
+{
+	if (!envResourceData.is_array())
+	{
+		return;
+	}	
+
+
+	auto envResourceJsonArrayDatas = envResourceData.array_items();
+	for (int i = 0; i < envResourceJsonArrayDatas.size(); ++i)
+	{
+		auto envJson = envResourceJsonArrayDatas[i];
+		auto filePath = envJson["file"].string_value();
+		scene->AddEnvSource(filePath);
+	}	
+}
+*/
 
 void SceneLoader::LoadEnvData(const json11::Json& envJsonData, Scene* scene)
 {
@@ -219,5 +241,11 @@ void SceneLoader::LoadLight(const json11::Json& lightJson, Scene* scene)
 void SceneLoader::LoadCameraModel(const json11::Json& cameraJson, Scene* scene)
 {
 	scene->cameraModel = cameraJson["model"].string_value();
+
+	int width = cameraJson["width"].int_value();
+	int height = cameraJson["width"].int_value();
+
+	scene->imageWidth = width > 0 ? width : scene->imageWidth;
+	scene->imageHeight = height > 0 ? height : scene->imageHeight;
 }
 

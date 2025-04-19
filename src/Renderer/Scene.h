@@ -30,6 +30,19 @@ struct Mesh
 	std::vector<Triangle> triangles;
 };
 
+
+
+struct ModelResource
+{
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec3> normals;
+	std::vector<glm::vec3> tangents;
+	std::vector<glm::vec3> bitangents;
+    std::vector<glm::vec2> uvs;
+	std::vector<glm::ivec3> triangles;
+    std::vector<unsigned int> materialIdx;
+};
+
 class Scene {
 public:
 	std::vector<Shape*> shapes = {};
@@ -41,13 +54,20 @@ public:
 	std::map<std::string, int> textureMap;
 	std::map<std::string, int> textureFileMap = {};
 
+
+	std::vector<ModelResource> modelResources = {};
+	std::map<std::string, int> modelRecourcesMap = {};
+
 	std::vector<Material*> Materials = {};
 	std::vector<ILight*> lights = {};
 	std::vector<Texture*> textures = {};
 	std::vector<IEnvSource*> envSources = {};
+	std::vector<std::string> envSourceNames = {};
 
 	std::vector<Mesh> meshes = {};
 	std::string cameraModel = "";
+	int imageWidth = 720;
+	int imageHeight = 720;
 
 	void AddShape(Shape * s);
 	void AddShape(Shape * s, std::string mat_name);
@@ -63,6 +83,7 @@ public:
 	void AddAreaLight(glm::dvec3 position, glm::quat rotation, glm::vec3 radiance, float width, float height, bool visible = false);
 	void AddDirectionalLight(glm::vec3 direction, glm::vec3 radiance);
 	void AddEnvSource(const std::string & path, float scale = 1.0f, float sampleScale = 1.0f);
+	void AddEnvResource(const std::string & path); 
 	Texture* AddTexture(std::string texId, std::string path);
 	Texture* AddTexture(std::string texId, std::string path, TextureWrapping wrapping);
 	Texture* AddTexture(std::string texId, const Texture& texture);
@@ -75,6 +96,7 @@ public:
 	bool RayCastTest(const Ray & ray, Vec3 & hitPos, Vec3 & direction, int & idx)const;
 
 private:
+	bool LoadMeshResources(const std::string & path, ModelResource * & modelResource);
 	int CreateMaterial(aiMaterial * p_material, const std::string & filePath);
 	void DumpMaterialTextures(aiMaterial* p_material, const std::string& filePath, std::map<std::string, std::string>& map, std::map<std::string, TextureWrapping>& wrappingMap);
 };
@@ -88,6 +110,7 @@ struct SceneData
 	//Light
 	std::vector<ILight*> lights;
 
+	unsigned int envIdx;
 	std::vector<IEnvSource*> envSources;
 
 	//Material
@@ -100,6 +123,8 @@ struct SceneData
     CameraData cameraData;
 
 	IRayTraceEngine* pRayTraceEngine;
+
+	std::vector<std::string> envSourceNames;
 };
 
 inline Material* GetMaterial(const SceneData & sceneData, int matIdx)

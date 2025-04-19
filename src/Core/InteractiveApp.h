@@ -18,9 +18,15 @@ private:
 	void RayTestGUI();
 	void SampleTestGUI();
 	void CameraGUI();
+	void EnvirmonentGUI();
+
+
+	void ObjectEditGUI();
 private:
 	float myColor[4];
 	char saveFileBuffer[128];
+
+	std::vector<std::string> m_texture_names = {};
 public:
 	Renderer* renderer;
 	InteractiveApp* app;
