@@ -122,7 +122,7 @@ inline Material* GetShapeMaterial(const SceneData & sceneData, int shapeIdx)
 	return GetMaterial(sceneData, GetShapeMatIdx(sceneData, shapeIdx));
 }
 
-inline void SampleLight(const SceneData & sceneData, const glm::dvec3 & surfacePosition, const glm::dvec3 & surfaceNormal, ILight * light, glm::dvec3 & direction, glm::vec3 & lightPower)
+inline void SampleLight(const SceneData & sceneData, const glm::dvec3 & surfacePosition, const glm::dvec3 & surfaceNormal, ILight* &  light, glm::dvec3 & direction, glm::vec3 & lightPower)
 {
     int lightIdx = std::min((int)sceneData.lights.size() - 1, (int)(SysRandom::Random() * sceneData.lights.size()));
 	light = lightIdx < 0 ? nullptr : sceneData.lights[lightIdx];

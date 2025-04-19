@@ -151,12 +151,14 @@ static glm::vec3 DisneyFresnel(const SurfaceData & surface, const DisneyBRDFPara
 {
 	float dotHV = glm::dot(wm, wo);
 
-	glm::vec3 tint = CalculateTint(glm::vec3(1.0f));
+	// glm::vec3 tint = CalculateTint(glm::vec3(1.0f));
+	glm::vec3 tint = CalculateTint(param.color);
 
 	// -- See section 3.1 and 3.2 of the 2015 PBR presentation + the Disney BRDF explorer (which does their 2012 remapping
 	// -- rather than the SchlickR0FromRelativeIOR seen here but they mentioned the switch in 3.2).
-	glm::vec3 R0 = Fresnel::SchlickR0FromRelativeIOR(param.ior) * glm::lerp(glm::vec3(1.0f), tint, param.specularTint);
-			 R0 = glm::lerp(R0, param.color, param.metallic);
+	glm::vec3 R0 = Fresnel::SchlickR0FromRelativeIOR(param.ior) * glm::lerp(tint, tint, param.specularTint);
+	
+	R0 = glm::lerp(R0, param.color, param.metallic);
 
 	float dielectricFresnel = Fresnel::Dielectric(dotHV, 1.0f, param.ior);
 	glm::vec3 metallicFresnel = Fresnel::Schlick(R0, glm::dot(wi, wm));
