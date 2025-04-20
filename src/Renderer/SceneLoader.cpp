@@ -118,6 +118,8 @@ void SceneLoader::LoadMeshData(const json11::Json& sceneJson, Scene* scene)
 		meshFileMap[name] = file;
 	}
 
+	scene->meshFileMap = meshFileMap;
+
 	auto meshInstanceJson = sceneJson["models"];
 	auto meshInstanceDatas = meshInstanceJson.array_items();
 

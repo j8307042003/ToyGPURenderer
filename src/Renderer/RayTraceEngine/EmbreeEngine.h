@@ -5,6 +5,7 @@
 #include "IRayTraceEngine.h"
 #include <embree3/rtcore.h>
 #include <math/Ray.h>
+#include "Renderer/Scene.h"
 
 class EmbreeEngine : public IRayTraceEngine
 {
@@ -18,10 +19,15 @@ public:
 
 private:
 	SceneData* m_sceneData;
+	std::vector<DynamicMesh*> dynamicObjs = {};
+    unsigned int dyGeoId = 0; // hack
 
 public:
 	virtual bool IntersectScene(SceneData * sceneData, const Ray3f & ray, float t_min, float t_max, SceneIntersectData * intersect) override;
 	virtual bool Raycast(SceneData* sceneData, const Ray3f& ray, float t_min, float t_max) override;
+
+    virtual bool AddDynamicGeometry(DynamicMesh * model) override;
+    virtual bool UpdateDynamicGeometry(DynamicMesh * model) override;
 
 public:
 	static SceneData* s_sceneData;

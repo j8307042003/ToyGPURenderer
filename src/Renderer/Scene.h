@@ -64,6 +64,8 @@ public:
 	std::vector<IEnvSource*> envSources = {};
 	std::vector<std::string> envSourceNames = {};
 
+	std::map<std::string, std::string> meshFileMap = {};
+
 	std::vector<Mesh> meshes = {};
 	std::string cameraModel = "";
 	int imageWidth = 720;
@@ -72,6 +74,7 @@ public:
 	void AddShape(Shape * s);
 	void AddShape(Shape * s, std::string mat_name);
 	void AddModel(std::string modelFile, std::string mat_name, Vec3 position = Vec3(), glm::quat rotation = glm::quat(), float scale = 1);
+    bool LoadMeshResources(const std::string & path, ModelResource * & modelResource);
 	void AddEnv(IEnvSource * envSource);
 	void AddMaterial(material * m);
 	void AddMaterial(std::string name, material * m);
@@ -96,11 +99,24 @@ public:
 	bool RayCastTest(const Ray & ray, Vec3 & hitPos, Vec3 & direction, int & idx)const;
 
 private:
-	bool LoadMeshResources(const std::string & path, ModelResource * & modelResource);
 	int CreateMaterial(aiMaterial * p_material, const std::string & filePath);
 	void DumpMaterialTextures(aiMaterial* p_material, const std::string& filePath, std::map<std::string, std::string>& map, std::map<std::string, TextureWrapping>& wrappingMap);
 };
 
+
+struct DynamicMesh
+{
+    ModelResource* resources;
+    glm::vec3 position;
+    glm::vec3 eulerRotation;
+
+    std::vector<glm::vec3> vertices;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec3> tangents;
+
+    float scale;
+    const char* name;
+};
 
 struct SceneData
 {
@@ -115,6 +131,8 @@ struct SceneData
 
 	//Material
 	std::vector<Material*> materials;
+    
+    std::vector<DynamicMesh> dynamicObjs;
 
 	std::vector<Texture *> textures;
 
@@ -181,5 +199,8 @@ bool EvalMaterialScatter(const Material & mat, const glm::vec3 & view, const glm
 bool EvalMaterialBRDF(const Material & mat, const Ray3f & ray, const SceneIntersectData & intersect, BsdfSample & bsdfSample);
 glm::vec3 EvalMaterialEmission(const Material& mat, const SceneIntersectData& intersect);
 
+
+bool UpdateDynamicsObj(SceneData * sceneData, DynamicMesh * obj);
+bool AddDynamicsObj(SceneData * sceneData, ModelResource* resource, const char* name);
 
 #endif

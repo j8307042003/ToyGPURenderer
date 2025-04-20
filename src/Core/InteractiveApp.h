@@ -28,6 +28,7 @@ private:
 
 	std::vector<std::string> m_texture_names = {};
 public:
+	Scene* scene;
 	Renderer* renderer;
 	InteractiveApp* app;
 	Camera* cam;

@@ -95,6 +95,7 @@ InteractiveApp::InteractiveApp(char *argv[]) : m_running(false), m_key_table(), 
 	m_testGUI.renderer = m_renderer;
 	m_testGUI.app = this;
 	m_testGUI.cam = m_cam;
+	m_testGUI.scene = m_scene;
 	AddUI(&m_testGUI);
 
 
@@ -472,11 +473,111 @@ void TestGUI::ObjectEditGUI()
 {
 	PathTraceRenderer* renderer = (PathTraceRenderer*)app->GetRenderer();
 
-
 	SceneData* pScene = renderer->GetSceneData();
-    unsigned int idx = pScene->envIdx;
+    if (pScene == nullptr) return;
+    static unsigned int idx = 0;
 	
-	static const char* current_item = pScene->envSourceNames[idx].c_str();	
+	static const char* current_item = 0;	
+
+    
+    ImGui::BeginGroup();
+    // bool bAnyChange = false;
+	if (ImGui::BeginCombo("Object", current_item))
+	{
+
+		unsigned int combo_idx = 0;
+        for (auto it = scene->meshFileMap.begin(); it != scene->meshFileMap.end(); it++)
+		{
+			const char* item_str = it->first.c_str();
+			bool is_selected = (current_item == item_str); // You can store your selection however you want, outside or inside your objects
+			if (ImGui::Selectable(item_str, is_selected))
+			{
+				current_item = item_str;
+				idx = combo_idx;
+
+                // bAnyChange = true;
+			}
+			if (is_selected)
+			{
+				ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+			}
+
+			combo_idx++;
+		}
+		ImGui::EndCombo();
+	}
+    
+    ImGui::SameLine();
+    
+    if (ImGui::Button("Add"))
+    {
+        int run = 0;
+        std::string fileId = "";
+        const char* fileIdStr = nullptr;
+        for (auto it = scene->meshFileMap.begin(); it != scene->meshFileMap.end(); it++)
+        {
+            if (run == idx)
+            {
+                fileId = it->second;
+                fileIdStr = it->first.c_str();
+                break;
+            }
+            run++;
+        }
+        ModelResource* resource = nullptr;
+        auto it = scene->modelRecourcesMap.find(fileId);
+        if (it == scene->modelRecourcesMap.end())
+        {
+            scene->LoadMeshResources(fileId, resource);
+        }
+        else {
+            resource = &scene->modelResources[it->second];
+        }
+        
+        if (resource != nullptr)
+            AddDynamicsObj(pScene, resource, fileIdStr);
+    }
+    
+    ImGui::NewLine();
+    static int objSelectIdx = 0;
+    static DynamicMesh* objPtr = nullptr;
+
+    if (ImGui::BeginListBox("##ListBox", ImVec2(-FLT_MIN, 100))) // optional size
+    {
+        
+        for (int i = 0; i < pScene->dynamicObjs.size(); i++)
+        {
+            const bool isSelected = (objSelectIdx == i);
+            if (ImGui::Selectable(pScene->dynamicObjs[i].name, isSelected))
+            {
+                objSelectIdx = i;
+                objPtr = &pScene->dynamicObjs[i];
+            }
+
+            if (isSelected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndListBox();
+    }
+
+
+    bool bAnyChange = false;
+    if (objPtr != nullptr)
+    {
+    	ImGui::Text("Rotation");
+        bAnyChange |= ImGui::SliderFloat("x", &objPtr->eulerRotation.x, -180.0f, 180.0f);
+        bAnyChange |= ImGui::SliderFloat("y", &objPtr->eulerRotation.y, -180.0f, 180.0f);
+        bAnyChange |= ImGui::SliderFloat("z", &objPtr->eulerRotation.z, -180.0f, 180.0f);
+
+        if (bAnyChange)
+        {
+        	UpdateDynamicsObj(pScene, objPtr);
+        }
+    }
+
+    if (bAnyChange) renderer->ClearImage();
+
+    ImGui::EndGroup();
 }
 
 

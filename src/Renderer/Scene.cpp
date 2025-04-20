@@ -1194,3 +1194,53 @@ glm::vec3 EvalMaterialEmission(const Material& mat, const SceneIntersectData& in
 }
 
 
+void update_dynamic_obj_mesh(DynamicMesh* mesh)
+{
+	glm::quat quat = glm::quat(glm::radians(mesh->eulerRotation));
+
+	glm::mat4 model = glm::mat4(1.0);
+	model = glm::translate(model, mesh->position);
+	model = glm::scale(model * toMat4(quat), glm::vec3(mesh->scale));
+
+	ModelResource * resource = mesh->resources;
+	for (int i = 0; i < mesh->vertices.size(); ++i)
+	{
+		mesh->vertices[i] = model * glm::vec4(resource->positions[i], 1.0f);
+		mesh->normals[i] = model * glm::vec4(resource->normals[i], 0.0f);
+		mesh->tangents[i] = model * glm::vec4(resource->tangents[i], 0.0f);
+	}
+
+}
+
+bool UpdateDynamicsObj(SceneData * sceneData, DynamicMesh * obj)
+{
+	update_dynamic_obj_mesh(obj);
+
+ 	if (sceneData->pRayTraceEngine == nullptr) return false;
+	sceneData->pRayTraceEngine->UpdateDynamicGeometry(obj);   	
+}
+
+
+bool AddDynamicsObj(SceneData * sceneData, ModelResource* resource, const char* name)
+{
+    sceneData->dynamicObjs.emplace_back();
+    
+    DynamicMesh & obj = sceneData->dynamicObjs[sceneData->dynamicObjs.size() - 1];
+    obj.resources = resource;
+    obj.position = glm::vec3();
+    obj.eulerRotation = glm::vec3();
+    obj.scale = 1.0f;
+    obj.name = name;
+    obj.vertices.resize(resource->positions.size());
+    obj.normals.resize(resource->normals.size());
+    obj.tangents.resize(resource->tangents.size());
+
+
+    update_dynamic_obj_mesh(&obj);
+ 
+ 	if (sceneData->pRayTraceEngine == nullptr) return false;
+	sceneData->pRayTraceEngine->AddDynamicGeometry(&obj);   
+
+	return true; 
+}
+

@@ -9,6 +9,7 @@ EmbreeEngine* EmbreeEngine::BuildEmgreeEngine(SceneData * sceneData)
 	EmbreeEngine * instance = new EmbreeEngine();
 	instance->device = rtcNewDevice(NULL);
 	instance->scene = rtcNewScene(instance->device);
+    rtcSetSceneFlags(instance->scene, RTC_SCENE_FLAG_DYNAMIC);
 	//rtcSetSceneBuildQuality(instance->scene, RTC_BUILD_QUALITY_HIGH);
 
 	//instance->geom = rtcNewGeometry(instance->device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -70,25 +71,53 @@ bool EmbreeEngine::IntersectScene(SceneData * sceneData, const Ray3f & ray, floa
 
 	if (rayhit.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
 
-	auto& triangleData = sceneData->shapesData.triangles[rayhit.hit.primID];
+
+	if (rayhit.hit.geomID == 0)
+	{
+
+		auto& triangleData = sceneData->shapesData.triangles[rayhit.hit.primID];
 
 
-	glm::dvec3 dir = glm::dot(ray.direction, sceneData->shapesData.normals[triangleData.y]) >= 0.0 ? glm::dvec3(-1.0) : glm::dvec3(1.0);
+		glm::dvec3 dir = glm::dot(ray.direction, sceneData->shapesData.normals[triangleData.y]) >= 0.0 ? glm::dvec3(-1.0) : glm::dvec3(1.0);
 
-	intersect->shapeIdx = rayhit.hit.primID;
-	intersect->point = ray.origin + (double)rayhit.ray.tfar * ray.direction;
-	intersect->materialIdx = sceneData->shapes[intersect->shapeIdx].matIdx;
-	intersect->uv = (double)rayhit.hit.u * sceneData->shapesData.texcoords[triangleData.y] + (double)rayhit.hit.v * sceneData->shapesData.texcoords[triangleData.z] + (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.texcoords[triangleData.x];
-	intersect->normal = glm::normalize(
-									(double)rayhit.hit.u * sceneData->shapesData.normals[triangleData.y] 
-									+ (double)rayhit.hit.v * sceneData->shapesData.normals[triangleData.z]
-									+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.normals[triangleData.x]) * dir;
-	intersect->tangent = glm::normalize(
-									(double)rayhit.hit.u * sceneData->shapesData.tangents[triangleData.y]
-									+ (double)rayhit.hit.v * sceneData->shapesData.tangents[triangleData.z]
-									+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.tangents[triangleData.x]) * dir;
-	//intersect->normal = glm::dot(intersect->normal, ray.direction) <= 0.0f ? intersect->normal : -intersect->normal;
-	intersect->normal = intersect->normal * dir;
+		intersect->shapeIdx = rayhit.hit.primID;
+		intersect->point = ray.origin + (double)rayhit.ray.tfar * ray.direction;
+		intersect->materialIdx = sceneData->shapes[intersect->shapeIdx].matIdx;
+		intersect->uv = (double)rayhit.hit.u * sceneData->shapesData.texcoords[triangleData.y] + (double)rayhit.hit.v * sceneData->shapesData.texcoords[triangleData.z] + (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.texcoords[triangleData.x];
+		intersect->normal = glm::normalize(
+										(double)rayhit.hit.u * sceneData->shapesData.normals[triangleData.y] 
+										+ (double)rayhit.hit.v * sceneData->shapesData.normals[triangleData.z]
+										+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.normals[triangleData.x]) * dir;
+		intersect->tangent = glm::normalize(
+										(double)rayhit.hit.u * sceneData->shapesData.tangents[triangleData.y]
+										+ (double)rayhit.hit.v * sceneData->shapesData.tangents[triangleData.z]
+										+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * sceneData->shapesData.tangents[triangleData.x]) * dir;
+		//intersect->normal = glm::dot(intersect->normal, ray.direction) <= 0.0f ? intersect->normal : -intersect->normal;
+		intersect->normal = intersect->normal * dir;
+	}
+	else {
+		// hack
+		auto obj = dynamicObjs[0];
+		auto& triangleData = obj->resources->triangles[rayhit.hit.primID];
+
+
+		glm::dvec3 dir = glm::dot(ray.direction, glm::dvec3(obj->normals[triangleData.y])) >= 0.0 ? glm::dvec3(-1.0) : glm::dvec3(1.0);
+
+		intersect->shapeIdx = rayhit.hit.primID;
+		intersect->point = ray.origin + (double)rayhit.ray.tfar * ray.direction;
+		intersect->materialIdx = obj->resources->materialIdx[triangleData.x];
+		intersect->uv = (double)rayhit.hit.u * glm::dvec2(obj->resources->uvs[triangleData.y]) + (double)rayhit.hit.v * glm::dvec2(obj->resources->uvs[triangleData.z]) + (double)(1 - rayhit.hit.u - rayhit.hit.v) * glm::dvec2(obj->resources->uvs[triangleData.x]);
+		intersect->normal = glm::normalize(
+										(double)rayhit.hit.u * glm::dvec3(obj->normals[triangleData.y])
+										+ (double)rayhit.hit.v * glm::dvec3(obj->normals[triangleData.z])
+										+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * glm::dvec3(obj->normals[triangleData.x])) * dir;
+		intersect->tangent = glm::normalize(
+										(double)rayhit.hit.u * glm::dvec3(obj->tangents[triangleData.y])
+										+ (double)rayhit.hit.v * glm::dvec3(obj->tangents[triangleData.z])
+										+ (double)(1 - rayhit.hit.u - rayhit.hit.v) * glm::dvec3(obj->tangents[triangleData.x])) * dir;
+		//intersect->normal = glm::dot(intersect->normal, ray.direction) <= 0.0f ? intersect->normal : -intersect->normal;
+		intersect->normal = intersect->normal * dir;		
+	}
 
 	return true;
 }
@@ -149,3 +178,78 @@ void EmbreeEngine::IntersectFilter(const RTCFilterFunctionNArguments* args)
 	{
 	}	 
 }
+
+
+bool EmbreeEngine::AddDynamicGeometry(DynamicMesh * model)
+{
+	unsigned int triangleCount = model->resources->triangles.size();
+
+	auto triGeo = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
+	
+	auto embree_positions = (float*)rtcSetNewGeometryBuffer(triGeo,
+		RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * sizeof(float),
+		model->resources->positions.size());
+	
+	auto embree_triangles = rtcSetNewGeometryBuffer(triGeo,
+		RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * sizeof(unsigned int),
+		triangleCount);
+
+	memcpy(embree_triangles, model->resources->triangles.data(), triangleCount * 12);
+
+	memcpy(embree_positions, model->vertices.data(), model->vertices.size() * 3 * sizeof(float));
+	
+	/*
+	for (int i = 0; i < model.resources->positions.size(); ++i)
+	{
+		auto& tri = sceneData->shapesData.triangles[i];
+		embree_positions[i * 9 + 0] = (float)sceneData->shapesData.positions[tri[0]][0];
+		embree_positions[i * 9 + 1] = (float)sceneData->shapesData.positions[tri[0]][1];
+		embree_positions[i * 9 + 2] = (float)sceneData->shapesData.positions[tri[0]][2];
+
+		embree_positions[i * 9 + 3] = (float)sceneData->shapesData.positions[tri[1]][0];
+		embree_positions[i * 9 + 4] = (float)sceneData->shapesData.positions[tri[1]][1];
+		embree_positions[i * 9 + 5] = (float)sceneData->shapesData.positions[tri[1]][2];
+
+		embree_positions[i * 9 + 6] = (float)sceneData->shapesData.positions[tri[2]][0];
+		embree_positions[i * 9 + 7] = (float)sceneData->shapesData.positions[tri[2]][1];
+		embree_positions[i * 9 + 8] = (float)sceneData->shapesData.positions[tri[2]][2];
+	}
+	*/
+	//memcpy(embree_positions, shape.positions.data(), shape.positions.size() * 12);
+
+	rtcSetGeometryIntersectFilterFunction(triGeo, EmbreeEngine::IntersectFilter);
+	rtcSetGeometryOccludedFilterFunction(triGeo, EmbreeEngine::IntersectFilter);
+	rtcCommitGeometry(triGeo);
+    dyGeoId = rtcAttachGeometry(scene, triGeo);
+	rtcReleaseGeometry(triGeo);
+
+	rtcCommitScene(scene);
+
+	dynamicObjs.push_back(model);
+
+	return true;
+}
+
+bool EmbreeEngine::UpdateDynamicGeometry(DynamicMesh * model) 
+{
+	// hack
+	RTCGeometry geom = rtcGetGeometry(scene, dyGeoId);
+	/* loop over all vertices */
+	float* vertices = (float*) rtcGetGeometryBufferData(geom,RTC_BUFFER_TYPE_VERTEX,0);
+
+	memcpy(vertices, model->vertices.data(), model->vertices.size() * 3 * sizeof(float));
+
+	/*
+	parallel_for(size_t(0),size_t(data.numPhi+1),[&](const range<size_t>& range) {
+		const int threadIndex = (int)TaskScheduler::threadIndex();
+		for (size_t i=range.begin(); i<range.end(); i++)
+		  animateSphere((int)i,threadIndex,vertices,rcpNumTheta,rcpNumPhi,pos,r,f);
+	});
+	*/
+
+	/* commit mesh */
+	rtcUpdateGeometryBuffer(geom,RTC_BUFFER_TYPE_VERTEX,0);
+	rtcCommitGeometry(geom);
+	rtcCommitScene(scene);
+}
+
